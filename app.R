@@ -1,9 +1,15 @@
+
+
+
+# Load libraries
 library(shiny)
 library(tidyverse)
 library(tablerDash)
 library(shinyEffects)
 library(echarts4r)
 library(shinyWidgets)
+library(karyoploteR)
+
 
 # datas flowGl
 vectors <- expand.grid(x = -3:3, y = -3:3)
@@ -20,7 +26,7 @@ year <- data.frame(date = dates, values = values)
 
 # cards
 flowCard <- tablerCard(
-  title = "FlowGl Chart",
+  title = "Karyotype",
   closable = FALSE,
   zoomable = FALSE,
   options = tagList(
@@ -28,8 +34,10 @@ flowCard <- tablerCard(
     tablerTag(name = "build", addon = "passing", addonColor = "success")
   ),
   width = 12,
-  echarts4rOutput("flowGl")
+  plotOutput("flowGl")
 )
+
+
 
 profileCard <- tablerProfileCard(
   width = 12,
@@ -51,6 +59,7 @@ profileCard <- tablerProfileCard(
     )
   )
 )
+
 
 
 calendarCard <- tablerBlogCard(
@@ -101,7 +110,14 @@ shiny::shinyApp(
       fluidRow(
         column(
           width = 3,
-          profileCard,
+          numericInput(
+            inputId = "totalStorage",
+            label = "Start",
+            value = 1000),
+          numericInput(
+            inputId = "totalStorage",
+            label = "End",
+            value = 1000),
           tablerStatCard(
             value = 43,
             title = "Followers",
@@ -139,10 +155,7 @@ shiny::shinyApp(
             description = "12 waiting payments",
             width = 12
           ),
-          numericInput(
-            inputId = "totalStorage",
-            label = "Enter storage capacity",
-            value = 1000),
+
           uiOutput("info")
           )
     ),
@@ -227,25 +240,9 @@ shiny::shinyApp(
       mtcars[, c("mpg", input$variable), drop = FALSE]
     }, rownames = TRUE)
     
-    output$flowGl <- renderEcharts4r({
-      vectors %>%
-        e_charts(x) %>%
-        e_flow_gl(y, sx, sy, color) %>%
-        e_visual_map(
-          min = 0, max = 1, # log 10
-          dimension = 4, # x = 0, y = 1, sx = 3, sy = 4
-          show = FALSE, # hide
-          inRange = list(
-            color = c('#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8',
-                      '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026')
-          )
-        ) %>%
-        e_x_axis(
-          splitLine = list(show = FALSE)
-        ) %>%
-        e_y_axis(
-          splitLine = list(show = FALSE)
-        )
+    output$flowGl <- renderPlot({
+
+      plotKaryotype(genome="hg19", plot.type=1)
     })
     
     
