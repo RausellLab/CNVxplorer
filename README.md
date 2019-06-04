@@ -1,2 +1,2 @@
-# cnvxplore
-CNVxplore: A webtool for the interpretation of CNVs
+# CNVxplore: A webtool for the interpretation of CNVs
+
