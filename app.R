@@ -114,6 +114,9 @@ shiny::shinyApp(
             inputId = "totalStorage",
             label = "Start",
             value = 1000),
+          selectizeInput(inputId = 'select_karyotype', label = 'Select Karyotype', choices = rownames(mtcars),
+                         selected = NULL, multiple = FALSE,
+                         options = NULL),
           numericInput(
             inputId = "totalStorage",
             label = "End",
