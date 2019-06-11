@@ -9,7 +9,9 @@ library(shinyEffects)
 library(echarts4r)
 library(shinyWidgets)
 library(karyoploteR)
-
+human_chrom <- hg19 <- list('chr1' = 1, 'chr2' = 2,'chr3' = 3,'chr4' = 4,'chr5' = 5,'chr6' = 6,'chr7' = 7,'chr8' = 8,'chr9' = 9,'chr10' = 10,'chr11' = 11,'chr12' = 12,'chr13' = 13,
+                            'chr14' = 14,'chr15' = 15,'chr16' = 16,'chr17' = 17,'chr18' = 18,'chr19' = 19, 'chr20' = 20, 'chr21' = 21,  'chr22' = 22,
+                            'chrX' = 'X','chrY' = 'Y')
 
 # datas flowGl
 vectors <- expand.grid(x = -3:3, y = -3:3)
@@ -110,16 +112,16 @@ shiny::shinyApp(
       fluidRow(
         column(
           width = 3,
-          numericInput(
-            inputId = "totalStorage",
-            label = "Start",
-            value = 1000),
-          selectizeInput(inputId = 'select_karyotype', label = 'Select Karyotype', choices = rownames(mtcars),
+          selectizeInput(inputId = 'int_chrom', label = 'Genomic interval - Chromosome', choices = human_chrom,
                          selected = NULL, multiple = FALSE,
                          options = NULL),
           numericInput(
-            inputId = "totalStorage",
-            label = "End",
+            inputId = "int_start",
+            label = "Genomic interval - Start",
+            value = 1000),
+          numericInput(
+            inputId = "int_end",
+            label = "Genomic interval - End",
             value = 1000),
           tablerStatCard(
             value = 43,
@@ -244,8 +246,10 @@ shiny::shinyApp(
     }, rownames = TRUE)
     
     output$flowGl <- renderPlot({
-
-      plotKaryotype(genome="hg19", plot.type=1)
+      input_chr <- paste0('chr', input$int_chrom)
+      plotKaryotype(chromosomes = input_chr, plot.type = 2) %>%
+      kpDataBackground(data.panel = 1)
+      
     })
     
     

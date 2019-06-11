@@ -2,7 +2,8 @@
 
 # Load packages
 library(tidyverse)
-
+library(readxl)
+library(biomaRt)
 
 # Reference of scores
 
@@ -48,13 +49,33 @@ tibble(gene_symbol = NA, gene_entrezid = NA,
 # Source:  ftp://ftp.ebi.ac.uk/pub/databases/genenames/new/tsv/locus_types/gene_with_protein_product.txt
 # ------------------------------------------------------------------------------
 
-hgcn_genes <- read_excel('data/gene_with_protein_product.xlsx')
+hgcn_genes <- read_excel('data/gene_with_protein_product.xlsx') %>% as_tibble()
 
 hgcn_genes <- hgcn_genes %>%
-  as_tibble() %>%
-  select(entrez_id, symbol, location) %>%
-  rename(gene = symbol)
+  select(entrez_id, ensembl_gene_id, location, symbol) %>%
+  rename(gene = symbol) %>%
+  na.omit()
 
+
+human  <- useMart("ensembl", dataset = "hsapiens_gene_ensembl",
+                  host    = "grch37.ensembl.org",
+                  path    = "/biomart/martservice")
+
+# 
+# 'external_gene_name' - SYMBOL
+interval_genes <- getBM(attributes = c('ensembl_gene_id_version', 'start_position','end_position', 'chromosome_name'), 
+                        mart = human ) %>% as_tibble() %>% filter(!str_detect(chromosome_name, 'PATCH'))
+
+hgcn_genes <- interval_genes %>% 
+  rename(ensembl_gene_id = ensembl_gene_id_version) %>%
+  mutate(ensembl_gene_id = str_remove(ensembl_gene_id, '\\..*')) %>%
+  right_join(hgcn_genes, by = c('ensembl_gene_id'))
+
+
+hgcn_genes %>% count(start_position) %>% arrange(desc(n))
+hgcn_genes %>% filter(is.na(start_position)) %>% select(ensembl_gene_id) %>% pull()
+
+# There are 398 genes with no coordinates
 
 hgcn_genes %>%
   left_join(pli) %>% # pli score
@@ -66,7 +87,8 @@ hgcn_genes %>%
   left_join(rvis) %>% # RVIS score based
   mutate(clinvar = if_else(gene %in% clinvar_raw, 1, 0)) %>% # List of genes with likely pathogenic and pathogenic variants
   mutate(gwas = if_else(gene %in% gwas, 1, 0)) %>% # GWAS genes
-  left_join(ccr) # Genes with CCRs in the 99th percentile or higher
+  left_join(ccr) %>%
+  count(ccr)# Genes with CCRs in the 99th percentile or higher
 
 # ------------------------------------------------------------------------------
 # Dataset: pLI
