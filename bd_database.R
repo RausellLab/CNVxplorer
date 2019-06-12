@@ -5,6 +5,17 @@ library(tidyverse)
 library(readxl)
 library(biomaRt)
 
+# TODO
+
+# 398 genes does not have coordinates (start/end)
+# OMIM
+# HI%
+# Percentile RVIS or original data
+
+# QUESTIONS NECKER
+
+# Input user, two options: 1- select chrom, g banding or select g banding where the chromosome is included
+
 # Reference of scores
 
 tibble(gene_symbol = NA, gene_entrezid = NA,
@@ -77,7 +88,7 @@ hgcn_genes %>% filter(is.na(start_position)) %>% select(ensembl_gene_id) %>% pul
 
 # There are 398 genes with no coordinates
 
-hgcn_genes %>%
+hgcn_genes <- hgcn_genes %>%
   left_join(pli) %>% # pli score
   left_join(vg) %>% # variance gene expression
   mutate(haplo = if_else(gene %in% clingen, 1, 0)) %>% # haploinsufficiency genes
@@ -87,9 +98,10 @@ hgcn_genes %>%
   left_join(rvis) %>% # RVIS score based
   mutate(clinvar = if_else(gene %in% clinvar_raw, 1, 0)) %>% # List of genes with likely pathogenic and pathogenic variants
   mutate(gwas = if_else(gene %in% gwas, 1, 0)) %>% # GWAS genes
-  left_join(ccr) %>%
-  count(ccr)# Genes with CCRs in the 99th percentile or higher
+  left_join(ccr)# Genes with CCRs in the 99th percentile or higher
 
+
+hgcn_genes <- hgcn_genes %>% rename(chrom = chromosome_name)
 # ------------------------------------------------------------------------------
 # Dataset: pLI
 # Source: https://storage.googleapis.com/gnomad-public/release/2.1.1/constraint/gnomad.v2.1.1.lof_metrics.by_gene.txt.bgz

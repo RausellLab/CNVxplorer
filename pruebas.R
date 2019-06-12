@@ -3,9 +3,88 @@ library(chromPlot)
 
 data(hg19_cytoBandIdeo)
 
-chromPlot::hg_cytoBandIdeo
+hg_cytoBandIdeo <- chromPlot::hg_cytoBandIdeo %>% filter(Name == 'p14')
 
 ##########
+
+data <- data.frame(Value = round(rnorm(50, 10, 2), 0))
+ggplot(data) + 
+  geom_histogram(aes(x = Value, fill = Value == 13))
+
+hgcn_genes %>%
+  select(gene, pLI, rvis) %>%
+  na.omit() %>%
+  slice(1:500) %>%
+  column_to_rownames('gene') %>%
+  as.matrix() %>%
+  pheatmap(
+    fontsize          = 7,
+    drop_levels       = TRUE
+    
+  )
+
+
+test <- hgcn_genes %>% slice(1:100) %>% select(entrez_id) %>% pull()  %>% as.character()
+univ <- hgcn_genes %>% select(entrez_id) %>% pull() %>% as.character
+
+  
+
+ego <- enrichGO(gene          = test,
+                universe      = univ,
+                OrgDb         = org.Hs.eg.db,
+                ont           = "CC",
+                pAdjustMethod = "BH",
+                pvalueCutoff  = 0.01,
+                qvalueCutoff  = 0.05)
+
+barplot(ego, showCategory=30)
+
+
+df <- mtcars %>% mutate(name = row.names(.))
+df %>% 
+  ggplot(aes(mpg, disp)) +
+  geom_point(col = "darkred") +
+  gghighlight(name == 'Camaro Z28',
+              unhighlighted_colour = alpha("steelblue", 0.4),
+              use_direct_label = TRUE,
+              label_key = name,
+              label_params = list(size = 5)) +
+  geom_point(col = "darkred", size = 2.5) 
+
+a <- matrix(NA, nrow = 2, ncol = 500)
+a[1,] <- hgcn_genes$pLI[1:500]
+a[2,] <- hgcn_genes$rvis[1:500]
+a[1,][as.numeric(which(is.na(a[1,])))] <- 0
+a[2,][as.numeric(which(is.na(a[2,])))] <- 0
+colnames(a) <- hgcn_genes$gene[1:500]
+pheatmap(a, cluster_rows = FALSE, cluster_cols = FALSE)
+  
+  df <- data.frame(x = c("a", "b"), y = c(3, 4), z = c(5, 6))
+  df %>% spread(x, y) 
+  
+
+test = matrix(rnorm(200), 20, 10)
+test[1:10, seq(1, 10, 2)] = test[1:10, seq(1, 10, 2)] + 3
+test[11:20, seq(2, 10, 2)] = test[11:20, seq(2, 10, 2)] + 2
+test[15:20, seq(2, 10, 2)] = test[15:20, seq(2, 10, 2)] + 4
+colnames(test) = paste("Test", 1:10, sep = "")
+rownames(test) = paste("Gene", 1:20, sep = "")
+
+library(pheatmap)
+
+
+c(hgcn_genes$start_position[28], data_raw$end_position[28]) %overlaps% c(1000, 60000000)
+
+
+library(DescTools)
+
+for (i in 1:19000) {
+  
+ b <- c(hgcn_genes$start_position[i], hgcn_genes$end_position[i]) %overlaps% c(10, 45)
+ print(b)
+}
+
+hgcn_genes %>% mutate(testeo =  c(start_position, end_position) %overlaps% c(10, 45)) %>% count(testeo)
 
 hgcn_genes <- read_excel('data/gene_with_protein_product.xlsx') %>% as_tibble()
 
@@ -54,3 +133,9 @@ hgcn_genes <- interval_genes %>%
   right_join(hgcn_genes)
 
 hgcn_genes %>% count(start_position) %>% arrange(desc(n))
+
+
+plotKaryotype(chromosomes = 'chr1', plot.type = 2) %>%
+  kpDataBackground(data.panel = 1) %>%
+  kpAddBaseNumbers() %>%
+  kpRect(chr="chr1", x0=c(100000000, 110300000), x1=c(120000000, 150050000), y0=0.2, y1=0.3)
