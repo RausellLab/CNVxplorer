@@ -7,6 +7,16 @@ hg_cytoBandIdeo <- chromPlot::hg_cytoBandIdeo %>% filter(Name == 'p14')
 
 ##########
 
+library(rentrez)
+test <- entrez_search(db="omim", term="DMD") %>% as_tibble()
+
+###
+
+test <- GET('https://ghr.nlm.nih.gov/search?query=DMD&show=xml')
+xmlParse(test)
+XML::xmlToDataFrame(getNodeSet(test, path='//row'))
+###
+
 data <- data.frame(Value = round(rnorm(50, 10, 2), 0))
 ggplot(data) + 
   geom_histogram(aes(x = Value, fill = Value == 13))
@@ -22,6 +32,45 @@ hgcn_genes %>%
     drop_levels       = TRUE
     
   )
+
+
+test <- hgcn_genes %>% slice(1:100) %>% select(entrez_id) %>% pull()  %>% as.character()
+univ <- hgcn_genes %>% select(entrez_id) %>% pull() %>% as.character
+
+go_analysis <- enrichGO(gene  = test,
+                        universe      = univ,
+                        OrgDb         = org.Hs.eg.db,
+                        ont           = "CC",
+                        pAdjustMethod = "BH",
+                        pvalueCutoff  = 0.01,
+                        qvalueCutoff  = 0.05) %>% as.data.frame()
+
+go_analysis %>% 
+  # filter(pvalue <= 0.05) %>%
+  ggplot(aes(reorder(Description, p.adjust), p.adjust)) +
+  geom_col(aes(fill = Description), color = 'black', show.legend = FALSE) +
+  scale_fill_viridis_d() +
+  # scale_y_log10() +
+  coord_flip() +
+  xlab('') +
+  ylab('p-adjusted') +
+  geom_vline(xintercept = 0.05) +
+  theme_minimal()
+
+tablerCard(
+  title = "Plots",
+  zoomable = FALSE,
+  closable = FALSE,
+  plotOutput('func_analysis'),
+  options = tagList(
+    switchInput(
+      inputId = "enable_distPlot",
+      label = "Plot?",
+      value = TRUE,
+      onStatus = "success",
+      offStatus = "danger"
+    )
+  )),
 
 
 test <- hgcn_genes %>% slice(1:100) %>% select(entrez_id) %>% pull()  %>% as.character()

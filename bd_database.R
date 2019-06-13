@@ -11,6 +11,11 @@ library(biomaRt)
 # OMIM
 # HI%
 # Percentile RVIS or original data
+# Functional analysis - Gene Ontology - Pathway analysis (which db?)
+# ReactomePA analysis 423MB careful!
+# Gene ontology based of non-coding regions
+# difference between pLI and o/e
+# should a put a minus + plus to the output from remot
 
 # QUESTIONS NECKER
 
@@ -18,8 +23,7 @@ library(biomaRt)
 
 # Reference of scores
 
-tibble(gene_symbol = NA, gene_entrezid = NA,
-  score = c('gwas', # we could filter out by number of hits (no filter - 8652, >1 4498)
+ref_scores <- tibble(score = c('gwas', # we could filter out by number of hits (no filter - 8652, >1 4498)
                  'fda',
                  'pli',
                  'deg', # CRISPR - mice K.O - aggregated dataset (DEG) (last source from 2013)
@@ -30,7 +34,9 @@ tibble(gene_symbol = NA, gene_entrezid = NA,
                  'vg',
             'rvis',
             'clinvar',
-            'ccr'), # it could be extended with reference variant - omim - disease
+            'ccr',
+            'ncRVIS',
+            'ncGERP'), # it could be extended with reference variant - omim - disease
        level = c('gene',
                  'gene',
                  'gene',
@@ -40,8 +46,30 @@ tibble(gene_symbol = NA, gene_entrezid = NA,
                  'gene',
                  'gene',
                  'gene',
+                 'gene',
+                 'gene',
+                 'gene',
+                 'gene',
                  'gene'),
+       type = c('d',
+                 'd',
+                 'c',
+                 'd',
+                 'd',
+                 'd',
+                 'd',
+                 'd',
+                 'c',
+                 'c',
+                 'd',
+                 'c',
+                 'c',
+                 'c'),
        source = c('http:',
+                  'http:',
+                  'http:',
+                  'http:',
+                  'http:',
                   'http:',
                   'http:',
                   'http:',
@@ -98,7 +126,8 @@ hgcn_genes <- hgcn_genes %>%
   left_join(rvis) %>% # RVIS score based
   mutate(clinvar = if_else(gene %in% clinvar_raw, 1, 0)) %>% # List of genes with likely pathogenic and pathogenic variants
   mutate(gwas = if_else(gene %in% gwas, 1, 0)) %>% # GWAS genes
-  left_join(ccr)# Genes with CCRs in the 99th percentile or higher
+  left_join(ccr) %>% # Genes with CCRs in the 99th percentile or higher 
+  left_join(nc) # non-coding scores RVIS and ncGERP - 5UTR + 3UTR + 250bp upstream
 
 
 hgcn_genes <- hgcn_genes %>% rename(chrom = chromosome_name)
@@ -176,6 +205,16 @@ dev_genes <- read.table('data/DDG2P_6_6_2019.csv',
 # Access: ####
 # ------------------------------------------------------------------------------
 
+omim <- read.table('data/', sep = '\t', header = TRUE,
+                   stringsAsFactors = F)
+omim <- omim[-3087,]
+colnames(omim) <- c('pheno', 'gene','id_gene', 'location')
+
+omim$gene <-map_chr(omim$gene, function(x) str_split(x, ',')[[1]][1])
+omim$id_pheno <-map_chr(omim$pheno, function(x) str_extract(x, '\\d{6}'))
+omim$pheno <-map_chr(omim$pheno, function(x) str_replace(x, '\\d{6}', ''))
+omim$pheno <-map_chr(omim$pheno, function(x) str_replace(x, '\\d{6}', ''))
+omim$pheno <-map_chr(omim$pheno, function(x) gsub( '*\\(.*?\\) *', '', x)) 
 
 
 
@@ -239,7 +278,14 @@ a <- read.table('data/HI_Predictions_Version3.bed', sep = '\t', skip = 1) %>%
   select(V4) %>%
   mutate(V4 = as.character(V4))
 
-
+a %>% separate(V4, into = LETTERS[1:10]) %>% 
+  select(A, D, E) %>%
+  mutate(E = if_else(E == '', '00', E )) %>%
+  mutate(hi = paste(D, E, sep = '.')) %>%
+  mutate(hi = as.numeric(hi))
+  rename(gene = A)
+  
+  
 
 # ------------------------------------------------------------------------------
 # Dataset: GWAS genes
@@ -280,3 +326,22 @@ ccr <- read.table('https://static-content.springer.com/esm/art%3A10.1038%2Fs4158
   as_tibble() %>%
   rename(ccr = number_of_99th_percentile_CCRs) %>%
   mutate(gene = as.character(gene))
+
+
+# ------------------------------------------------------------------------------
+# Dataset: ncRVIS and ncGERP
+# Source: https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1005492#sec025
+# Table: S1 Data. Collection of RVIS and GERP scores and their corresponding percentile
+# ------------------------------------------------------------------------------
+
+
+nc_raw <- read_excel('data/journal.pgen.1005492.s011.XLSX.xlsx', sheet = 1)
+
+nc <- nc_raw %>%
+  select( `CCDS release 9` ,`CCDS release 15`, ncRVIS, `ncGERP      [Average GERP++]` ) %>%
+  rename(gene1 =  `CCDS release 9`, gene2 = `CCDS release 15`, ncrvis = ncRVIS, ncgerp = `ncGERP      [Average GERP++]` ) %>%
+  mutate(ncgerp = as.numeric(ncgerp)) %>%
+  select(-gene1) %>%
+  rename(gene = gene2) %>%
+  mutate(ncrvis = round(ncrvis, 3),
+         ncgerp = round(ncgerp, 3))

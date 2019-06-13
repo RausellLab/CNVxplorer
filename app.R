@@ -11,6 +11,15 @@ library(shinyWidgets)
 library(karyoploteR)
 library(DT)
 library(gghighlight)
+library(ReactomePA)
+library(shinycssloaders)
+library(plotly)
+library(waiter)
+library(DescTools)
+library(clusterProfiler)
+library(org.Hs.eg.db)
+library(patchwork)
+
 
 human_chrom <- hg19 <- list('chr1' = 1, 'chr2' = 2,'chr3' = 3,'chr4' = 4,'chr5' = 5,'chr6' = 6,'chr7' = 7,'chr8' = 8,'chr9' = 9,'chr10' = 10,'chr11' = 11,'chr12' = 12,'chr13' = 13,
                             'chr14' = 14,'chr15' = 15,'chr16' = 16,'chr17' = 17,'chr18' = 18,'chr19' = 19, 'chr20' = 20, 'chr21' = 21,  'chr22' = 22,
@@ -79,7 +88,31 @@ calendarCard <- tablerBlogCard(
 # app
 shiny::shinyApp(
   ui = tablerDashPage(
+    # enable_preloader = TRUE,
+    # loading_duration = 4,
     navbar = tablerDashNav(
+      
+      navMenu = tablerNavMenu(
+        tablerNavMenuItem(
+          tabName = "Home",
+          icon = "home",
+          "Home"
+        ),
+        tablerNavMenuItem(
+          tabName = "Page1",
+          icon = "box",
+          "Page1"
+        ),
+        tablerNavMenuItem(
+          tabName = "Page2",
+          icon = "box",
+          "Page2"
+        ),
+        tablerNavMenuItem(
+          tabName = "Documentation",
+          icon = "box",
+          "Documentation"
+        )),
       id = "mymenu",
       src = "https://preview.tabler.io/demo/brand/tabler.svg",
       tablerDropdown(
@@ -111,6 +144,30 @@ shiny::shinyApp(
     title = "tablerDash",
     body = tablerDashBody(
       
+      tablerTabItems(
+        
+        tablerTabItem(
+          tabName = "Home",
+          
+          tablerCard(
+            title = "Welcome to CNVxplore",
+            
+            'Description and more',
+            width = 12,
+            overflow = TRUE
+          ),
+          tablerCard(
+            title = "Welcome to CNVxplore",
+            
+           DTOutput('score_references'),
+            width = 12,
+            overflow = FALSE
+          )
+        ),
+        tablerTabItem(
+          tabName = "Page1",
+      
+      use_waiter(),
       setZoom(class = "card"),
       chooseSliderSkin("Nice"),
       
@@ -148,6 +205,11 @@ shiny::shinyApp(
                 title = "Genome-wide percentiles",
                 status = NULL,
                 date = "yesterday"
+              ),
+              tablerTimelineItem(
+                title = "Functional analysis",
+                status = NULL,
+                date = "now"
               ),
               tablerTimelineItem(
                 title = "Regulatory regions",
@@ -220,11 +282,6 @@ shiny::shinyApp(
             title = "Percentile pLI score",
             width = 2
           ),
-          tablerStatCard(
-            value =  '-',
-            title = "Percentile pLI score",
-            width =  2
-          ),
 
           tablerStatCard(
             value =  '-',
@@ -248,18 +305,40 @@ shiny::shinyApp(
       
     ),
     fluidRow(
-      
-      plotlyOutput('heatmap')
+      tablerCard(
+        title = "Heatmap - Genome-wide percentile (pLI - RVIS scores)",
+        plotlyOutput('heatmap'),
+        width = 12,
+        overflow = TRUE
+      )
       
       
     ),
     tablerCard(
-      title = "Genome-wide percentile (pLI - RVIS scores)",
-      
-      plotOutput('go_analysis'),
-      width = 6,
-      overflow = TRUE
-    )
+      title = "Functional analysis",
+      width = 12,
+      zoomable = FALSE,
+      closable = FALSE,
+      plotOutput('func_analysis') %>% withSpinner(type = 5),
+      options = tagList(
+        switchInput(
+          inputId = "enable_func_analysis",
+          label = "Run?",
+          value = FALSE,
+          onStatus = "success",
+          offStatus = "danger"
+            
+        ),
+        prettyRadioButtons(
+          inputId = "choose_go",
+          label = "Select one option:", 
+          choices = c("biological process", "molecular function", "cellular component"),
+          inline = TRUE, 
+          status = "primary",
+          fill = TRUE
+        )
+      ))
+        ))
    
     )
   ),
@@ -308,10 +387,21 @@ shiny::shinyApp(
       data_input <- data_selected() %>% select(-start_position, -end_position)
       datatable(data_input, rownames = FALSE, filter = 'top',
                 options = list(
-                  pageLength = 5, autoWidth = TRUE, style = 'bootstrap'
+                  pageLength = 5, autoWidth = TRUE, style = 'bootstrap',
+                  selection = 'single',
+                  columnDefs = list(list(className = 'dt-center', targets = '_all'))
                 ))
+    })
+    
+    output$score_references <- renderDataTable({
       
-      
+
+      datatable(ref_scores, rownames = FALSE,
+                options = list(
+                  pageLength = 5, autoWidth = TRUE, style = 'bootstrap',
+                  selection = 'single',
+                  columnDefs = list(list(className = 'dt-center', targets = '_all'))
+                ))
     })
     
     output$distPlot <- renderPlot({
@@ -321,14 +411,16 @@ shiny::shinyApp(
     
     output$perc_gene <- renderPlot({
      
+      red_line <- data_selected() %>% slice(input$dgenes_rows_selected) %>% select(pLI) %>% pull()
+      symbol_chosen <- data_selected() %>% slice(input$dgenes_rows_selected) %>% select(gene) %>% pull()
       
       hgcn_genes %>% 
         ggplot(aes(pLI)) + 
         geom_histogram() +
         theme_minimal() +
         scale_fill_viridis_d() +
-        geom_vline(xintercept = 0.2, color = 'red', alpha = 0.6) +
-        ggtitle('Histogram pLI scores - Gene: PCSK9')
+        geom_vline(xintercept = red_line, color = 'red', alpha = 0.6, type = 'dashed') +
+        ggtitle(paste('Histogram pLI scores - Gene:', symbol_chosen))
       
     })
     
@@ -336,10 +428,11 @@ shiny::shinyApp(
       
       name_gene_filtered <- data_selected() %>% slice(input$dgenes_rows_selected) %>% select(gene) %>% pull()
       test6 <<- name_gene_filtered
+      test7 <<- data_selected()
       p <- data_selected() %>%
         
         ggplot(aes(pLI, rvis)) +
-        geom_point(col = "darkred") +
+        geom_point(col = "steelblue") +
         theme_minimal() +
         gghighlight(gene == name_gene_filtered)
       
@@ -393,7 +486,7 @@ shiny::shinyApp(
       tablerStatCard(
         value = nrow(data_selected()),
         title = "Number of genes",
-        # trend = -10,
+        trend = 19192,
         width = 12
       )
     })
@@ -479,7 +572,7 @@ shiny::shinyApp(
     
     output$heatmap <- renderPlotly({
 
-      # a <- matrix(NA, nrow = 2, ncol = 100)
+      a <- matrix(NA, nrow = 2, ncol = 100)
       a[1,] <- hgcn_genes$pLI[1:100]
       a[2,] <- hgcn_genes$rvis[1:100]
       # a[1,][as.numeric(which(is.na(a[1,])))] <- 0
@@ -488,22 +581,84 @@ shiny::shinyApp(
       # a <- pheatmap(a, cluster_rows = FALSE, cluster_cols = FALSE)
       # a
       
-      data_raw <- hgcn_genes %>% mutate(p_li = ntile(pLI, 100), p_rvis = ntile(rvis, 100))
-      m <- matrix(NA, nrow = 2, ncol = 500)
+      data_raw <- hgcn_genes %>% mutate(p_li = ntile(pLI, 100), p_rvis = ntile(rvis, 100),
+                                        p_ncrvis = ntile(ncrvis, 100), p_ncgerp = ntile(ncgerp, 100))
+      m <- matrix(NA, nrow = 4, ncol = 500)
       m[1,] <- data_raw$p_li[1:500]
       m[2,] <- data_raw$p_rvis[1:500]
+      m[3,] <- data_raw$p_ncrvis[1:500]
+      m[4,] <- data_raw$p_ncgerp[1:500]
+      
       p <- plot_ly(
-        x = hgcn_genes$gene[1:500], y = c("RVIS", "pLI"),
+        x = hgcn_genes$gene[1:500], y = c("RVIS", "pLI", 'ncRVIS', 'ncGERP'),
         z = m, type = "heatmap"
+        # width = 1200,
+        # height = 500
+        
       )
     })
     
     
-    output$go_analysis <- renderPlot({
+    output$func_analysis <- renderPlot({
       
+      if (input$enable_func_analysis == TRUE) {
+      
+        if (input$choose_go == 'biological process') {
+          go_chosen <- 'BP'
+        } else if (input$choose_go == 'molecular function') {
+          go_chosen <- 'MF'
+        } else {
+          go_chosen <- 'CC'
+        }
       test <- hgcn_genes %>% slice(1:100) %>% select(entrez_id) %>% pull()  %>% as.character()
       univ <- hgcn_genes %>% select(entrez_id) %>% pull() %>% as.character
 
+      go_analysis <- enrichGO(gene  = test,
+                      universe      = univ,
+                      OrgDb         = org.Hs.eg.db,
+                      ont           = go_chosen,
+                      pAdjustMethod = "BH",
+                      pvalueCutoff  = 0.01,
+                      qvalueCutoff  = 0.05)
+      
+      pathway_analysis <- enrichPathway(gene=de,pvalueCutoff=0.05, readable=T)
+      
+      
+      a <-  go_analysis %>% ggplot(aes(reorder(Description, p.adjust), p.adjust)) +
+        geom_col(aes(fill = Description), color = 'black', show.legend = FALSE) +
+        scale_fill_viridis_d() +
+        # scale_y_log10() +
+        coord_flip() +
+        xlab('') +
+        ylab('p-adjusted') +
+        ggtitle('GO analysis') +
+        geom_vline(xintercept = 0.05) +
+        theme_minimal() +
+        theme(axis.text=element_text(size=12),
+              axis.title=element_text(size=14,face="bold"))
+      
+      b <-  pathway_analysis %>% ggplot(aes(reorder(Description, p.adjust), p.adjust)) +
+        geom_col(aes(fill = Description), color = 'black', show.legend = FALSE) +
+        scale_fill_viridis_d() +
+        # scale_y_log10() +
+        coord_flip() +
+        xlab('') +
+        ylab('p-adjusted') +
+        ggtitle('Pathway analysis') +
+        geom_vline(xintercept = 0.05) +
+        theme_minimal() +
+        theme(axis.text=element_text(size=12),
+              axis.title=element_text(size=14,face="bold"))
+      
+      a + b
+      }
+    })
+    
+    output$path_analysis <- renderPlot({
+      
+      test <- hgcn_genes %>% slice(1:100) %>% select(entrez_id) %>% pull()  %>% as.character()
+      univ <- hgcn_genes %>% select(entrez_id) %>% pull() %>% as.character
+      
       ego <- enrichGO(gene          = test,
                       universe      = univ,
                       OrgDb         = org.Hs.eg.db,
@@ -516,12 +671,6 @@ shiny::shinyApp(
       
       
       
-    })
-    
-    
-    output$gauge <- renderEcharts4r({
-      e_charts() %>%
-        e_gauge(as.numeric(input$gaugeVal), "%")
     })
     
   }
