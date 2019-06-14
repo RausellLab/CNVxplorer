@@ -16,6 +16,7 @@ test <- GET('https://ghr.nlm.nih.gov/search?query=DMD&show=xml')
 xmlParse(test)
 XML::xmlToDataFrame(getNodeSet(test, path='//row'))
 ###
+library('heatmaply')
 
 data <- data.frame(Value = round(rnorm(50, 10, 2), 0))
 ggplot(data) + 
@@ -24,14 +25,10 @@ ggplot(data) +
 hgcn_genes %>%
   select(gene, pLI, rvis) %>%
   na.omit() %>%
-  slice(1:500) %>%
+  slice(1:50) %>%
   column_to_rownames('gene') %>%
   as.matrix() %>%
-  pheatmap(
-    fontsize          = 7,
-    drop_levels       = TRUE
-    
-  )
+  heatmaply()
 
 
 test <- hgcn_genes %>% slice(1:100) %>% select(entrez_id) %>% pull()  %>% as.character()
@@ -125,7 +122,20 @@ library(pheatmap)
 c(hgcn_genes$start_position[28], data_raw$end_position[28]) %overlaps% c(1000, 60000000)
 
 
-library(DescTools)
+de <- names(geneList)[abs(geneList) > 2]
+
+edo <- enrichDGN(de)
+
+
+
+data(geneList)
+de <- names(geneList)[abs(geneList) > 2]
+
+edo <- enrichDGN(de)
+edox <- setReadable(edo, 'org.Hs.eg.db', 'ENTREZID')
+cnetplot(edo, foldChange=geneList)
+barplot(edo, showCategory=20)
+
 
 for (i in 1:19000) {
   

@@ -19,6 +19,8 @@ library(DescTools)
 library(clusterProfiler)
 library(org.Hs.eg.db)
 library(patchwork)
+library(DOSE)
+library(enrichplot)
 
 
 human_chrom <- hg19 <- list('chr1' = 1, 'chr2' = 2,'chr3' = 3,'chr4' = 4,'chr5' = 5,'chr6' = 6,'chr7' = 7,'chr8' = 8,'chr9' = 9,'chr10' = 10,'chr11' = 11,'chr12' = 12,'chr13' = 13,
@@ -101,12 +103,22 @@ shiny::shinyApp(
         tablerNavMenuItem(
           tabName = "Page1",
           icon = "box",
-          "Page1"
+          "Overview"
         ),
         tablerNavMenuItem(
           tabName = "Page2",
           icon = "box",
-          "Page2"
+          "Gene Panel"
+        ),
+        tablerNavMenuItem(
+          tabName = "Page2",
+          icon = "plus",
+          "Functional analysis"
+        ),
+        tablerNavMenuItem(
+          tabName = "Page3",
+          icon = "download",
+          "Download report"
         ),
         tablerNavMenuItem(
           tabName = "Documentation",
@@ -310,6 +322,16 @@ shiny::shinyApp(
         plotlyOutput('heatmap'),
         width = 12,
         overflow = TRUE
+        # options = tagList(
+        #   pickerInput(
+        #           inputId = "Id083",
+        #           label = "Choose variables:",
+        #           choices = list('pLI' = 'pLI'),
+        #           multiple = TRUE
+        #         )
+        #   
+        #   
+        # )
       )
       
       
@@ -329,15 +351,38 @@ shiny::shinyApp(
           offStatus = "danger"
             
         ),
+        pickerInput(
+          inputId = "sign_vline",
+          label = tags$b("P.value threshold:"), 
+          choices = c("0.05", "0.01", "0.005"),
+          width = 130),
         prettyRadioButtons(
           inputId = "choose_go",
-          label = "Select one option:", 
+          label = tags$b("Select one option:"), 
           choices = c("biological process", "molecular function", "cellular component"),
           inline = TRUE, 
           status = "primary",
           fill = TRUE
         )
-      ))
+      )),
+    tablerCard(
+      title = "Gene-disease association",
+      plotOutput('func_analysis_diseases') %>% withSpinner(type = 5),
+      width = 12,
+      zoomable = FALSE,
+      closable = FALSE
+      
+      
+    )
+    # tablerCard(
+    #   title = "Gene-disease association",
+    #   plotOutput('func_2nalysis_mesh') %>% withSpinner(type = 5),
+    #   width = 12,
+    #   zoomable = FALSE,
+    #   closable = FALSE
+    #   
+    #   
+    # )
         ))
    
     )
@@ -354,7 +399,7 @@ shiny::shinyApp(
     
     data_selected <- reactive({
       
-      data_raw <- hgcn_genes %>% filter(chrom == 1)
+      data_raw <- hgcn_genes %>% filter(chrom == input$input_chrom)
       
       if(input$input_geno_karyo == 'Genomic coordinates') {
         
@@ -363,8 +408,7 @@ shiny::shinyApp(
           data_raw$keep[i] <- c(data_raw$start_position[i], data_raw$end_position[i]) %overlaps% c(input$int_start, input$int_end)
 
         }
-        test1 <<- data_raw
-        
+
         data_raw <- data_raw %>% filter(keep == TRUE) %>% select(-keep)
 
       } else {
@@ -377,7 +421,7 @@ shiny::shinyApp(
         rename(band = location) %>% 
         mutate(coordinates = paste0(chrom,':', start_position,'-', end_position)) %>% 
         mutate(oe = paste0(oe_lof, ' (', oe_lof_lower, '-',oe_lof_upper, ')')) %>%
-        select(-ensembl_gene_id, -chrom, -entrez_id, -transcript, -oe_lof, -oe_lof_lower, -oe_lof_upper, -vg)
+        select(-ensembl_gene_id, -chrom, -transcript, -oe_lof, -oe_lof_lower, -oe_lof_upper, -vg)
 
     })
     
@@ -416,7 +460,7 @@ shiny::shinyApp(
       
       hgcn_genes %>% 
         ggplot(aes(pLI)) + 
-        geom_histogram() +
+        geom_histogram(binwidth = 0.1) +
         theme_minimal() +
         scale_fill_viridis_d() +
         geom_vline(xintercept = red_line, color = 'red', alpha = 0.6, type = 'dashed') +
@@ -461,6 +505,7 @@ shiny::shinyApp(
     })
     
     output$choose_geno_karyo1 <- renderUI({
+      
       if (input$input_geno_karyo == 'Genomic coordinates') {
         
         numericInput(
@@ -470,12 +515,20 @@ shiny::shinyApp(
 
       } else {
         
-        karyotype_filtered <- as.list(chromPlot::hg_cytoBandIdeo %>% filter(Chrom == input$chrom) %>% select(Name))
+        karyotype_filtered <- as.list(chromPlot::hg_cytoBandIdeo %>% filter(Chrom == input$input_chrom) %>% select(Name))
+        test <<- karyotype_filtered 
         
+        # selectizeInput(inputId = 'input_karyotype', label = 'Karyotype', choices = karyotype_filtered,
+        #                selected = NULL, multiple = FALSE,
+        #                options = NULL)
         
-        selectizeInput(inputId = 'input_karyotype', label = 'Karyotype', choices = karyotype_filtered,
-                       selected = NULL, multiple = FALSE,
-                       options = NULL)
+        pickerInput(
+          inputId = "input_karyotype",
+          label = "Karyotype", 
+          choices = karyotype_filtered,
+          options = list(
+            `live-search` = TRUE)
+        )
 
       }
 
@@ -519,17 +572,6 @@ shiny::shinyApp(
         trend = -10,
         width = 12
       )
-    })
-    
-    
-    output$choose_geno_karyo1 <- renderUI({
-
-        numericInput(
-          inputId = "int_start",
-          label = "Genomic interval - Start",
-          value = 1000)
-
-      
     })
     
     output$n_genes_pli <- renderUI({
@@ -588,13 +630,16 @@ shiny::shinyApp(
       m[2,] <- data_raw$p_rvis[1:500]
       m[3,] <- data_raw$p_ncrvis[1:500]
       m[4,] <- data_raw$p_ncgerp[1:500]
+      # m <- m[colSums(!is.na(m)) > 0]
+      
+      # heatmaply(as.matrix(m))
       
       p <- plot_ly(
         x = hgcn_genes$gene[1:500], y = c("RVIS", "pLI", 'ncRVIS', 'ncGERP'),
         z = m, type = "heatmap"
         # width = 1200,
         # height = 500
-        
+
       )
     })
     
@@ -610,8 +655,12 @@ shiny::shinyApp(
         } else {
           go_chosen <- 'CC'
         }
-      test <- hgcn_genes %>% slice(1:100) %>% select(entrez_id) %>% pull()  %>% as.character()
-      univ <- hgcn_genes %>% select(entrez_id) %>% pull() %>% as.character
+        
+
+      # test <- hgcn_genes %>% slice(1:100) %>% select(entrez_id) %>% pull()  %>% as.character()
+      # univ <- hgcn_genes %>% select(entrez_id) %>% pull() %>% as.character
+        test <- data_selected() %>% slice(1:100) %>% select(entrez_id) %>% pull()  %>% as.character()
+        univ <- hgcn_genes %>% select(entrez_id) %>% pull() %>% as.character
 
       go_analysis <- enrichGO(gene  = test,
                       universe      = univ,
@@ -623,29 +672,43 @@ shiny::shinyApp(
       
       pathway_analysis <- enrichPathway(gene=de,pvalueCutoff=0.05, readable=T)
       
-      
-      a <-  go_analysis %>% ggplot(aes(reorder(Description, p.adjust), p.adjust)) +
+      a <-  go_analysis %>%
+        as_tibble() %>%
+        slice(1:10) %>%
+        mutate(p.adjust = -log10(p.adjust)) %>%
+        ggplot(aes(reorder(Description, p.adjust), p.adjust)) +
         geom_col(aes(fill = Description), color = 'black', show.legend = FALSE) +
         scale_fill_viridis_d() +
-        # scale_y_log10() +
         coord_flip() +
         xlab('') +
-        ylab('p-adjusted') +
+        ylab('-log10(p-adjusted)') +
         ggtitle('GO analysis') +
-        geom_vline(xintercept = 0.05) +
+        geom_hline(yintercept =-log10(as.numeric(input$sign_vline)), color = 'red', alpha = 0.6, linetype = 'dashed', size = 2) +
+        geom_text(
+          aes(label = GeneRatio, y = p.adjust + 0.05),
+          position = position_stack(vjust = 0.5),
+          vjust = 0
+        ) +
         theme_minimal() +
         theme(axis.text=element_text(size=12),
               axis.title=element_text(size=14,face="bold"))
       
-      b <-  pathway_analysis %>% ggplot(aes(reorder(Description, p.adjust), p.adjust)) +
+      b <-  pathway_analysis %>%
+        as_tibble() %>% 
+        mutate(p.adjust = -log10(p.adjust)) %>%
+        ggplot(aes(reorder(Description, p.adjust), p.adjust)) +
         geom_col(aes(fill = Description), color = 'black', show.legend = FALSE) +
         scale_fill_viridis_d() +
-        # scale_y_log10() +
         coord_flip() +
         xlab('') +
-        ylab('p-adjusted') +
+        ylab('-log10(p-adjusted)') +
         ggtitle('Pathway analysis') +
-        geom_vline(xintercept = 0.05) +
+        geom_hline(yintercept =-log10(as.numeric(input$sign_vline)), color = 'red', alpha = 0.6, linetype = 'dashed', size = 2) +
+        geom_text(
+          aes(label = GeneRatio, y = p.adjust + 0.05),
+          position = position_stack(vjust = 0.5),
+          vjust = 0
+        ) +
         theme_minimal() +
         theme(axis.text=element_text(size=12),
               axis.title=element_text(size=14,face="bold"))
@@ -654,24 +717,32 @@ shiny::shinyApp(
       }
     })
     
-    output$path_analysis <- renderPlot({
+    output$func_analysis_diseases  <- renderPlot({
+       
+      # enrichNCG
+      # enrichDGN
+      # gseNCG
+      # gseDGN
       
-      test <- hgcn_genes %>% slice(1:100) %>% select(entrez_id) %>% pull()  %>% as.character()
-      univ <- hgcn_genes %>% select(entrez_id) %>% pull() %>% as.character
+      test <<- data_selected()
+      list_genes <- test  %>% slice(1:100) %>% select(entrez_id) %>% pull()  %>% as.character()
       
-      ego <- enrichGO(gene          = test,
-                      universe      = univ,
-                      OrgDb         = org.Hs.eg.db,
-                      ont           = "CC",
-                      pAdjustMethod = "BH",
-                      pvalueCutoff  = 0.01,
-                      qvalueCutoff  = 0.05)
+      # analysis_input <- enrichDGN(list_genes, minGSSize = 5)
+      # barplot(analysis_input, showCategory=20)
       
-      barplot(ego, showCategory=30)
-      
-      
+      enrich_dgn <- enrichDGN(list_genes)
+beepr::beep(3)
+      cnetplot(enrich_dgn, foldChange= hgcn_genes$entrez_id)
       
     })
+    
+    # output$func_analysis_mesh  <- renderPlot({
+    #   
+    #   # x <- enrichMeSH(de, MeSHDb = "MeSH.Hsa.eg.db", database='gendoo', category = 'C')
+    #   dotplot(x)
+    #   
+    #   
+    # })
     
   }
 )

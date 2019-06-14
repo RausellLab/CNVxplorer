@@ -33,10 +33,11 @@ ref_scores <- tibble(score = c('gwas', # we could filter out by number of hits (
                  'triplo',
                  'vg',
             'rvis',
-            'clinvar',
+            'clinvar',  # it could be extended with reference variant - omim - disease
             'ccr',
             'ncRVIS',
-            'ncGERP'), # it could be extended with reference variant - omim - disease
+            'ncGERP',
+            'HI score'),
        level = c('gene',
                  'gene',
                  'gene',
@@ -50,7 +51,23 @@ ref_scores <- tibble(score = c('gwas', # we could filter out by number of hits (
                  'gene',
                  'gene',
                  'gene',
+                 'gene',
                  'gene'),
+       description = c('-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-'),
        type = c('d',
                  'd',
                  'c',
@@ -64,21 +81,23 @@ ref_scores <- tibble(score = c('gwas', # we could filter out by number of hits (
                  'd',
                  'c',
                  'c',
+                  'c',
                  'c'),
-       source = c('http:',
-                  'http:',
-                  'http:',
-                  'http:',
-                  'http:',
-                  'http:',
-                  'http:',
-                  'http:',
-                  'http:',
-                  'http:',
-                  'http:',
-                  'http:',
-                  'http:',
-                  'http:'))
+       source = c('-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-'))
 
 
 # Load datasets
@@ -127,8 +146,8 @@ hgcn_genes <- hgcn_genes %>%
   mutate(clinvar = if_else(gene %in% clinvar_raw, 1, 0)) %>% # List of genes with likely pathogenic and pathogenic variants
   mutate(gwas = if_else(gene %in% gwas, 1, 0)) %>% # GWAS genes
   left_join(ccr) %>% # Genes with CCRs in the 99th percentile or higher 
-  left_join(nc) # non-coding scores RVIS and ncGERP - 5UTR + 3UTR + 250bp upstream
-
+  left_join(nc) %>% # non-coding scores RVIS and ncGERP - 5UTR + 3UTR + 250bp upstream
+  left_join(hi) # Haploinsufficiency Score (HI index)
 
 hgcn_genes <- hgcn_genes %>% rename(chrom = chromosome_name)
 # ------------------------------------------------------------------------------
@@ -140,7 +159,8 @@ hgcn_genes <- hgcn_genes %>% rename(chrom = chromosome_name)
 pli <- read.table('data/gnomad.v2.1.1.lof_metrics.by_gene.txt', header = TRUE, sep = '\t', stringsAsFactors = FALSE) %>%
   as_tibble() %>%
   # filter(canonical == 'true') %>% 
-  select(gene, pLI, transcript, oe_lof, oe_lof_lower, oe_lof_upper )
+  select(gene, pLI, transcript, oe_lof, oe_lof_lower, oe_lof_upper ) %>%
+  mutate(pLI = round(pLI, 2))
 
 # ------------------------------------------------------------------------------
 # Dataset: Vg - Expected population variance in its dosage that is due to genetic differences among individuals
@@ -273,16 +293,33 @@ clinvar_raw <- clinvar_raw %>%
 # ASK ANTONIO IF IT'S WORTHY
 # ------------------------------------------------------------------------------
 
-a <- read.table('data/HI_Predictions_Version3.bed', sep = '\t', skip = 1) %>%
+
+double_genes  <- read.table('data/HI_Predictions_Version3.bed', sep = '\t', skip = 1) %>%
+       as_tibble() %>%
+       select(V4) %>%
+       mutate(V4 = as.character(V4)) %>%
+       filter(str_detect(V4, '-')) %>%
+       separate(V4, into = as.character(1:10)) %>%
+       select(`1`, `5`, `6`) %>%
+       rename(A = `1`, D = `5`, E = `6`)
+      
+
+
+
+
+
+hi <- read.table('data/HI_Predictions_Version3.bed', sep = '\t', skip = 1) %>%
   as_tibble() %>%
   select(V4) %>%
-  mutate(V4 = as.character(V4))
-
-a %>% separate(V4, into = LETTERS[1:10]) %>% 
+  mutate(V4 = as.character(V4)) %>%
+  filter(!str_detect(V4, '-')) %>%
+  separate(V4, into = LETTERS[1:10]) %>% 
   select(A, D, E) %>%
+  rbind(double_genes) %>%
   mutate(E = if_else(E == '', '00', E )) %>%
   mutate(hi = paste(D, E, sep = '.')) %>%
-  mutate(hi = as.numeric(hi))
+  mutate(hi = as.numeric(hi)) %>%
+  select(-D, -E) %>%
   rename(gene = A)
   
   
