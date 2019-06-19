@@ -1,4 +1,74 @@
 
+library(rentrez)
+
+
+###
+
+a <- GET('http://purl.obolibrary.org/obo/MP_0005378')
+a
+
+go <- Ontology("mp")
+
+a <- termLabel(term(go, "MP_0005378"))
+
+mgi_test <- mgi[1:100,]
+mgi_test <- mgi_test %>% separate(pheno, into = LETTERS[1:230], sep = ' ') %>%
+  gather('delete', 'mpo_id', -gene, -entrez_id, -gene_mouse, -mgi) %>%
+  filter(mpo_id != '') %>%
+  mutate(kaka = NA)
+
+
+for (i in 1:nrow(mgi_test)) {
+  
+  mgi_test[i]$kaka <- termLabel(term(go, mgi_test %>% slice(i) %>% select(mpo_id) %>% pull() ))
+}
+
+library(rols)
+
+entrez_db_summary()
+
+entrez_db_searchable("nuccore")
+
+  manolito <- entrez_search(db="gene", term="(DMD[Gene Name]) AND Homo sapiens[Organism]")
+
+  all_recs <- entrez_fetch(db="gene", id=1756, rettype="gene_table")
+  
+a <- entrez_summary(db = 'gene', id = 1752)
+### 
+
+  hgcn_genes %>%
+  slice(1:100) %>%
+  select(gene, pLI) %>%
+  mutate(haplo = if_else(haplo == 1, 'Yes', 'No'))
+  datatable() %>%
+  formatStyle(
+      'pLI',
+      background = styleColorBar(c(0,1), '#ca7171'),
+      backgroundSize = '100% 90%',
+      backgroundRepeat = 'no-repeat',
+      backgroundPosition = 'center'
+    )
+
+
+
+###
+
+
+hgMale <- gganatogram(data=hgMale_key, fillOutline='#a6bddb', organism='human', sex='male', fill="value") + theme_void()
+
+
+
+
+
+gtex %>%
+  filter(gene == 'DDX11L1') %>%
+  ggplot(aes(reorder(tissue, -value), value)) +
+  geom_col(aes(fill = tissue), color = 'black', show.legend = FALSE) +
+  theme_minimal() +
+  xlab('Tissue') +
+  ylab('Median TPM')
+
+
 library(chromPlot)
 
 data(hg19_cytoBandIdeo)

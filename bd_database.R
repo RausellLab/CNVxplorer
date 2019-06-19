@@ -4,6 +4,7 @@
 library(tidyverse)
 library(readxl)
 library(biomaRt)
+library(data.table)
 
 # TODO
 
@@ -382,3 +383,83 @@ nc <- nc_raw %>%
   rename(gene = gene2) %>%
   mutate(ncrvis = round(ncrvis, 3),
          ncgerp = round(ncgerp, 3))
+
+
+
+# ------------------------------------------------------------------------------
+# Dataset: GTEx
+# Source: https://gtexportal.org/home/datasets
+# File name: 	GTEx_Analysis_2016-01-15_v7_RNASeQCv1.1.8_gene_tpm.gct.gz
+# ------------------------------------------------------------------------------
+
+# gtex <- read.table('https://storage.googleapis.com/gtex_analysis_v7/annotations/GTEx_v7_Annotations_SampleAttributesDS.txt',
+#                    sep = '\t', header = TRUE)
+
+gtex <- read.table('data/GTEx_Analysis_2016-01-15_v7_RNASeQCv1.1.8_gene_median_tpm.gct',
+                   sep = '\t', header = TRUE, skip = 2)
+
+gtex <- gtex %>% 
+  as_tibble() %>%
+  rename(gene = Description) %>%
+  select(-gene_id) %>%
+  gather('tissue', 'value', - gene)
+
+# ------------------------------------------------------------------------------
+# Dataset: HPA
+# Source: https://gtexportal.org/home/datasets
+# File name: 	GTEx_Analysis_2016-01-15_v7_RNASeQCv1.1.8_gene_tpm.gct.gz
+# ------------------------------------------------------------------------------
+
+hpa <- read.table('data/normal_tissue.tsv', header = TRUE, sep = '\t')
+
+hpa <- hpa %>%
+  as_tibble() %>%
+  rename(gene = Gene.name, tissue = Tissue, cell_type = Cell.type) %>%
+  # mutate(Level = as.numeric(case_when(
+  #   Level == 'High' ~ "3",
+  #   Level == 'Medium' ~ "2",
+  #   Level == 'Low' ~ "1",
+  #   Level == 'Not detected' ~ "0"
+  # ))) %>%
+  select(-Gene)
+
+# ------------------------------------------------------------------------------
+# Dataset: Mouse phenotype
+# Source: http://www.informatics.jax.org/downloads/reports/HMD_HumanPhenotype.rpt
+# ------------------------------------------------------------------------------
+
+mgi <- read.table('http://www.informatics.jax.org/downloads/reports/HMD_HumanPhenotype.rpt', sep = '\t')
+  
+mgi <- mouse_p %>%
+  as_tibble() %>%
+  select(-V8, -V3) %>%
+  rename(gene = V1, entrez_id = V2, gene_mouse = V5, pheno = V7, mgi = V6) %>%
+  mutate(mgi = str_remove(mgi, pattern = '  ')) %>%
+  select(-V4)
+
+# ------------------------------------------------------------------------------
+# Dataset: OMIM
+# Source: https://data.omim.org/downloads/cpJFEdlrQ5qqPk0TOzvVBA/morbidmap.txt
+# ------------------------------------------------------------------------------
+
+
+morbidmap <- read_xlsx('data/morbidmap.xlsx', skip = 3)
+
+morbidmap <- morbidmap %>% 
+  as_tibble() %>%
+  rename(pheno = `# Phenotype`, gene = `Gene Symbols`, mim_gene = `MIM Number`) %>%
+  select(- `Cyto Location`) %>%
+  mutate(mapping = 
+    case_when(
+      str_detect(pheno, '\\([1]\\)') ~ "1",
+      str_detect(pheno, '\\([2]\\)') ~ "2",
+      str_detect(pheno, '\\([3]\\)') ~ "3",
+      str_detect(pheno, '\\([4]\\)') ~ "4"
+    )) %>%
+  filter(!isNA(mapping)) %>%  # eliminate description at the bottom
+  mutate(pheno = str_remove(pheno, '\\([1-4]\\)' )) %>%
+  mutate(mim_disease = str_extract(pheno, '[0-9]{6}')) %>%
+  mutate(pheno = str_remove(pheno, '[0-9]{6}')) %>%
+  mutate(pheno = str_remove(pheno, ',  ')) %>%
+  select(gene, pheno, mim_gene, mim_disease, mapping)
+
