@@ -1,27 +1,68 @@
 
 library(rentrez)
 
+funnel <- data.frame(stage = c("19,192 genes", "182 genes", "60 genes"), value = c(1, 0.5, 0.25))
 
-###
+funnel %>% 
+  e_charts() %>% 
+  e_funnel(value, stage) %>% 
+  e_title("Funnel")
 
-a <- GET('http://purl.obolibrary.org/obo/MP_0005378')
-a
+##
+
+
+##
+library(httr)
+
+a <- GET('https://ghr.nlm.nih.gov/condition/alzheimer-disease?report=json')
+
+hello <- test1
 
 go <- Ontology("mp")
 
-a <- termLabel(term(go, "MP_0005378"))
+test_tmp <- hello %>% select(gene) %>% pull()
+mgi_tmp <- mgi %>%  filter(gene %in% test_tmp)
+mgi_tmp <- mgi_tmp %>% separate(pheno, into = LETTERS[1:230], sep = ' ') %>%
+  gather('delete', 'mpo_id', -gene, -entrez_id, -gene_mouse, -mgi) %>%
+  filter(mpo_id != '') %>%
+  select(-delete)
 
-mgi_test <- mgi[1:100,]
+vector_mpo <- mgi_tmp %>% select(mpo_id) %>% unique() %>%
+  mutate(description = map_chr(mpo_id, function(x) termLabel(term(go, x)))) %>%
+  mutate(description = str_remove(description, ' phenotype'))
+
+mgi_tmp <- mgi_tmp %>% left_join(vector_mpo)
+
+###
+
+go <- Ontology("mp")
+
+test_tmp <- test15 %>% select(gene) %>% pull()
+mgi_test <- mgi %>% filter(gene %in% test_tmp)
 mgi_test <- mgi_test %>% separate(pheno, into = LETTERS[1:230], sep = ' ') %>%
   gather('delete', 'mpo_id', -gene, -entrez_id, -gene_mouse, -mgi) %>%
   filter(mpo_id != '') %>%
-  mutate(kaka = NA)
+  select(-delete)
+
+vector_mpo <- mgi_test %>% select(mpo_id) %>% unique() %>%
+  mutate(description = map_chr(vector_mpo$mpo_id, function(x) termLabel(term(go, x)))) %>%
+  mutate(description = str_remove(description, ' phenotype'))
+
+mgi_test <- mgi_test %>% left_join(vector_mpo)
+
+a <- tibble(a = 25, b = '<img src="/download.jpg" height="52"></img>')
+
+datatable(a, escape = FALSE)
+
+  e_charts(description) %>% 
+  e_bar(n, name = "Phenotype") %>%
+  e_flip_coords() # flip axis
 
 
-for (i in 1:nrow(mgi_test)) {
-  
-  mgi_test[i]$kaka <- termLabel(term(go, mgi_test %>% slice(i) %>% select(mpo_id) %>% pull() ))
-}
+  mgi_test %>% count(description) %>% arrange(n) %>%
+  e_charts() %>% 
+  e_treemap(description, description, n) %>% 
+  e_title("Description")
 
 library(rols)
 

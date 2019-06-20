@@ -131,7 +131,7 @@ shiny::shinyApp(
           "Gene Panel"
         ),
         tablerNavMenuItem(
-          tabName = "download",
+          tabName = "down_report",
           icon = "download",
           "Download report"
         ),
@@ -264,6 +264,7 @@ shiny::shinyApp(
           # uiOutput('n_genes_rvis'),
           
           uiOutput('n_genes'),
+
           uiOutput("info")
           )
     ),
@@ -310,29 +311,27 @@ shiny::shinyApp(
           width = 12,
           overflow = TRUE
         ),
-        fluidRow(
-          uiOutput('p_3pli'),
-          uiOutput('p_rv4is')
-),
-        # tablerCard(
-        #   title = "List of genes",
-          column(width = 6,
-          uiOutput('p_pli'),
-          uiOutput('p_rvis'),
+       
+          column(width = 3,
+
+          uiOutput('n_clinvar'),
+          uiOutput('n_gwas'),
+          uiOutput('n_d3ev'),
+          uiOutput('n_hi')),
+          column(width = 3,
+                 
           uiOutput('n_dev'),
           uiOutput('n_omim'),
-          
-          uiOutput('n_pli'),
-          
-          overflow = TRUE),
-        # ),
+          uiOutput('n_d43ev'),
+          uiOutput('n_pli')),
+        column(width = 6,
         tablerCard(
           title = "Genome-wide percentile (pLI - RVIS scores)",
           
           plotlyOutput("dot_comparison"),
-          width = 6,
+          width = 12,
           overflow = TRUE
-        )
+        ))
       
     ),
     fluidRow(
@@ -486,19 +485,35 @@ shiny::shinyApp(
     ),
     tablerTabItem(
       tabName = "model",
+      tablerCard(title = 'Phenotypes associated with the list of genes',
+                 echarts4rOutput('agg_model'),
+                 width = 12),
       fluidRow(
-        tablerCard(title = 'Select a gene:',
-                   uiOutput('gene_model'),
-                   width = 3),
+        # tablerCard(title = 'Select a gene:',
+        #            uiOutput('gene_model'),
+        #            width = 3),
         tablerCard(title = 'Genes associated with phenotypes in mouse (MGI)',
                    DTOutput('model_genes'),
-                   width = 9))
+                   width = 12))
       
+      ),
+tablerTabItem(
+  tabName = "down_report",
+  fluidRow(
+    tablerCard(
+      title = "Gene dataset",
       
-      
-      
-      
-      )
+      echarts4rOutput("funnel_genes"),
+      width = 5,
+      overflow = TRUE
+    ),
+    tablerCard(title = '',
+               DTOutput('mode2l_genes'),
+               width = 9))
+  
+)
+
+
       
     
     
@@ -581,6 +596,8 @@ shiny::shinyApp(
         mutate(coordinates = paste0(chrom,':', start_position,'-', end_position)) %>% 
         mutate(oe = paste0(oe_lof, ' (', oe_lof_lower, '-',oe_lof_upper, ')')) %>%
         select(-ensembl_gene_id, -chrom, -transcript, -oe_lof, -oe_lof_lower, -oe_lof_upper, -vg)
+      
+      test1 <<- data_raw
     })
     
     output$dgenes <- renderDataTable({
@@ -649,15 +666,32 @@ shiny::shinyApp(
 
     })
     
+    
+    # output$model_phenotype <- renderDT({
+    #   
+    #   test_tmp <- data_selected() %>% select(gene) %>% pull()
+    #   mgi_test <- mgi %>% filter(gene %in% test_tmp)
+    #   mgi_test <- mgi_test %>% separate(pheno, into = LETTERS[1:230], sep = ' ') %>%
+    #     gather('delete', 'mpo_id', -gene, -entrez_id, -gene_mouse, -mgi) %>%
+    #     filter(mpo_id != '') %>%
+    #     select(-delete)
+    #   
+    #   vector_mpo <- mgi_test %>% select(mpo_id) %>% unique() %>%
+    #     mutate(description = map_chr(vector_mpo$mpo_id, function(x) termLabel(term(go, x))))
+    #   
+    #   mgi_test <- mgi_test %>% left_join(vector_mpo) %>% select(gene, mpo_id, description) %>% count(description)
+    #   test16 <<- mgi_test
+    #   
+    #   
+    # })
+    
+    
+    
     output$model_genes <- renderDT({
       
-      filtered_gene <- input$input_gene_model
-      
-      
-      mgi_tmp <- mgi %>%
-                filter(gene == !!filtered_gene)
+     df_tmp <- model_genes_phenotype() %>% select(-entrez_id, -gene_mouse)
         
-      datatable(mgi_tmp,
+      datatable(df_tmp,
                 options = list(searchHighlight = TRUE,  style = 'bootstrap'))
       
       
@@ -802,15 +836,57 @@ shiny::shinyApp(
     
     output$n_dev <- renderUI({
       
-      test15 <<- data_selected() 
-      
-      n_dev_yes <- data_selected() %>% count(dev) %>% filter(dev == 1) %>% select(n) %>% pull()
+
+      n_dev_yes <- data_selected() %>% filter(dev == 1) %>% nrow()
       n_total <- nrow(data_selected())
       tablerStatCard(
         value =  paste(n_dev_yes, n_total, sep = '/'),
         title = "Developmental disorder genes",
         # trend = -10,
-        width = 6
+        width = 12
+      )
+    })
+    
+    output$n_clinvar <- renderUI({
+      
+      
+      n_clinvar_yes <- data_selected() %>% filter(clinvar == 1) %>% nrow()
+      n_total <- nrow(data_selected())  
+      
+      tablerStatCard(
+        value =  paste(n_clinvar_yes, n_total, sep = '/'),
+        title =  'Genes located in ClinVar',
+        # trend = -10,
+        width = 12
+      )
+    })
+    
+    output$n_gwas <- renderUI({
+      
+      
+      n_gwas_yes <- data_selected() %>% filter(gwas == 1) %>% nrow()
+      n_total <- nrow(data_selected())
+      
+      tablerStatCard(
+        value =  paste(n_gwas_yes, n_total, sep = '/'),
+        title =  'Genes found in GWAS Catalog',
+        # trend = -10,
+        width = 12
+      )
+    })
+    
+    
+    output$n_hi<- renderUI({
+      
+      
+      n_hi_yes <- data_selected() %>% filter(hi <= 10) %>% nrow()
+      n_total <- nrow(data_selected())  
+      
+      tablerStatCard(
+        value =  paste(n_hi_yes, n_total, sep = '/'),
+        title =  paste("Likely to exhibit haploinsufficiency", '(hi <= 10)'),
+        # trend = -10,
+        width = 12
       )
     })
     
@@ -826,7 +902,7 @@ shiny::shinyApp(
         value =  paste(n_pli_yes, n_total, sep = '/'),
         title =  paste("Intolerant to LoF mutations", '(pLI >= 0.9)'),
         # trend = -10,
-        width = 6
+        width = 12
       )
     })
     
@@ -842,7 +918,7 @@ shiny::shinyApp(
         value =  paste(n_omim, n_total, sep = '/'),
         title = "OMIM diseases",
         # trend = -10,
-        width = 6
+        width =  12
       )
     })
     
@@ -892,6 +968,53 @@ shiny::shinyApp(
           label = "Genomic interval - End",
           value = 10000000)
       }
+    })
+    
+    model_genes_phenotype <- reactive({
+      
+      
+      go <- Ontology("mp")
+
+      test_tmp <- data_selected() %>% select(gene) %>% pull()
+      mgi_tmp <- mgi %>% filter(gene %in% test_tmp)
+      mgi_tmp <- mgi_tmp %>% separate(pheno, into = LETTERS[1:230], sep = ' ') %>%
+        gather('delete', 'mpo_id', -gene, -entrez_id, -gene_mouse, -mgi) %>%
+        filter(mpo_id != '') %>%
+        select(-delete)
+      
+      vector_mpo <- mgi_tmp %>% select(mpo_id) %>% unique() %>%
+        mutate(description = map_chr(mpo_id, function(x) termLabel(term(go, x)))) %>%
+        mutate(description = str_remove(description, ' phenotype'))
+
+      mgi_tmp <- mgi_tmp %>% left_join(vector_mpo)
+      
+      mgi_tmp
+
+      
+      
+    })
+    
+    
+    output$agg_model <- renderEcharts4r({
+
+      model_genes_phenotype() %>% count(description) %>% arrange(n) %>%
+        e_charts() %>% 
+        e_treemap(description, description, n) %>%
+        e_tooltip(trigger = "axis") %>%
+        e_title("")
+      
+      
+    })
+    
+    output$funnel_genes <- renderEcharts4r({
+
+      funnel <- data.frame(stage = c("19,192 genes", "182 genes", "60 genes"), value = c(1, 0.5, 0.25))
+      
+      funnel %>% 
+        e_charts() %>% 
+        e_funnel(value, stage) %>% 
+        e_title("")
+
     })
     
     

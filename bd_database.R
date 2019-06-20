@@ -25,80 +25,80 @@ library(data.table)
 # Reference of scores
 
 ref_scores <- tibble(score = c('gwas', # we could filter out by number of hits (no filter - 8652, >1 4498)
-                 'fda',
-                 'pli',
-                 'deg', # CRISPR - mice K.O - aggregated dataset (DEG) (last source from 2013)
-                 'omim', # omim total - autosomal dominant - recessive - X-linked
-                 'dev_disorder',
-                 'haplo',
-                 'triplo',
-                 'vg',
-            'rvis',
-            'clinvar',  # it could be extended with reference variant - omim - disease
-            'ccr',
-            'ncRVIS',
-            'ncGERP',
-            'HI score'),
-       level = c('gene',
-                 'gene',
-                 'gene',
-                 'gene',
-                 'gene',
-                 'gene',
-                 'gene',
-                 'gene',
-                 'gene',
-                 'gene',
-                 'gene',
-                 'gene',
-                 'gene',
-                 'gene',
-                 'gene'),
-       description = c('-',
-                  '-',
-                  '-',
-                  '-',
-                  '-',
-                  '-',
-                  '-',
-                  '-',
-                  '-',
-                  '-',
-                  '-',
-                  '-',
-                  '-',
-                  '-',
-                  '-'),
-       type = c('d',
-                 'd',
-                 'c',
-                 'd',
-                 'd',
-                 'd',
-                 'd',
-                 'd',
-                 'c',
-                 'c',
-                 'd',
-                 'c',
-                 'c',
-                  'c',
-                 'c'),
-       source = c('-',
-                  '-',
-                  '-',
-                  '-',
-                  '-',
-                  '-',
-                  '-',
-                  '-',
-                  '-',
-                  '-',
-                  '-',
-                  '-',
-                  '-',
-                  '-',
-                  '-'))
+                               'fda',
+                               'pli',
+                               'deg', # CRISPR - mice K.O - aggregated dataset (DEG) (last source from 2013)
+                               'omim', # omim total - autosomal dominant - recessive - X-linked
+                               'dev_disorder',
+                               'haplo',
+                               'triplo',
+                               'vg',
+                               'rvis',
+                               'clinvar',  # it could be extended with reference variant - omim - disease
+                               'ccr',
+                               'ncRVIS',
+                               'ncGERP',
+                               'HI score'),
+                     level = c('gene',
+                               'gene',
+                               'gene',
+                               'gene',
+                               'gene',
+                               'gene',
+                               'gene',
+                               'gene',
+                               'gene',
+                               'gene',
+                               'gene',
+                               'gene',
+                               'gene',
+                               'gene',
+                               'gene'),
+                     description = c('-',
+                                     '-',
+                                     '-',
+                                     '-',
+                                     '-',
+                                     '-',
+                                     '-',
+                                     '-',
+                                     '-',
+                                     '-',
+                                     '-',
+                                     '-',
+                                     '-',
+                                     '-',
+                                     '-'),
+                     type = c('d',
+                              'd',
+                              'c',
+                              'd',
+                              'd',
+                              'd',
+                              'd',
+                              'd',
+                              'c',
+                              'c',
+                              'd',
+                              'c',
+                              'c',
+                              'c',
+                              'c'),
+                     source = c('-',
+                                '-',
+                                '-',
+                                '-',
+                                '-',
+                                '-',
+                                '-',
+                                '-',
+                                '-',
+                                '-',
+                                '-',
+                                '-',
+                                '-',
+                                '-',
+                                '-'))
 
 
 # Load datasets
@@ -144,7 +144,7 @@ hgcn_genes <- hgcn_genes %>%
   mutate(dev = if_else(gene %in% dev_genes, 1, 0)) %>% # developmental disorder genes - it can be extended with mode, consecuence and disease
   mutate(fda = if_else(gene %in% fda, 1, 0)) %>% #  Mechanistic targets of FDA-approved drugs 
   left_join(rvis) %>% # RVIS score based
-  mutate(clinvar = if_else(gene %in% clinvar_raw, 1, 0)) %>% # List of genes with likely pathogenic and pathogenic variants
+  mutate(clinvar = as.factor(if_else(gene %in% clinvar_raw, 1, 0))) %>% # List of genes with likely pathogenic and pathogenic variants
   mutate(gwas = if_else(gene %in% gwas, 1, 0)) %>% # GWAS genes
   left_join(ccr) %>% # Genes with CCRs in the 99th percentile or higher 
   left_join(nc) %>% # non-coding scores RVIS and ncGERP - 5UTR + 3UTR + 250bp upstream
@@ -198,7 +198,7 @@ clingen <- clingen_raw %>% as_tibble() %>% filter(score == 3) %>% select(gene) %
 # ------------------------------------------------------------------------------
 
 triplo <- read.table('data/ClinGen_triplosensitivity_gene.bed', col.names = c('chrom', 'start', 'end', 'gene', 'score'), stringsAsFactors = FALSE,
-                          skip = 1, sep = '\t') %>%
+                     skip = 1, sep = '\t') %>%
   as_tibble() %>%
   filter(score == 1) %>%
   select(gene) %>%
@@ -285,8 +285,9 @@ clinvar_raw <- clinvar_raw %>%
   mutate(gene = str_remove(gene, 'GENEINFO=')) %>%
   mutate(gene = str_remove(gene, '\\:.*')) %>%
   distinct() %>%
-  na.omit()
-  
+  na.omit() %>%
+  pull()
+
 # ------------------------------------------------------------------------------
 # Dataset: Haploinsufficiency prediction
 # Source: https://decipher.sanger.ac.uk/about#downloads/data
@@ -296,14 +297,14 @@ clinvar_raw <- clinvar_raw %>%
 
 
 double_genes  <- read.table('data/HI_Predictions_Version3.bed', sep = '\t', skip = 1) %>%
-       as_tibble() %>%
-       select(V4) %>%
-       mutate(V4 = as.character(V4)) %>%
-       filter(str_detect(V4, '-')) %>%
-       separate(V4, into = as.character(1:10)) %>%
-       select(`1`, `5`, `6`) %>%
-       rename(A = `1`, D = `5`, E = `6`)
-      
+  as_tibble() %>%
+  select(V4) %>%
+  mutate(V4 = as.character(V4)) %>%
+  filter(str_detect(V4, '-')) %>%
+  separate(V4, into = as.character(1:10)) %>%
+  select(`1`, `5`, `6`) %>%
+  rename(A = `1`, D = `5`, E = `6`)
+
 
 
 
@@ -322,8 +323,8 @@ hi <- read.table('data/HI_Predictions_Version3.bed', sep = '\t', skip = 1) %>%
   mutate(hi = as.numeric(hi)) %>%
   select(-D, -E) %>%
   rename(gene = A)
-  
-  
+
+
 
 # ------------------------------------------------------------------------------
 # Dataset: GWAS genes
@@ -334,7 +335,7 @@ hi <- read.table('data/HI_Predictions_Version3.bed', sep = '\t', skip = 1) %>%
 
 
 gwas_raw <- read.table('data/gwas_catalog_v1.0-associations_e96_r2019-05-03.tsv', header = TRUE, sep = '\t',
-                   fill = TRUE)
+                       fill = TRUE)
 
 gwas <- gwas_raw %>% as.tibble() %>% 
   select(CHR_ID, CHR_POS, INTERGENIC, REPORTED.GENE.S.) %>% 
@@ -350,7 +351,8 @@ gwas <- gwas_raw %>% as.tibble() %>%
   filter(INTERGENIC == 0) %>%
   select(gene) %>%
   distinct() %>%
-  na.omit()
+  na.omit() %>%
+  pull()
 
 # ------------------------------------------------------------------------------
 # Dataset: CCR score - Nº of regions located in a gene that are above of P99
@@ -429,13 +431,14 @@ hpa <- hpa %>%
 # ------------------------------------------------------------------------------
 
 mgi <- read.table('http://www.informatics.jax.org/downloads/reports/HMD_HumanPhenotype.rpt', sep = '\t')
-  
+
 mgi <- mouse_p %>%
   as_tibble() %>%
   select(-V8, -V3) %>%
   rename(gene = V1, entrez_id = V2, gene_mouse = V5, pheno = V7, mgi = V6) %>%
   mutate(mgi = str_remove(mgi, pattern = '  ')) %>%
-  select(-V4)
+  select(-V4) %>%
+  filter(pheno != '')
 
 # ------------------------------------------------------------------------------
 # Dataset: OMIM
@@ -450,12 +453,12 @@ morbidmap <- morbidmap %>%
   rename(pheno = `# Phenotype`, gene = `Gene Symbols`, mim_gene = `MIM Number`) %>%
   select(- `Cyto Location`) %>%
   mutate(mapping = 
-    case_when(
-      str_detect(pheno, '\\([1]\\)') ~ "1",
-      str_detect(pheno, '\\([2]\\)') ~ "2",
-      str_detect(pheno, '\\([3]\\)') ~ "3",
-      str_detect(pheno, '\\([4]\\)') ~ "4"
-    )) %>%
+           case_when(
+             str_detect(pheno, '\\([1]\\)') ~ "1",
+             str_detect(pheno, '\\([2]\\)') ~ "2",
+             str_detect(pheno, '\\([3]\\)') ~ "3",
+             str_detect(pheno, '\\([4]\\)') ~ "4"
+           )) %>%
   filter(!isNA(mapping)) %>%  # eliminate description at the bottom
   mutate(pheno = str_remove(pheno, '\\([1-4]\\)' )) %>%
   mutate(mim_disease = str_extract(pheno, '[0-9]{6}')) %>%
@@ -463,3 +466,22 @@ morbidmap <- morbidmap %>%
   mutate(pheno = str_remove(pheno, ',  ')) %>%
   select(gene, pheno, mim_gene, mim_disease, mapping)
 
+
+# ------------------------------------------------------------------------------
+# Dataset: Paralogous genes
+# Source: biomart
+# ------------------------------------------------------------------------------
+
+
+human  <- useMart("ensembl", dataset = "hsapiens_gene_ensembl",
+                  host    = "grch37.ensembl.org",
+                  path    = "/biomart/martservice")
+
+
+para_genes <- getBM(attributes = c('ensembl_gene_id', 'hsapiens_paralog_ensembl_gene'), 
+                        mart = human )
+
+para_genes %>% as_tibble() %>%
+  rename(gene = ensembl_gene_id, para = hsapiens_paralog_ensembl_gene) %>%
+  filter(para != '') %>%
+  count(gene)
