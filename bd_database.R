@@ -478,10 +478,11 @@ human  <- useMart("ensembl", dataset = "hsapiens_gene_ensembl",
                   path    = "/biomart/martservice")
 
 
-para_genes <- getBM(attributes = c('ensembl_gene_id', 'hsapiens_paralog_ensembl_gene'), 
+para_genes <- getBM(attributes = c('external_gene_name', 'hsapiens_paralog_ensembl_gene'), 
                         mart = human )
 
 para_genes %>% as_tibble() %>%
-  rename(gene = ensembl_gene_id, para = hsapiens_paralog_ensembl_gene) %>%
+  rename(gene = external_gene_name, para = hsapiens_paralog_ensembl_gene) %>%
   filter(para != '') %>%
-  count(gene)
+  count(gene) %>%
+  filter(gene == 'DMD')
