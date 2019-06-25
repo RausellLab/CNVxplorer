@@ -21,6 +21,8 @@ library(org.Hs.eg.db)
 library(patchwork)
 library(DOSE)
 library(enrichplot)
+library(rentrez)
+
 
 
 human_chrom <- hg19 <- list('chr1' = 1, 'chr2' = 2,'chr3' = 3,'chr4' = 4,'chr5' = 5,'chr6' = 6,'chr7' = 7,'chr8' = 8,'chr9' = 9,'chr10' = 10,'chr11' = 11,'chr12' = 12,'chr13' = 13,
@@ -28,6 +30,9 @@ human_chrom <- hg19 <- list('chr1' = 1, 'chr2' = 2,'chr3' = 3,'chr4' = 4,'chr5' 
                             'chrX' = 'X','chrY' = 'Y')
 
 hg_cytoBandIdeo <- chromPlot::hg_cytoBandIdeo
+
+
+
 
 # datas flowGl
 vectors <- expand.grid(x = -3:3, y = -3:3)
@@ -89,9 +94,12 @@ calendarCard <- tablerBlogCard(
 
 # app
 shiny::shinyApp(
+ 
   ui = tablerDashPage(
     # enable_preloader = TRUE,
     # loading_duration = 4,
+    
+    
     navbar = tablerDashNav(
       
       navMenu = tablerNavMenu(
@@ -124,6 +132,11 @@ shiny::shinyApp(
           tabName = "tissue",
           icon = "box",
           "Tissue-specificity"
+        ),
+        tablerNavMenuItem(
+          tabName = "disease",
+          icon = "box",
+          "Disease-specificity"
         ),
         tablerNavMenuItem(
           tabName = "gene",
@@ -220,6 +233,7 @@ shiny::shinyApp(
             overflow = FALSE
           )
         ),
+
         tablerTabItem(
           tabName = "Page1",
       
@@ -316,13 +330,13 @@ shiny::shinyApp(
 
           uiOutput('n_clinvar'),
           uiOutput('n_gwas'),
-          uiOutput('n_d3ev'),
+          uiOutput('n_d4ev'),
           uiOutput('n_hi')),
           column(width = 3,
                  
           uiOutput('n_dev'),
           uiOutput('n_omim'),
-          uiOutput('n_d43ev'),
+          uiOutput('n_pubmed'),
           uiOutput('n_pli')),
         column(width = 6,
         tablerCard(
@@ -423,6 +437,56 @@ shiny::shinyApp(
       #   
       # ),
       tablerCard(
+        title = "Gene ontology",
+        width = 12,
+        zoomable = FALSE,
+        closable = FALSE,
+        uiOutput('plot_df') ,
+        options = tagList(
+          switchInput(
+            inputId = "enable_group_go",
+            label = "Run?",
+            value = FALSE,
+            onStatus = "success",
+            offStatus = "danger"
+            
+          ),
+          switchInput(
+            inputId = "user_df_plot",
+            label = "Table?",
+            value = FALSE,
+            onStatus = "success",
+            offStatus = "danger"
+            
+          ),
+          pickerInput(
+            inputId = "user_level",
+            label = tags$b("Level:"), 
+            choices = 1:52,
+            width = 130,
+            options = list(
+              size = 10,
+              `live-search` = TRUE)),
+          prettyRadioButtons(
+            inputId = "choose_group_go",
+            label = tags$b("Select one option:"), 
+            choices = c("biological process", "molecular function", "cellular component"),
+            inline = TRUE, 
+            status = "primary",
+            fill = TRUE
+          )
+          
+          
+          )
+      ),
+      # tablerCard(
+      #   title = "Gene ontology",
+      #   width = 12,
+      #   zoomable = FALSE,
+      #   closable = FALSE,
+      #   DTOutput('df_22go') %>% withSpinner(type = 5)
+      # ),
+      tablerCard(
         title = "Gene Ontology",
         width = 12,
         zoomable = FALSE,
@@ -438,7 +502,7 @@ shiny::shinyApp(
             
           ),
           pickerInput(
-            inputId = "sign_v2line",
+            inputId = "sign_vline",
             label = tags$b("P.value threshold:"), 
             choices = c("0.05", "0.01", "0.005"),
             width = 130),
@@ -464,11 +528,24 @@ shiny::shinyApp(
         width = 12,
         zoomable = FALSE,
         closable = FALSE
-        
-        
       )
       
     ),
+    tablerTabItem(
+      tabName = "disease",
+      fluidRow(
+        tablerCard(title = 'Select a region:',
+                   uiOutput('gen2e_tissue'),
+                   width = 3),
+        tablerCard(title = 'PubMed',
+                   DTOutput('disease_pubmed'),
+                   width = 9)),
+      tablerCard(title = 'RNA Expression (GTEx)',
+                 plotlyOutput('tissue4_gtex'),
+                 width = 12)
+      
+    ),
+    
     tablerTabItem(
       tabName = "tissue",
       fluidRow(
@@ -480,7 +557,7 @@ shiny::shinyApp(
                  width = 9)),
       tablerCard(title = 'RNA Expression (GTEx)',
                  plotlyOutput('tissue_gtex'),
-                 width = 9)
+                 width = 12)
 
     ),
     tablerTabItem(
@@ -501,7 +578,7 @@ tablerTabItem(
   tabName = "down_report",
   fluidRow(
     tablerCard(
-      title = "Gene dataset",
+      title = "Funnel overview",
       
       echarts4rOutput("funnel_genes"),
       width = 5,
@@ -531,6 +608,8 @@ tablerTabItem(
       test4 <<- input$dgenes_rows_selected
       print(test4)
     })
+    
+    
     
     
     output$gene_tissue <- renderUI({
@@ -564,6 +643,46 @@ tablerTabItem(
           `live-search` = TRUE))
       
       
+      
+    })
+    
+    
+    query_pubmed <- reactive({
+      
+      query_pubmed <- entrez_search(db="pubmed", term="22q11.2", retmax = 200 )
+   
+
+      
+    })
+    
+    output$n_pubmed <- renderUI({
+      
+      tablerStatCard(
+        value =   length(query_pubmed()[['ids']]),
+        title = "Number of articles found in Pubmed",
+        width = 12
+      )
+      
+    })
+    
+    
+    output$disease_pubmed <- renderDT({
+      
+      test21 <<- query_pubmed()
+      query_tmp <- entrez_summary(db="pubmed", id= query_pubmed()[['ids']])
+      
+      title <- unname(map_chr(query_tmp, function(x) x[["title"]]))
+      n_cites <- unname(map_chr(query_tmp, function(x) x[["pmcrefcount"]]))
+      
+      df_output <- tibble(title = title, n_cites = n_cites)
+
+  
+      datatable(df_output, rownames = FALSE, filter = 'top', 
+                options = list(
+                  pageLength = 5, autoWidth = TRUE, style = 'bootstrap', list(searchHighlight = TRUE),
+                  selection = 'single',
+                  columnDefs = list(list(className = 'dt-center', targets = '_all'))
+                ))
       
     })
     
@@ -1081,7 +1200,7 @@ tablerTabItem(
                       OrgDb         = org.Hs.eg.db,
                       ont           = go_chosen,
                       pAdjustMethod = "BH",
-                      pvalueCutoff  = 0.01,
+                      pvalueCutoff  = 0.05,
                       qvalueCutoff  = 0.05)
       
       validate(
@@ -1112,29 +1231,108 @@ tablerTabItem(
               axis.title=element_text(size=14,face="bold"))
       
       a
-      
-      # b <-  pathway_analysis %>%
-      #   as_tibble() %>% 
-      #   mutate(p.adjust = -log10(p.adjust)) %>%
-      #   ggplot(aes(reorder(Description, p.adjust), p.adjust)) +
-      #   geom_col(aes(fill = Description), color = 'black', show.legend = FALSE) +
-      #   scale_fill_viridis_d() +
-      #   coord_flip() +
-      #   xlab('') +
-      #   ylab('-log10(p-adjusted)') +
-      #   ggtitle('Pathway analysis') +
-      #   geom_hline(yintercept =-log10(as.numeric(input$sign_vline)), color = 'red', alpha = 0.6, linetype = 'dashed', size = 2) +
-      #   geom_text(
-      #     aes(label = GeneRatio, y = p.adjust + 0.05),
-      #     position = position_stack(vjust = 0.5),
-      #     vjust = 0
-      #   ) +
-      #   theme_minimal() +
-      #   theme(axis.text=element_text(size=12),
-      #         axis.title=element_text(size=14,face="bold"))
-      
+
       
       }
+    })
+    
+    running_go <- reactive({
+      
+      
+      req(isTRUE(input$enable_group_go))
+      
+      
+      if (input$choose_group_go == 'biological process') {
+        go_chosen <- 'BP'
+      } else if (input$choose_group_go == 'molecular function') {
+        go_chosen <- 'MF'
+      } else {
+        go_chosen <- 'CC'
+      }
+      
+      n_level <- as.numeric(input$user_level)
+      
+      filtered_genes <- data_selected() %>% select(entrez_id) %>% pull()  %>% as.character()
+      
+      tryCatch(
+        
+        ggo <- groupGO(gene     = filtered_genes,
+                       OrgDb    = org.Hs.eg.db,
+                       ont      = go_chosen,
+                       level    = n_level,
+                       readable = TRUE),
+        
+        
+        error= function(e) stop("Please, reduce the level assigned"))
+      # test20 <<- ggo
+      
+      
+      validate(
+        need(ggo %>% as_tibble() %>% select(Count) %>% sum() != 0, "0 terms found. Please reduce the level assigned")
+      )
+      
+      
+      ggo
+      
+    })
+    
+    
+    output$plot_df <- renderUI({
+      
+      if (isTRUE(input$user_df_plot)) {
+        
+        DTOutput('df_go')
+        
+      } else {
+        plotOutput('group_go')
+        
+      }
+
+    })
+    
+    
+    output$group_go  <- renderPlot({
+      
+      running_go() %>%
+        as_tibble() %>%
+        arrange(desc(Count)) %>%
+        filter(Count != 0) %>%
+        slice(1:10) %>%
+        as_tibble() %>% 
+        # mutate(p.adjust = -log10(p.adjust)) %>%
+        ggplot(aes(reorder(Description, Count), Count)) +
+        geom_col(aes(fill = Description), color = 'black', show.legend = FALSE) +
+        scale_fill_viridis_d() +
+        coord_flip() +
+        xlab('') +
+        ylab('Number of genes') +
+        geom_text(
+          aes(label = GeneRatio, y = Count + 0.05),
+          position = position_stack(vjust = 0.5),
+          vjust = 0
+        ) +
+        theme_minimal() +
+        theme(axis.text=element_text(size=12),
+              axis.title=element_text(size=14,face="bold"))
+      
+      
+      
+    })
+    
+    
+    output$df_go  <- renderDT({
+      
+      df <- running_go() %>%
+        as_tibble() %>%
+        filter(Count != 0) %>%
+        arrange(desc(Count)) %>%
+        separate(geneID, sep = '/', into = as.character(1:1000)) %>%
+        gather('delete', 'gene', -ID, -Description, -Count, -GeneRatio) %>%
+        select(-delete) %>%
+        na.omit()
+      
+      datatable(df)
+      
     })
     
     output$func_pathways  <- renderPlot({
@@ -1181,12 +1379,14 @@ tablerTabItem(
       # analysis_input <- enrichDGN(list_genes, minGSSize = 5)
       # barplot(analysis_input, showCategory=20)
       
-      enrich_dgn <- enrichDGN(list_genes)
+      # enrich_dgn <- enrichDGN(list_genes)
+      enrich_dgn <- enrichDO(list_genes)
+      
       
       validate(
         need(nrow(enrich_dgn) != 0, "0 enriched terms found")
       )
-      cnetplot(enrich_dgn, foldChange= hgcn_genes$entrez_id)
+      cnetplot(enrich_dgn, foldChange= hgcn_genes$entrez_id, readable = TRUE)
       
     })
     

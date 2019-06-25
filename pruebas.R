@@ -1,12 +1,73 @@
 
-library(rentrez)
 
-funnel <- data.frame(stage = c("19,192 genes", "182 genes", "60 genes"), value = c(1, 0.5, 0.25))
 
-funnel %>% 
-  e_charts() %>% 
-  e_funnel(value, stage) %>% 
-  e_title("Funnel")
+
+  
+  filtered_genes <- test1 %>% select(entrez_id) %>% pull()  %>% as.character()
+
+  ggo <- groupGO(gene     = filtered_genes,
+                 OrgDb    = org.Hs.eg.db,
+                 ont      = "BP",
+                 level    = 13,
+                 readable = TRUE),
+  
+  
+  barplot(ggo)
+  
+  query_tmp <- entrez_summary(db="pubmed", id= test21[['ids']])
+  
+  title <- unname(map_chr(query_tmp, function(x) x[["title"]]))
+  n_cites <- unname(map_chr(query_tmp, function(x) x[["pmcrefcount"]]))
+  
+  df_output <- tibble(title = title, n_cites = n_cites)
+  
+  
+  datatable(v, options = list(
+    pageLength = 5, autoWidth = TRUE, style = 'bootstrap'))
+  
+  ggo %>% 
+    as_tibble() %>%
+    filter(Count != 0) %>%
+    arrange(desc(Count)) %>%
+    separate(geneID, sep = '/', into = as.character(1:1000)) %>%
+    gather('delete', 'gene', -ID, -Description, -Count, -GeneRatio) %>%
+    select(-delete) %>%
+    na.omit()
+    
+  
+  ggo %>%
+    as_tibble() %>%
+    arrange(desc(Count)) %>%
+    slice(1:10) %>%
+    as_tibble() %>% 
+    # mutate(p.adjust = -log10(p.adjust)) %>%
+    ggplot(aes(reorder(Description, Count), Count)) +
+    geom_col(aes(fill = Description), color = 'black', show.legend = FALSE) +
+    scale_fill_viridis_d() +
+    coord_flip() +
+    xlab('') +
+    ylab('-log10(p-adjusted)') +
+    ggtitle('Pathway analysis') +
+    geom_text(
+      aes(label = GeneRatio, y = Count + 0.05),
+      position = position_stack(vjust = 0.5),
+      vjust = 0
+    ) +
+    theme_minimal() +
+    theme(axis.text=element_text(size=12),
+          axis.title=element_text(size=14,face="bold"))
+  
+
+a <- entrez_search(db="pubmed", term="22q11.2", retmax = 200 )
+
+
+a <- entrez_summary(db="pubmed", id=a$ids)
+
+
+
+b <- unname(map_chr(a, function(x) x[["title"]]))
+b <- unname(map_chr(a, function(x) x[["pmcrefcount"]]))
+
 
 ##
 
