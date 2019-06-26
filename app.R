@@ -34,64 +34,6 @@ hg_cytoBandIdeo <- chromPlot::hg_cytoBandIdeo
 
 
 
-# datas flowGl
-vectors <- expand.grid(x = -3:3, y = -3:3)
-mu <- 1
-vectors$sx <- vectors$y
-vectors$sy <- mu * (1 - vectors$x^2) * vectors$y - vectors$x
-vectors$color <- log10(runif(nrow(vectors), 1, 10))
-
-# calendar plot
-dates <- seq.Date(as.Date("2018-01-01"), as.Date("2018-12-31"), by = "day")
-values <- rnorm(length(dates), 20, 6)
-
-year <- data.frame(date = dates, values = values)
-
-# cards
-flowCard <- tablerCard(
-  title = "Karyotype",
-  closable = FALSE,
-  zoomable = FALSE,
-  options = tagList(
-    tablerAvatar(status = "lime", url = "https://john-coene.com/img/profile.png"),
-    tablerTag(name = "build", addon = "passing", addonColor = "success")
-  ),
-  width = 12,
-  plotOutput("flowGl")
-)
-
-
-
-profileCard <- tablerProfileCard(
-  width = 12,
-  title = "Peter Richards",
-  subtitle = "Big belly rude boy, million
-  dollar hustler. Unemployed.",
-  background = "https://preview.tabler.io/demo/photos/ilnur-kalimullin-218996-500.jpg",
-  src = "https://preview.tabler.io/demo/faces/male/16.jpg",
-  tablerSocialLinks(
-    tablerSocialLink(
-      name = "facebook",
-      href = "https://www.facebook.com",
-      icon = "facebook"
-    ),
-    tablerSocialLink(
-      name = "twitter",
-      href = "https://www.twitter.com",
-      icon = "twitter"
-    )
-  )
-)
-
-
-
-calendarCard <- tablerBlogCard(
-  horizontal = TRUE,
-  width = 12,
-  echarts4rOutput("calendar")
-)
-
-
 # app
 shiny::shinyApp(
  
@@ -271,7 +213,7 @@ shiny::shinyApp(
          tags$br()
         ),
         column(6,
-               plotOutput('flowGl')),
+               plotOutput('plot_chrom', height = 200)),
         column(
           width = 3,
           # uiOutput('n_genes_pli'),
@@ -335,6 +277,7 @@ shiny::shinyApp(
           column(width = 3,
                  
           uiOutput('n_dev'),
+          uiOutput('n_tads'),
           uiOutput('n_omim'),
           uiOutput('n_pubmed'),
           uiOutput('n_pli')),
@@ -680,8 +623,8 @@ tablerTabItem(
       datatable(df_output, rownames = FALSE, filter = 'top', 
                 options = list(
                   pageLength = 5, autoWidth = TRUE, style = 'bootstrap', list(searchHighlight = TRUE),
-                  selection = 'single',
-                  columnDefs = list(list(className = 'dt-center', targets = '_all'))
+                  selection = 'single'
+                  # columnDefs = list(list(className = 'dt-center', targets = '_all'))
                 ))
       
     })
@@ -714,7 +657,7 @@ tablerTabItem(
         rename(band = location) %>% 
         mutate(coordinates = paste0(chrom,':', start_position,'-', end_position)) %>% 
         mutate(oe = paste0(oe_lof, ' (', oe_lof_lower, '-',oe_lof_upper, ')')) %>%
-        select(-ensembl_gene_id, -chrom, -transcript, -oe_lof, -oe_lof_lower, -oe_lof_upper, -vg)
+        select(-ensembl_gene_id, -transcript, -oe_lof, -oe_lof_lower, -oe_lof_upper, -vg)
       
       test1 <<- data_raw
     })
@@ -722,7 +665,7 @@ tablerTabItem(
     output$dgenes <- renderDataTable({
       
       server <- TRUE
-      data_input <- data_selected() %>% select(-start_position, -end_position)
+      data_input <- data_selected() %>% select(-start_position, -end_position) %>% select(-chrom)
 
       datatable(data_input, rownames = FALSE, filter = 'top', 
                 # extensions = 'Responsive',
@@ -864,10 +807,16 @@ tablerTabItem(
       mtcars[, c("mpg", input$variable), drop = FALSE]
     }, rownames = TRUE)
     
-    output$flowGl <- renderPlot({
+    output$plot_chrom <- renderPlot({
+      
       input_chr <- paste0('chr', input$input_chrom)
-      data_input <- data_selected()
-      plotKaryotype()
+      
+      # data_input <- data_selected()
+      # plotKaryotype()
+      
+      ideoTrack <- IdeogramTrack(genome="hg19", chromosome= input_chr)
+      plotTracks(ideoTrack, from= input$int_start , to= input$int_end, showBandId=TRUE,
+                 cex.bands=0.5)
         
       # plotKaryotype(chromosomes = input_chr, plot.type = 2) %>%
       # kpDataBackground(data.panel = 1)
@@ -951,6 +900,19 @@ tablerTabItem(
       )
       
       
+    })
+    
+    output$n_tads <- renderUI({
+      
+      
+      n_tads <- check_tads(input$input_chrom, input$int_start, input$int_end )
+      n_total <- nrow(data_selected())
+      tablerStatCard(
+        value =  length(n_tads),
+        title = "Number of TADs disrupted",
+        # trend = -10,
+        width = 12
+      )
     })
     
     output$n_dev <- renderUI({
@@ -1264,14 +1226,13 @@ tablerTabItem(
         
         
         error= function(e) stop("Please, reduce the level assigned"))
-      # test20 <<- ggo
+      test20 <<- ggo
       
       
       validate(
         need(ggo %>% as_tibble() %>% select(Count) %>% sum() != 0, "0 terms found. Please reduce the level assigned")
       )
-      
-      
+  
       ggo
       
     })
@@ -1329,7 +1290,8 @@ tablerTabItem(
         separate(geneID, sep = '/', into = as.character(1:1000)) %>%
         gather('delete', 'gene', -ID, -Description, -Count, -GeneRatio) %>%
         select(-delete) %>%
-        na.omit()
+        na.omit() %>%
+        distinct()
       
       datatable(df)
       
@@ -1353,7 +1315,7 @@ tablerTabItem(
         coord_flip() +
         xlab('') +
         ylab('-log10(p-adjusted)') +
-        ggtitle('Pathway analysis') +
+        ggtitle('Enriched pathways') +
         geom_hline(yintercept =-log10(as.numeric(input$sign_vline)), color = 'red', alpha = 0.6, linetype = 'dashed', size = 2) +
         geom_text(
           aes(label = GeneRatio, y = p.adjust + 0.05),

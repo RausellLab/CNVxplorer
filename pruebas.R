@@ -12,6 +12,82 @@
                  readable = TRUE),
   
   
+  
+test20 %>%
+    as_tibble() %>%
+    filter(Count != 0) %>%
+    arrange(desc(Count)) %>%
+    separate(geneID, sep = '/', into = as.character(1:1000)) %>%
+    gather('delete', 'gene', -ID, -Description, -Count, -GeneRatio) %>%
+    select(-delete) %>%
+    na.omit() %>%
+    filter(Description == 'axonogenesis') %>%
+    distinct()
+  
+  
+  library(Gviz)
+  
+  ideoTrack <- IdeogramTrack(genome="hg19", chromosome="chr4")
+  plotTracks(ideoTrack, from=85e6, to=129e6)
+  
+  
+  tad 
+  
+  
+  
+
+check_tads <- function(chrom = NULL, start = NULL, end = NULL) {
+  
+
+        chrom_tmp <-  chrom
+        start_tmp <-  start
+        end_tmp <-  end
+    
+
+  tmp_df <- tad %>%
+      filter(chrom == !!chrom_tmp) %>%
+      mutate(check_tad = if_else(start_tmp <= start & end_tmp >= start, 1, 0 )) %>%
+      mutate(check_tad2 = if_else(start_tmp <= end & end_tmp >= end, 1, 0 )) %>%
+      mutate(check_tad3 = if_else(start_tmp <= start & end_tmp >= end, 1, 0 )) %>%
+      mutate(check_final_tad = if_else(check_tad  + check_tad2 + check_tad3 > 0, 1, 0 )) %>%
+      select(id, check_final_tad) %>%
+      filter(check_final_tad > 0)
+  
+  if (nrow(tmp_df) > 0) {
+    
+    list_tads <- as.vector(tmp_df %>% pull(id))
+    
+    
+  } else {
+    
+    list_tads <- 0
+  
+  }
+  
+  return(list_tads)
+  
+  
+}
+
+
+check_tads('3', 1020000, 3900000 )
+  
+start = 1720000
+end = 3400000
+
+  
+if_else(start_tmp >= start & end_tmp >= end, 1, 0)
+    
+  
+       
+  tad %>% slice(1027)
+  
+    
+  test_df %>% filter(tad_check > 0)
+  
+  
+  
+  
   barplot(ggo)
   
   query_tmp <- entrez_summary(db="pubmed", id= test21[['ids']])

@@ -486,3 +486,67 @@ para_genes %>% as_tibble() %>%
   filter(para != '') %>%
   count(gene) %>%
   filter(gene == 'DMD')
+
+
+# ------------------------------------------------------------------------------
+# Dataset: Structural Variants (SV)
+# Source: https://gnomad.broadinstitute.org/downloads
+# ------------------------------------------------------------------------------
+
+
+gnomad_sv_raw <- read.table('/home/cbl02/Storage/data/gnomad_v2_sv.sites.bed', sep = '\t', header = TRUE)
+
+
+gnomad_sv_raw %>%
+  as_tibble()
+
+
+# ------------------------------------------------------------------------------
+# Dataset: Structural Variants (SV)
+# Source: https://decipher.sanger.ac.uk/about#downloads/data
+# ------------------------------------------------------------------------------
+
+decipher_sv_raw <- read.table('/home/cbl02/Storage/data/population_cnv.txt', sep = '\t', header = TRUE)
+
+decipher_sv_raw %>%
+  as_tibble()
+
+
+
+# ------------------------------------------------------------------------------
+# Dataset: Protein-Protein interaction network
+# Source: https://www.intomics.com/inbio/map.html#downloads
+# Name file: inBio_Map_core_2016_09_12.tar.gz
+# ------------------------------------------------------------------------------
+
+inbio_network_raw <- read.table('/home/cbl02/Storage/data/core.psimitab', sep = '\t', header = FALSE)
+
+inbio_network <- inbio_network_raw %>%
+  as_tibble() %>%
+  slice(1:100)
+
+
+# ------------------------------------------------------------------------------
+# Dataset: Human Phenotype Ontology
+# Source: http://compbio.charite.de/jenkins/job/hpo.annotations/lastStableBuild/artifact/misc/phenotype_annotation.tab
+# Name file: phenotype_annotation.tab
+# ------------------------------------------------------------------------------
+
+# ERROR!!
+hpo_raw <- read.table('http://compbio.charite.de/jenkins/job/hpo.annotations/lastStableBuild/artifact/misc/phenotype_annotation.tab', 
+                      sep = '\t', header = FALSE, fill = TRUE)
+
+# ------------------------------------------------------------------------------
+# Dataset: TADs
+# Source: 30765865 - 25693564
+# Name file: https://raw.githubusercontent.com/JacobSpectorMD/ClinTAD/master/home/files/boundary.txt
+# ------------------------------------------------------------------------------
+
+tad <- read.table('https://raw.githubusercontent.com/JacobSpectorMD/ClinTAD/master/home/files/boundary.txt', header = FALSE, sep = '\t', 
+                  stringsAsFactors = FALSE)
+
+tad <- tad %>%
+  as_tibble() %>%
+  rename(chrom = V1, start = V2, end = V3) %>%
+  mutate(chrom = str_remove(chrom, 'chr')) %>%
+  mutate(id = row_number()) %>% select(id, chrom, start, end)
