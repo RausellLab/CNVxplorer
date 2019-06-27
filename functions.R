@@ -1,6 +1,9 @@
 
-
-
+# ------------------------------------------------------------------------------
+# Name function: check_tads
+# Description: Check if a specific interval (chrom, start, end) overlap with any TADs limit
+# in that case, the function retrieves a vector with the TADs disrupted.
+# ------------------------------------------------------------------------------
 
 
 check_tads <- function(chrom = NULL, start = NULL, end = NULL) {
