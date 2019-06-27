@@ -532,7 +532,7 @@ inbio_network <- inbio_network_raw %>%
 # Name file: phenotype_annotation.tab
 # ------------------------------------------------------------------------------
 
-# ERROR!!
+# ERROR - LESS ROWS THAN  FILE!!
 hpo_raw <- read.table('http://compbio.charite.de/jenkins/job/hpo.annotations/lastStableBuild/artifact/misc/phenotype_annotation.tab', 
                       sep = '\t', header = FALSE, fill = TRUE)
 
@@ -550,3 +550,136 @@ tad <- tad %>%
   rename(chrom = V1, start = V2, end = V3) %>%
   mutate(chrom = str_remove(chrom, 'chr')) %>%
   mutate(id = row_number()) %>% select(id, chrom, start, end)
+
+
+# ------------------------------------------------------------------------------
+# Dataset: Genehancer
+# Version: 4.11
+# Name file: Email from Marilyn
+# ------------------------------------------------------------------------------
+
+genehancer <- read.table('/home/cbl02/Storage/data/genehancer_V4_11.gff', header = FALSE, sep = '\t', 
+                  stringsAsFactors = FALSE)
+
+
+
+df <- read_excel('data/genehancer.xlsx')
+df <- df %>% as.tibble() %>%
+  select(-source,-strand, -frame) %>%
+  rename('chr' = 'chrom') %>%
+  mutate(chr = str_remove(chr, 'chr'))
+
+
+
+a <- str_split(df$attributes, ';')
+a <- lapply(a, function(x) x[[1]][1])
+a <- unlist(a)
+a <- str_remove(a, 'genehancer_id=')
+df$id <- a
+df_prev <- df %>% select(attributes)
+df <- df %>% select(-attributes)
+
+df_assoc <- df_prev
+
+a <- str_split(df_assoc$attributes, ';')
+df_assoc$id <- unlist(lapply(a, function(x) x[[1]]))
+df_assoc <- df_assoc %>% select(id, attributes)
+df_assoc$id <- str_remove(df_assoc$id, 'genehancer_id=')
+
+df_assoc <- separate_rows(df_assoc, attributes, sep = ';')
+df_assoc <- df_assoc %>% filter(!str_detect(attributes, "genehancer_id="))
+
+df_assoc_gene <- df_assoc %>% filter(str_detect(attributes, 'connected_gene'))
+df_assoc_score <- df_assoc %>% filter(str_detect(attributes, 'score'))
+
+df_assoc_gene$score <- df_assoc_score$attributes
+colnames(df_assoc_gene) <- c('id', 'gene', 'score')
+
+df_assoc_gene$gene <- str_remove(df_assoc_gene$gene, 'connected_gene=')
+df_assoc_gene$score <- str_remove(df_assoc_gene$score, 'score=')
+df_assoc_gene$score <- as.numeric(df_assoc_gene$score)
+
+#
+glimpse(df)
+glimpse(df_assoc_gene)
+
+#
+df_assoc_enh <- df %>% filter(score > 1)
+df_assoc_enh <- df_assoc_enh %>% rename(score_enh = score)
+df_assoc_gene <- df_assoc_gene %>% filter(score > 1)
+df_assoc_gene <- df_assoc_gene %>% rename(score_gene = score)
+df_ge <- df_assoc_enh %>% left_join(df_assoc_gene, by = 'id')
+df_ge <- df_ge %>% select(gene, everything())
+df_ge <- df_ge %>% na.omit()
+df_ge <- df_ge %>% select(-'feature name')
+df_ge <- df_ge %>% filter(chr != 'Y')
+
+write.table(df_ge %>% select(chr, start, end, id) %>% distinct(), 'enhancer_apolo', quote = FALSE, row.names = FALSE,
+            col.names = FALSE, sep = '\t', append = TRUE)
+
+enhancer_raw <- read.table('to_remot/ckD1IzNl94S3Eqdj.bed', header = FALSE, sep = '\t')
+
+write.table(enhancer_raw %>% filter(!str_detect(V1, 'PATCH')) %>% distinct(),
+            'to_remot/enhancer_apolo_crossmap_cleaned', quote = FALSE, row.names = FALSE,
+            col.names = FALSE, sep = '\t', append = TRUE)
+
+enh_post <- mod_remot('from_remot/enhancer_apolo_crossmap_cleaned_7_result.txt', 'EUR', 7, TRUE)
+
+enh_post <- remove_duplicated_regions(enh_post, seg_dup, self_chain)
+
+crossmap_id <- read.table('to_remot/enhancer_apolo_crossmap_cleaned')
+
+enh_def <- enh_post %>% left_join(crossmap_id, by = c('chrom' = 'V1', 'start' = 'V2', 'end' = 'V3')) %>%
+  left_join(df_ge %>% select(gene, id), by = c('V4' = 'id'))
+
+
+test <- bitr(enh_def$gene, fromType="SYMBOL", toType="ENTREZID", OrgDb="org.Hs.eg.db") %>% 
+  as_tibble()
+
+enh_def <- enh_def %>% 
+  left_join(test, by = c('gene' = 'SYMBOL')) %>% 
+  select(-gene) %>% 
+  na.omit() %>% 
+  rename(gene = ENTREZID) %>%
+  mutate(gene = as.numeric(gene)) %>%
+  mutate(length = end - start) %>%
+  group_by(gene) %>%
+  sample_n(1) %>%
+  # filter(length == max(length)) %>%
+  ungroup() %>%
+  mutate(pos = round((end + start) /2, 0))
+
+# ------------------------------------------------------------------------------
+# Dataset: lncRNA
+# Source: Filtered data (species == 'Human') - https://apps.kaessmannlab.org/lncRNA_app/
+# ------------------------------------------------------------------------------
+
+lncrna <- read.table('/home/cbl02/Storage/data/lncRNA/filtered_data.csv', header = TRUE, sep = ',',
+                     stringsAsFactors = FALSE)
+
+lncrna %>%
+  as_tibble() %>%
+  select(-X)
+
+
+lncrna_coord <- read.table('/home/cbl02/Storage/data/lncRNA/human.lncRNA.gtf', sep = '\t',
+                           stringsAsFactors = FALSE)
+
+lncrna_coord <- lncrna_coord %>%
+  as_tibble() %>%
+  separate(V9, into = LETTERS[8:14], sep = ';') %>%
+  select(-V3, -M,  -K, -V6, -V8, -N, -L, -V2) %>%
+  mutate(H = str_remove(H, 'gene_id '))
+
+
+
+
+
+
+
+
+
+
+
+
+  
