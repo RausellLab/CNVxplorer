@@ -97,7 +97,9 @@ shiny::shinyApp(
         )),
       id = "mymenu",
       src = "https://preview.tabler.io/demo/brand/tabler.svg",
-      uiOutput('ref_user_genes')
+      uiOutput('ref_user_genes'),
+      uiOutput('ref_user_length')
+      
       # tablerDropdown(
       #   tablerDropdownItem(
       #     title = "Item 1 title",
@@ -814,8 +816,12 @@ tablerTabItem(
       # data_input <- data_selected()
       # plotKaryotype()
       
-      ideoTrack <- IdeogramTrack(genome="hg19", chromosome= input_chr)
-      plotTracks(ideoTrack, from= input$int_start , to= input$int_end, showBandId=TRUE,
+      # ideoTrack <- IdeogramTrack(genome="hg19", chromosome= input$input_chr)
+      # plotTracks(ideoTrack, from= input$int_start , to= input$int_end, showBandId=TRUE,
+      #            cex.bands=0.5)
+      # 
+      ideoTrack <- IdeogramTrack(genome="hg19", chromosome= 'chr1')
+      plotTracks(ideoTrack, from= 1000 , to= 10000000, showBandId=TRUE,
                  cex.bands=0.5)
         
       # plotKaryotype(chromosomes = input_chr, plot.type = 2) %>%
@@ -902,7 +908,35 @@ tablerTabItem(
       
     })
     
+    output$ref_user_length <- renderUI({
+      
+      req(input$start_analysis > 0)
+      
+      
+      if (input$input_geno_karyo == 'Genomic coordinates') {
+        
+        length_region <-  round((input$int_end - input$int_start + 1) / 1e6,2)
+        
+      } else {
+        
+        # name_region <- paste0(input$input_chrom, input$input_karyotype)
+        length_region <-  round((input$int_end - input$int_start + 1) / 1e6,2)
+      }
+      
+      tablerInfoCard(
+        width = 12,
+        value = paste(length_region, " Mb"),
+        status = "primary",
+        icon = "database",
+        description =  'Length of the genomic region'
+      )
+      
+      
+    })
+    
     output$n_tads <- renderUI({
+      
+      req(input$start_analysis > 0)
       
       
       n_tads <- check_tads(input$input_chrom, input$int_start, input$int_end )

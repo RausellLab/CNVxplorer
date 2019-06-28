@@ -1,7 +1,11 @@
 
 
 
-
+ideoTrack <- IdeogramTrack(genome="hg19", chromosome= 'chr1')
+plotTracks(ideoTrack, from= 1000 , to= 100000, showBandId=TRUE,
+           cex.bands=0.5)
+ideoTrack <- IdeogramTrack(genome="hg19", chromosome="chrX")
+a <- plotTracks(ideoTrack, from=85e6, to=129e6)
   
   filtered_genes <- test1 %>% select(entrez_id) %>% pull()  %>% as.character()
 

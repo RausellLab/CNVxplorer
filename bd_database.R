@@ -555,7 +555,8 @@ tad <- tad %>%
 # ------------------------------------------------------------------------------
 # Dataset: Genehancer
 # Version: 4.11
-# Name file: Email from Marilyn
+# Name file: Email from Marilyn (genenhancer team)
+# Genome reference: hg19
 # ------------------------------------------------------------------------------
 
 genehancer <- read.table('/home/cbl02/Storage/data/genehancer_V4_11.gff', header = FALSE, sep = '\t', 
@@ -652,14 +653,17 @@ enh_def <- enh_def %>%
 # ------------------------------------------------------------------------------
 # Dataset: lncRNA
 # Source: Filtered data (species == 'Human') - https://apps.kaessmannlab.org/lncRNA_app/
+# Genome reference: hg19
 # ------------------------------------------------------------------------------
 
 lncrna <- read.table('/home/cbl02/Storage/data/lncRNA/filtered_data.csv', header = TRUE, sep = ',',
                      stringsAsFactors = FALSE)
 
-lncrna %>%
+lncrna <- lncrna %>%
   as_tibble() %>%
-  select(-X)
+  select(-X, -Species ) %>%
+  rename(id = XLOC.id, chrom = chromosome, dynamic = Dynamic, ensembl75_id = ENSEMBL75.id, name = LncRNA.name, conservation = Minimum.age, genomic_class = Genomic.class,
+         nearest_coding_gene = Nearest.coding.gene)
 
 
 lncrna_coord <- read.table('/home/cbl02/Storage/data/lncRNA/human.lncRNA.gtf', sep = '\t',
@@ -668,10 +672,29 @@ lncrna_coord <- read.table('/home/cbl02/Storage/data/lncRNA/human.lncRNA.gtf', s
 lncrna_coord <- lncrna_coord %>%
   as_tibble() %>%
   separate(V9, into = LETTERS[8:14], sep = ';') %>%
-  select(-V3, -M,  -K, -V6, -V8, -N, -L, -V2) %>%
-  mutate(H = str_remove(H, 'gene_id '))
+  select(-V3, -M,  -K, -V6, -V8, -N, -L, -V2, -I) %>%
+  mutate(H = str_remove(H, 'gene_id ')) %>%
+  rename(chrom = V1, start = V4, end = V5, sense = V7, n_exon = J, id = H ) %>%
+  mutate(n_exon = as.numeric(str_remove(n_exon, 'exon_number '))) %>%
+  select(id, chrom, start, end, sense, n_exon)
 
 
+lncrna_expression_raw <- read.table('/home/cbl02/Storage/data/lncRNA/HumanRPKMs.txt', header = TRUE, sep = '\t',
+                     stringsAsFactors = FALSE)
+
+## 7 organs: Brain, Cerebellum, Heart, Kidney, Liver, Ovary, Testis
+## 26 developmental step: "10wpc, 11wpc, 12wpc, 13wpc, 16wpc, 18wpc, 19wpc, 20wpc, 4wpc, 5wpc, 6wpc, 7wpc, 
+# 8wpc, 9wpc, infant, newborn, olderMidAge, oldTeenager, school, senior, Senior, teenager, toddler, youngAdult, 
+# youngMidAge, youngTeenager"
+
+lncrna_expression <- lncrna_expression_raw %>%
+  rownames_to_column(var = 'id') %>%
+  as_tibble() %>%
+  gather('type', 'rpkm', -id) %>%
+  separate(col = type, into = c('organ', 'dev_step', 'dup'), sep = '\\.') %>%
+  mutate(dev_step = if_else(dev_step == 'Senior', 'senior', dev_step)) %>% # there was a typo in 85037 rows (Senior) and the rest, senior (510222)
+  filter(!str_detect(string = id, pattern = 'ENSG')) %>%
+  filter(str_detect(id, 'XLOC'))
 
 
 
