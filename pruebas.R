@@ -38,6 +38,11 @@ test20 %>%
   tad 
   
   
+  lncrna_coord
+  
+  
+check_  
+  
   
 
 check_tads <- function(chrom = NULL, start = NULL, end = NULL) {
@@ -74,7 +79,7 @@ check_tads <- function(chrom = NULL, start = NULL, end = NULL) {
 }
 
 
-check_tads('3', 1020000, 3900000 )
+check_regions('3', 1020000, 3900000 )
   
 start = 1720000
 end = 3400000
