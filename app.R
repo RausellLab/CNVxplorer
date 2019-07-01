@@ -66,7 +66,7 @@ shiny::shinyApp(
           "Model organism"
         ),
         tablerNavMenuItem(
-          tabName = "Page10",
+          tabName = "reg_region",
           icon = "box",
           "Regulatory regions"
         ),
@@ -222,7 +222,8 @@ shiny::shinyApp(
           # uiOutput('n_genes_rvis'),
           
           uiOutput('n_genes'),
-
+          uiOutput('n_enhancer'),
+          
           uiOutput("info")
           )
     ),
@@ -274,7 +275,7 @@ shiny::shinyApp(
 
           uiOutput('n_clinvar'),
           uiOutput('n_gwas'),
-          uiOutput('n_d4ev'),
+          uiOutput('n_lncrna'),
           uiOutput('n_hi')),
           column(width = 3,
                  
@@ -477,16 +478,19 @@ shiny::shinyApp(
       
     ),
     tablerTabItem(
-      tabName = "disease",
+      tabName = "reg_region",
       fluidRow(
         tablerCard(title = 'Select a region:',
-                   uiOutput('gen2e_tissue'),
+                   uiOutput('gen2e_2tissue'),
                    width = 3),
-        tablerCard(title = 'PubMed',
-                   DTOutput('disease_pubmed'),
+        uiOutput('n_enhancer_total'),
+        uiOutput('n_enhancer_inside'),
+        uiOutput('redund_n_enhancer'),
+        tablerCard(title = 'List enhancers',
+                   DTOutput('df_enhancer'),
                    width = 9)),
       tablerCard(title = 'RNA Expression (GTEx)',
-                 plotlyOutput('tissue4_gtex'),
+                 plotlyOutput('tissue42_gtex'),
                  width = 12)
       
     ),
@@ -930,6 +934,103 @@ tablerTabItem(
         icon = "database",
         description =  'Length of the genomic region'
       )
+      
+      
+    })
+    
+    
+    output$n_lncrna <- renderUI({
+      
+      req(input$start_analysis > 0)
+      
+      data_tmp <- lncrna_coord %>% filter(chrom == input$input_chrom) %>%
+        mutate(keep = 0)
+      
+      for (i in 1:nrow(data_tmp)) {
+        data_tmp$keep[i] <- c(data_tmp$start[i], data_tmp$end[i]) %overlaps% c(input$int_start, input$int_end)
+      }
+      
+      data_tmp <- data_tmp %>% filter(keep == 1) %>% select(id) %>% distinct() %>% pull(id)
+  
+        tablerStatCard(
+        value =  length(data_tmp),
+        title = "Number of lncRNA disrupted",
+        # trend = -10,
+        width = 12
+      )
+    })
+    
+    prev_enhancer <- reactive({
+      
+      req(input$start_analysis > 0)
+      
+      data_tmp <- df_enhancers %>% filter(chrom == input$input_chrom) %>%
+        mutate(keep = 0)
+      
+      for (i in 1:nrow(data_tmp)) {
+        data_tmp$keep[i] <- c(data_tmp$start[i], data_tmp$end[i]) %overlaps% c(input$int_start, input$int_end)
+      }
+      data_tmp <- data_tmp %>% filter(keep == 1) %>% select(-keep)
+    })
+    
+    output$n_enhancer_inside <- renderUI({
+      
+      list_genes_total <- prev_enhancer() %>% select(gene) %>% distinct() %>% pull(gene)
+      data_tmp <- data_selected() %>% filter(gene %in% list_genes_total) %>% pull(gene)
+      
+      tablerStatCard(
+        value =  paste(length(data_tmp), length(list_genes_total), sep = '/'),
+        title = "Number of target genes inside CNV",
+        width = 12
+      )
+    })
+    
+    
+    
+    output$n_enhancer <- renderUI({
+      
+      data_tmp <- prev_enhancer() %>% select(id) %>% distinct() %>% pull(id)
+      
+
+      tablerStatCard(
+        value =  length(data_tmp),
+        title = "Number of Enhancers",
+        # trend = -10,
+        width = 12
+      )
+    })
+    
+    
+    redundancy_enhancers <- reactive({
+      
+      data_tmp <- prev_enhancer() %>% select(gene) %>% distinct() %>% pull(gene)
+      df_output <- df_enhancers %>% filter(gene %in% data_tmp) %>% count(gene)
+      test25 <<- df_output
+    })
+    
+    output$redund_n_enhancer <- renderUI({
+      
+      test24 <<-  redundancy_enhancers() 
+
+      data_tmp <- redundancy_enhancers() %>% filter(n == 1)
+
+
+      tablerStatCard(
+        value =  nrow(data_tmp),
+        title = "Number of genes whose have one enhancer and it is disrupted",
+        # trend = -10,
+        width = 12
+      )
+    })
+    
+    output$df_enhancer <- renderDT({
+      
+                datatable(prev_enhancer(), rownames = FALSE, filter = 'top', 
+                          options = list(
+                            pageLength = 5, autoWidth = TRUE, style = 'bootstrap', list(searchHighlight = TRUE),
+                            selection = 'single'
+                            # columnDefs = list(list(className = 'dt-center', targets = '_all'))
+                          ))
       
       
     })

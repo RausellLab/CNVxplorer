@@ -1,6 +1,47 @@
 
 
 
+
+
+library(TxDb.Hsapiens.UCSC.hg19.knownGene)
+library(org.Hs.eg.db)
+gr <- GRanges("chr11", IRanges(122929275, 122930122), strand="-")
+trs <- geneModelFromTxdb(TxDb.Hsapiens.UCSC.hg19.knownGene,
+                         org.Hs.eg.db,
+                         gr=gr)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+test1
+
+
+
+data_tmp <- lncrna_coord %>% filter(chrom == '1') %>%
+  mutate(keep = 0)
+
+for (i in 1:nrow(data_tmp)) {
+  data_tmp$keep[i] <- c(data_tmp$start[i], data_tmp$end[i]) %overlaps% c(1000, 10000000)
+}
+
+data_tmp %>% filter(keep == 1) %>% select(id) %>% distinct() %>% pull(id)
+
+
 ideoTrack <- IdeogramTrack(genome="hg19", chromosome= 'chr1')
 plotTracks(ideoTrack, from= 1000 , to= 100000, showBandId=TRUE,
            cex.bands=0.5)
@@ -41,8 +82,9 @@ test20 %>%
   lncrna_coord
   
   
-check_  
+  a <- check_regions('1', 1000, 1000000)
   
+  lncrna %>% filter(id %in%)
   
 
 check_tads <- function(chrom = NULL, start = NULL, end = NULL) {

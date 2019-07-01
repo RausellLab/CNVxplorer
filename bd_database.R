@@ -17,6 +17,7 @@ library(data.table)
 # Gene ontology based of non-coding regions
 # difference between pLI and o/e
 # should a put a minus + plus to the output from remot
+# PIK3CD duplicated because database HI have two observations
 
 # QUESTIONS NECKER
 
@@ -562,13 +563,11 @@ tad <- tad %>%
 genehancer <- read.table('/home/cbl02/Storage/data/genehancer_V4_11.gff', header = FALSE, sep = '\t', 
                   stringsAsFactors = FALSE)
 
-
-
-df <- read_excel('data/genehancer.xlsx')
-df <- df %>% as.tibble() %>%
-  select(-source,-strand, -frame) %>%
-  rename('chr' = 'chrom') %>%
-  mutate(chr = str_remove(chr, 'chr'))
+df <- genehancer %>% 
+  as.tibble() %>%
+  filter(V3 == 'Enhancer') %>%
+  select(-V2, -V3, -V7, -V8) %>%
+  rename(chrom = V1, start = V4, end = V5, score_enh = V6, attributes = V9)
 
 
 
@@ -605,50 +604,58 @@ glimpse(df)
 glimpse(df_assoc_gene)
 
 #
-df_assoc_enh <- df %>% filter(score > 1)
-df_assoc_enh <- df_assoc_enh %>% rename(score_enh = score)
-df_assoc_gene <- df_assoc_gene %>% filter(score > 1)
-df_assoc_gene <- df_assoc_gene %>% rename(score_gene = score)
+df_assoc_enh <- df %>% filter(score_enh > 1)
+df_assoc_gene <- df_assoc_gene %>% filter(score_gene > 1)
+
 df_ge <- df_assoc_enh %>% left_join(df_assoc_gene, by = 'id')
 df_ge <- df_ge %>% select(gene, everything())
 df_ge <- df_ge %>% na.omit()
-df_ge <- df_ge %>% select(-'feature name')
-df_ge <- df_ge %>% filter(chr != 'Y')
+df_ge <- df_ge %>% filter(chrom != 'chrY')
 
-write.table(df_ge %>% select(chr, start, end, id) %>% distinct(), 'enhancer_apolo', quote = FALSE, row.names = FALSE,
+write.table(df_ge %>% select(chrom, start, end, id) %>% distinct(), 'enhancer_cnvxplore', quote = FALSE, row.names = FALSE,
             col.names = FALSE, sep = '\t', append = TRUE)
 
-enhancer_raw <- read.table('to_remot/ckD1IzNl94S3Eqdj.bed', header = FALSE, sep = '\t')
+# Used liftOver (https://genome.ucsc.edu/cgi-bin/hgLiftOver). Default parameters
+# from Grch38 to Grch37
+# Succesfully converted 27514 records
+# Conversion failed on 8 records.
 
-write.table(enhancer_raw %>% filter(!str_detect(V1, 'PATCH')) %>% distinct(),
-            'to_remot/enhancer_apolo_crossmap_cleaned', quote = FALSE, row.names = FALSE,
-            col.names = FALSE, sep = '\t', append = TRUE)
+enhancer_raw <- read.table('/home/cbl02/Storage/data/hglft_genome_4c90f_a0b3d0.bed', header = FALSE, sep = '\t')
 
-enh_post <- mod_remot('from_remot/enhancer_apolo_crossmap_cleaned_7_result.txt', 'EUR', 7, TRUE)
+df_enhancers <- enhancer_raw %>% as_tibble() %>% rename(chrom = V1, start = V2, end = V3, id = V4) %>% mutate(chrom = str_remove(chrom, 'chr')) %>%
+  mutate(id = as.character(id))
 
-enh_post <- remove_duplicated_regions(enh_post, seg_dup, self_chain)
-
-crossmap_id <- read.table('to_remot/enhancer_apolo_crossmap_cleaned')
-
-enh_def <- enh_post %>% left_join(crossmap_id, by = c('chrom' = 'V1', 'start' = 'V2', 'end' = 'V3')) %>%
-  left_join(df_ge %>% select(gene, id), by = c('V4' = 'id'))
-
-
-test <- bitr(enh_def$gene, fromType="SYMBOL", toType="ENTREZID", OrgDb="org.Hs.eg.db") %>% 
-  as_tibble()
-
-enh_def <- enh_def %>% 
-  left_join(test, by = c('gene' = 'SYMBOL')) %>% 
-  select(-gene) %>% 
-  na.omit() %>% 
-  rename(gene = ENTREZID) %>%
-  mutate(gene = as.numeric(gene)) %>%
-  mutate(length = end - start) %>%
-  group_by(gene) %>%
-  sample_n(1) %>%
-  # filter(length == max(length)) %>%
-  ungroup() %>%
-  mutate(pos = round((end + start) /2, 0))
+df_enhancers <- df_ge %>% select(gene, id, score_enh, score_gene) %>% left_join(df_enhancers, by = 'id')
+# 
+# write.table(enhancer_raw %>% filter(!str_detect(V1, 'PATCH')) %>% distinct(),
+#             'enhancer_cnvxplore_crossmap_cleaned', quote = FALSE, row.names = FALSE,
+#             col.names = FALSE, sep = '\t', append = TRUE)
+# 
+# enh_post <- mod_remot('from_remot/enhancer_apolo_crossmap_cleaned_7_result.txt', 'EUR', 7, TRUE)
+# 
+# enh_post <- remove_duplicated_regions(enh_post, seg_dup, self_chain)
+# 
+# crossmap_id <- read.table('to_remot/enhancer_apolo_crossmap_cleaned')
+# 
+# enh_def <- enh_post %>% left_join(crossmap_id, by = c('chrom' = 'V1', 'start' = 'V2', 'end' = 'V3')) %>%
+#   left_join(df_ge %>% select(gene, id), by = c('V4' = 'id'))
+# 
+# 
+# test <- bitr(enh_def$gene, fromType="SYMBOL", toType="ENTREZID", OrgDb="org.Hs.eg.db") %>% 
+#   as_tibble()
+# 
+# enh_def <- enh_def %>% 
+#   left_join(test, by = c('gene' = 'SYMBOL')) %>% 
+#   select(-gene) %>% 
+#   na.omit() %>% 
+#   rename(gene = ENTREZID) %>%
+#   mutate(gene = as.numeric(gene)) %>%
+#   mutate(length = end - start) %>%
+#   group_by(gene) %>%
+#   sample_n(1) %>%
+#   # filter(length == max(length)) %>%
+#   ungroup() %>%
+#   mutate(pos = round((end + start) /2, 0))
 
 # ------------------------------------------------------------------------------
 # Dataset: lncRNA

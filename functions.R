@@ -62,7 +62,8 @@ check_regions <- function(chrom = NULL, start = NULL, end = NULL) {
     mutate(check_tad3 = if_else(start_tmp <= start & end_tmp >= end, 1, 0 )) %>%
     mutate(check_final_tad = if_else(check_tad  + check_tad2 + check_tad3 > 0, 1, 0 )) %>%
     select(id, check_final_tad) %>%
-    filter(check_final_tad > 0)
+    filter(check_final_tad > 0) %>%
+    distinct()
   
   if (nrow(tmp_df) > 0) {
     
@@ -79,3 +80,6 @@ check_regions <- function(chrom = NULL, start = NULL, end = NULL) {
   
   
 }
+
+
+check_regions('1', 1000, 1000000)
