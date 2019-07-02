@@ -492,27 +492,66 @@ para_genes %>% as_tibble() %>%
 # ------------------------------------------------------------------------------
 # Dataset: Structural Variants (SV)
 # Source: https://gnomad.broadinstitute.org/downloads
+# Name file: https://storage.googleapis.com/gnomad-public/papers/2019-sv/gnomad_v2_sv.sites.bed.gz
+# More info: https://macarthurlab.org/2019/03/20/structural-variants-in-gnomad/
+# SVLEN a threshold?
+# A tibble: 8 x 2
+# SVTYPE      n
+# BND     72411 # Breakends
+# CPX      5249 # complex SV
+# CTX         9 # Translocation
+# DEL    199498 # deleted
+# DUP     51428 # duplicated
+# INS    115407 # insertion
+# INV       707 # inversion
+# MCNV     1148 # Multiallelic CNV
+# Populations:
+# AMR (Latino)
+# EUR (European)
+# OTH (Other)
+# AFR (African)
+# EAS (East Asian)
+
 # ------------------------------------------------------------------------------
+# PCRPLUS_DEPLETED I don't know what it is....
+# PESR_GT_OVERDISPERSION this neither...
 
 
 gnomad_sv_raw <- read.table('/home/cbl02/Storage/data/gnomad_v2_sv.sites.bed', sep = '\t', header = TRUE)
 
 
-gnomad_sv_raw %>%
-  as_tibble()
+gnomad_sv_raw <- gnomad_sv_raw %>%
+  as_tibble() %>%
+  filter(SVTYPE %in% c('DEL', 'DUP')) %>%
+  filter(FILTER == 'PASS') %>%
+  select(CHROM, START, END, NAME) %>%
+  rename(id = NAME) %>%
+  mutate(id  = str_remove(id, 'gnomAD_v2_')) %>%
+  mutate(source = 'gnomad_v2') %>%
+  rename(chrom = CHROM, start = START, end = END)
+    
 
 
 # ------------------------------------------------------------------------------
 # Dataset: Structural Variants (SV)
 # Source: https://decipher.sanger.ac.uk/about#downloads/data
+# Population Copy-Number Variation Frequencies
+# Variables: duplicated - deletion - general // observations - frequency - se
 # ------------------------------------------------------------------------------
 
-decipher_sv_raw <- read.table('/home/cbl02/Storage/data/population_cnv.txt', sep = '\t', header = TRUE)
+decipher_sv_raw <- read.table('/home/cbl02/Storage/data/population_cnv.txt', sep = '\t', header = TRUE) %>%
+  as_tibble() %>%
+  mutate(source = 'decipher') %>%
+  rename(id = population_cnv_id, chrom = chr) %>%
+  mutate(id = as.character(id)) %>%
+  select(id, chrom, start, end, source)
+  
+  
+# ------------------------------------------------------------------------------
+# Dataset: Aggregation of data from DECIPHER and gnomAD
+# ------------------------------------------------------------------------------
 
-decipher_sv_raw %>%
-  as_tibble()
-
-
+  cnv_df <- decipher_sv_raw %>% rbind(gnomad_sv_raw)
 
 # ------------------------------------------------------------------------------
 # Dataset: Protein-Protein interaction network
@@ -705,10 +744,55 @@ lncrna_expression <- lncrna_expression_raw %>%
 
 
 
+# ------------------------------------------------------------------------------
+# Dataset: seg_dup and self_chain
+# Description: Bed files with segmental duplications and self-chain of the genome(hg19)
+# Source: http://humanparalogy.gs.washington.edu/build37/data/GRCh37GenomicSuperDup.tab
+# Source: http://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/chainSelf.txt.gz.
+# Source with name of each field: http://rohsdb.cmb.usc.edu/GBshape/cgi-bin/hgTables?hgsid=1432484_CeWhnfzDUkBhJCkZ00iaiTQcyb3E&hgta_doSchemaDb=hg19&hgta_doSchemaTable=chainSelf
+# Comment: the score 90 is obtained from Quinlab (A map of constraint regions in coding part)
+# ------------------------------------------------------------------------------
+
+seg_dup <- read.table('http://humanparalogy.gs.washington.edu/build37/data/GRCh37GenomicSuperDup.tab', header = TRUE) %>% 
+  as_tibble()
+
+seg_dup1 <- seg_dup %>% select(chrom, chromStart, chromEnd) %>% 
+  rename(start = chromStart, end = chromEnd)
+seg_dup2 <- seg_dup %>% select(otherChrom, otherStart, otherEnd) %>%
+  rename(chrom = otherChrom, start = otherStart, end = otherEnd)
+seg_dup <- seg_dup1 %>% bind_rows(seg_dup2) %>% distinct()  %>% mutate(chrom = str_remove(chrom, 'chr')) %>%
+  makeGRangesFromDataFrame()
+
+# Self-chain coordinates
+
+self_chain <- read.table('data/chainSelf.txt', header = FALSE) %>% as_tibble()
+colnames(self_chain) <- c('bin', 'score', 'tName', 'tSize', 'tStart', 'tEnd', 'qName', 'qSize', 'qStrand',
+                          'qStart', 'qEnd', 'id', 'normScore')
+
+# NormScore = score / length bases. This score threshold is based on the paper: 
+self_chain <- self_chain %>% filter(normScore >= 90)
+
+# Clean dataframe and convert it to a GRanges object
+
+self_chain1 <- self_chain %>% select(tName, tStart, tEnd) %>% 
+  rename(chrom = tName, start = tStart, end = tEnd)
+self_chain2 <- self_chain %>% select(qName, qStart, qEnd) %>%
+  rename(chrom = qName, start = qStart, end = qEnd)
+self_chain <- self_chain1 %>% bind_rows(self_chain2) %>% distinct()  %>% mutate(chrom = str_remove(chrom, 'chr')) %>%
+  makeGRangesFromDataFrame()
 
 
+# ------------------------------------------------------------------------------
+# Dataset: blacklist.v2.bed
+# Source: https://github.com/Boyle-Lab/Blacklist/blob/master/lists/hg19-blacklist.v2.bed.gz
+# ------------------------------------------------------------------------------
 
-
+blacklist_encode <- read.table('/home/cbl02/Storage/data/hg19-blacklist.bed', sep = '\t', stringsAsFactors = FALSE) %>%
+  as_tibble() %>%
+  rename(chrom = V1, start = V2, end = V3, class = V4) %>%
+  select(-V5, -V6) %>%
+  mutate(chrom = str_remove(chrom, 'chr'))
+  
 
 
 

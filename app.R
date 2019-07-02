@@ -510,6 +510,20 @@ shiny::shinyApp(
 
     ),
     tablerTabItem(
+      tabName = "disease",
+      fluidRow(
+        tablerCard(title = 'Select a gene:',
+                   uiOutput('n_pub2med'),
+                   width = 3),
+        tablerCard(title = 'Protein Expression (Human Protein Atlas)',
+                   DTOutput('disease_pubmed'),
+                   width = 9)),
+      tablerCard(title = 'RNA Expression (GTEx)',
+                 plotlyOutput('tissue2_555gtex'),
+                 width = 12)
+      
+    ),
+    tablerTabItem(
       tabName = "model",
       tablerCard(title = 'Phenotypes associated with the list of genes',
                  echarts4rOutput('agg_model'),
