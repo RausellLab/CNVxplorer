@@ -18,6 +18,7 @@ library(data.table)
 # difference between pLI and o/e
 # should a put a minus + plus to the output from remot
 # PIK3CD duplicated because database HI have two observations
+# warning message with input outside of the maximum chromosomes
 
 # QUESTIONS NECKER
 
@@ -548,10 +549,10 @@ decipher_sv_raw <- read.table('/home/cbl02/Storage/data/population_cnv.txt', sep
   
   
 # ------------------------------------------------------------------------------
-# Dataset: Aggregation of data from DECIPHER and gnomAD
+# Dataset: Aggregation of data from DECIPHER, gnomAD and DGV
 # ------------------------------------------------------------------------------
 
-  cnv_df <- decipher_sv_raw %>% rbind(gnomad_sv_raw)
+  cnv_df <- decipher_sv_raw %>% rbind(gnomad_sv_raw) %>% rbind(dgv_df)
 
 # ------------------------------------------------------------------------------
 # Dataset: Protein-Protein interaction network
@@ -793,6 +794,25 @@ blacklist_encode <- read.table('/home/cbl02/Storage/data/hg19-blacklist.bed', se
   select(-V5, -V6) %>%
   mutate(chrom = str_remove(chrom, 'chr'))
   
+# ------------------------------------------------------------------------------
+# Dataset: DGV
+# Source: http://dgv.tcag.ca/dgv/docs/GRCh37_hg19_variants_2016-05-15.txt
+# ------------------------------------------------------------------------------
+
+dgv_df <- read.table('/home/cbl02/Storage/data/GRCh37_hg19_variants_2016-05-15.txt', sep = '\t', stringsAsFactors = FALSE,
+                     header = TRUE) %>%
+  as_tibble() %>%
+  filter(varianttype == 'CNV') %>%
+  filter(variantsubtype %in% c('deletion', 'duplication')) %>%
+  rename(id = variantaccession, chrom = chr) %>%
+  select(id, chrom, start, end) %>%
+  mutate(source = 'dgv')
+
+
+# ------------------------------------------------------------------------------
+# Dataset: Imprinting genes
+# Source: http://www.geneimprint.com/site/genes-by-species
+# ------------------------------------------------------------------------------
 
 
 
