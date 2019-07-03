@@ -272,7 +272,8 @@ shiny::shinyApp(
         ),
        
           column(width = 3,
-
+                 
+          uiOutput('n_cnv'),
           uiOutput('n_clinvar'),
           uiOutput('n_gwas'),
           uiOutput('n_lncrna'),
@@ -605,6 +606,37 @@ tablerTabItem(
           size = 10,
           `live-search` = TRUE))
       
+      
+      
+    })
+    
+    
+    
+    check_cnv_df <- reactive({
+      
+      df_output <- cnv_df %>%
+        filter(chrom == input$input_chrom) %>%
+        mutate(keep = c(start, end) %overlaps% c(input$int_start, input$int_end)) %>%
+        mutate(keep = map2_lgl(start, end, function(x, y) c(x, y) %overlaps% c(input$int_start, input$int_end))) %>%
+        filter(keep == TRUE) %>%
+        select(-keep)
+      
+      df_output
+      
+    })
+    
+    output$n_cnv <- renderUI({
+      
+      req(input$start_analysis > 0)
+      
+      data_tmp <- check_cnv_df() %>% nrow()
+      
+      tablerStatCard(
+        value =  data_tmp,
+        title = "Number of CNVs that overlap with this region",
+        # trend = -10,
+        width = 12
+      )
       
       
     })
