@@ -11,17 +11,23 @@ trs <- geneModelFromTxdb(TxDb.Hsapiens.UCSC.hg19.knownGene,
                          gr=gr)
 
 
+data_raw <- cnv_df %>% mutate(keep = NA) %>% slice(1:10)
+
+
+cnv_df
+
+map(data_raw, function(x) x[,3] - x[,4])
+
+data_raw %>%
+  mutate(keep = c(end, start) %overlaps% c(10529, 10000000))
 
 
 
-
-
-
-
-
-
-
-
+df_output <- cnv_df %>%
+  filter(chrom == '1') %>%
+mutate(keep = map2_lgl(start, end, function(x, y) c(x, y) %overlaps% c(1000, 1000000))) %>%
+  filter(keep == TRUE) %>%
+  select(-keep)
 
 
 
