@@ -2,7 +2,56 @@
 
 
 
+library(tidyverse)
+library(randomForest)
 
+url <- 'https://archive.ics.uci.edu/ml/machine-learning-databases/heart-disease/processed.cleveland.data'
+
+df <- read_csv(url, col_names = c('age', 'sex', 'cp', 'testbps', 'chol', 'fbs', 'restecg',
+                                  'thalach', 'exang', 'oldpeak', 'slope', 'ca',
+                                  'thal', 'hd'))
+
+df[df == '?'] <- NA
+
+df <- df %>%
+  mutate(sex = as.factor(if_else(sex == 1, 'M', 'F'))) %>%
+  mutate(cp = as.factor(cp),
+         ca = as.factor(ca),
+         fbs = as.factor(fbs),
+         restecg = as.factor(restecg),
+         exang = as.factor(exang),
+         slope = as.factor(slope),
+         exang = as.factor(as.integer(ca)),
+         thal = as.factor(thal)) %>%
+  mutate(hd = as.factor(if_else(hd == 0, 'Healthy', 'Unhealthy')))
+
+
+
+set.seed(42)
+  
+df <- rfImpute(hd ~ ., data = df, iter = 6)
+model  <- randomForest(hd ~ ., data = df, proximity = TRUE, ntree = 10000)
+
+
+tmp_plot <- tibble(
+  trees = rep(1:nrow(model$err.rate), 3),
+  type = rep(c('OOB', 'healthy', 'unhealthy'), each = nrow(model$err.rate)),
+  error = c(model$err.rate[,'OOB'],
+            model$err.rate[,'Healthy'],
+            model$err.rate[,'Unhealthy'])
+)
+
+ggplot(tmp_plot, aes(x = trees, y = error)) + geom_point(aes(color = type)) + geom_line(aes(group = type, color = type)) +
+  theme_minimal()
+
+
+glimpse(df)
+
+tmp_df <- read.table('/home/cbl02/Storage/remot/7mer_mutation_rate_nonCodon.txt', sep = '\t', header = TRUE, stringsAsFactors = FALSE, dec = ',')
+
+cor(tmp_df$European.autosomal.substitution.probability.from.reference.to.alternative, tmp_df$Asian.autosomal.substitution.probability.from.reference.to.alternative)
+
+summary(tmp_df)
 library(TxDb.Hsapiens.UCSC.hg19.knownGene)
 library(org.Hs.eg.db)
 gr <- GRanges("chr11", IRanges(122929275, 122930122), strand="-")

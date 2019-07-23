@@ -218,9 +218,15 @@ shiny::shinyApp(
                plotOutput('plot_chrom', height = 200)),
         column(
           width = 3,
-          # uiOutput('n_genes_pli'),
-          # uiOutput('n_genes_rvis'),
-          
+
+          pickerInput(
+            inputId = "Id094",
+            label = "Select/deselect all options", 
+            choices = vector_hp,
+            options = list(
+              `live-search` = TRUE),
+            multiple = TRUE
+          ),
           uiOutput('n_genes'),
           uiOutput('n_enhancer'),
           
@@ -481,17 +487,17 @@ shiny::shinyApp(
     tablerTabItem(
       tabName = "reg_region",
       fluidRow(
-        tablerCard(title = 'Select a region:',
-                   uiOutput('gen2e_2tissue'),
-                   width = 3),
+        # tablerCard(title = 'Select a region:',
+        #            uiOutput('gen2e_2tissue'),
+        #            width = 3),
         uiOutput('n_enhancer_total'),
         uiOutput('n_enhancer_inside'),
         uiOutput('redund_n_enhancer'),
         tablerCard(title = 'List enhancers',
                    DTOutput('df_enhancer'),
-                   width = 9)),
+                   width = 12)),
       tablerCard(title = 'RNA Expression (GTEx)',
-                 plotlyOutput('tissue42_gtex'),
+                 DTOutput('lncrna_df'),
                  width = 12)
       
     ),
@@ -985,7 +991,7 @@ tablerTabItem(
     })
     
     
-    output$n_lncrna <- renderUI({
+    lncrna_raw <- reactive({
       
       req(input$start_analysis > 0)
       
@@ -997,9 +1003,29 @@ tablerTabItem(
       }
       
       data_tmp <- data_tmp %>% filter(keep == 1) %>% select(id) %>% distinct() %>% pull(id)
-  
+      
+      
+    })
+    
+    output$lncrna_df <- renderDT({
+      
+      lncrna_selected <- lncrna_raw()
+      
+      tmp_lncrna <- lncrna %>% filter(id %in% lncrna_selected) %>% select(-genomic_class)
+      
+      datatable(tmp_lncrna, rownames = FALSE, 
+                options = list(
+                  pageLength = 5, autoWidth = TRUE, list(searchHighlight = TRUE)))
+                
+      
+      
+    })
+    
+    
+    output$n_lncrna <- renderUI({
+
         tablerStatCard(
-        value =  length(data_tmp),
+        value =  length(lncrna_raw()),
         title = "Number of lncRNA disrupted",
         # trend = -10,
         width = 12
@@ -1407,8 +1433,7 @@ tablerTabItem(
         
         
         error= function(e) stop("Please, reduce the level assigned"))
-      test20 <<- ggo
-      
+
       
       validate(
         need(ggo %>% as_tibble() %>% select(Count) %>% sum() != 0, "0 terms found. Please reduce the level assigned")

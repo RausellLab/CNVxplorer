@@ -110,7 +110,7 @@ ref_scores <- tibble(score = c('gwas', # we could filter out by number of hits (
 # Source:  ftp://ftp.ebi.ac.uk/pub/databases/genenames/new/tsv/locus_types/gene_with_protein_product.txt
 # ------------------------------------------------------------------------------
 
-hgcn_genes <- read_excel('data/gene_with_protein_product.xlsx') %>% as_tibble()
+hgcn_genes <- read_excel('/home/cbl02/Storage/data/gene_with_protein_product.xlsx') %>% as_tibble()
 
 hgcn_genes <- hgcn_genes %>%
   select(entrez_id, ensembl_gene_id, location, symbol) %>%
@@ -227,6 +227,8 @@ dev_genes <- read.table('data/DDG2P_6_6_2019.csv',
 # Source: https://decipher.sanger.ac.uk/ddd#ddgenes
 # Access: ####
 # ------------------------------------------------------------------------------
+
+## there are some genes with duplicated symbol on the same row
 
 omim <- read.table('data/', sep = '\t', header = TRUE,
                    stringsAsFactors = F)
@@ -574,9 +576,14 @@ inbio_network <- inbio_network_raw %>%
 # ------------------------------------------------------------------------------
 
 # ERROR - LESS ROWS THAN  FILE!!
-hpo_raw <- read.table('http://compbio.charite.de/jenkins/job/hpo.annotations/lastStableBuild/artifact/misc/phenotype_annotation.tab', 
-                      sep = '\t', header = FALSE, fill = TRUE)
 
+# url <- 'http://compbio.charite.de/jenkins/job/hpo.annotations.monthly/lastSuccessfulBuild/artifact/annotation/ALL_SOURCES_ALL_FREQUENCIES_genes_to_phenotype.txt'
+hpo_raw <- read.table('/home/cbl02/Storage/data/test_hp_genes.tsv', sep = '\t', skip = 1, stringsAsFactors = FALSE, fill = TRUE)
+
+hpo_genes <- hpo_raw %>% as_tibble() %>% rename(entrez_id = V1, gene = V2, term = V3, hp = V4)
+
+vector_hp <- hpo_genes %>% select(term) %>% distinct() %>% pull()
+  
 # ------------------------------------------------------------------------------
 # Dataset: TADs
 # Source: 30765865 - 25693564
