@@ -577,13 +577,16 @@ inbio_network <- inbio_network_raw %>%
 
 # ERROR - LESS ROWS THAN  FILE!!
 
-# url <- 'http://compbio.charite.de/jenkins/job/hpo.annotations.monthly/lastSuccessfulBuild/artifact/annotation/ALL_SOURCES_ALL_FREQUENCIES_genes_to_phenotype.txt'
-hpo_raw <- read.table('/home/cbl02/Storage/data/test_hp_genes.tsv', sep = '\t', skip = 1, stringsAsFactors = FALSE, fill = TRUE)
+
+hpo_raw <- fread('/home/cbl02/Storage/data/test_hp_genes.tsv', skip = 1)
 
 hpo_genes <- hpo_raw %>% as_tibble() %>% rename(entrez_id = V1, gene = V2, term = V3, hp = V4)
 
-vector_hp <- hpo_genes %>% select(term) %>% distinct() %>% pull()
-  
+
+vector_hp <- hpo_genes %>% select(hp) %>% distinct() %>% pull()
+vector_term <- hpo_genes %>% select(term) %>% distinct() %>% pull()
+
+
 # ------------------------------------------------------------------------------
 # Dataset: TADs
 # Source: 30765865 - 25693564
@@ -666,6 +669,7 @@ write.table(df_ge %>% select(chrom, start, end, id) %>% distinct(), 'enhancer_cn
 # from Grch38 to Grch37
 # Succesfully converted 27514 records
 # Conversion failed on 8 records.
+# 27,514 unique intervals
 
 enhancer_raw <- read.table('/home/cbl02/Storage/data/hglft_genome_4c90f_a0b3d0.bed', header = FALSE, sep = '\t')
 
@@ -673,20 +677,18 @@ df_enhancers <- enhancer_raw %>% as_tibble() %>% rename(chrom = V1, start = V2, 
   mutate(id = as.character(id))
 
 df_enhancers <- df_ge %>% select(gene, id, score_enh, score_gene) %>% left_join(df_enhancers, by = 'id')
+df_enhancers <- df_enhancers %>% na.omit() %>% distinct()
 # 
-# write.table(enhancer_raw %>% filter(!str_detect(V1, 'PATCH')) %>% distinct(),
-#             'enhancer_cnvxplore_crossmap_cleaned', quote = FALSE, row.names = FALSE,
-#             col.names = FALSE, sep = '\t', append = TRUE)
+write.table(df_enhancers %>% select(chrom, start, end) %>% distinct(),
+            '/home/cbl02/Storage/data/to_remot_cnxplore', quote = FALSE, row.names = FALSE,
+            col.names = FALSE, sep = '\t', append = TRUE)
 # 
-# enh_post <- mod_remot('from_remot/enhancer_apolo_crossmap_cleaned_7_result.txt', 'EUR', 7, TRUE)
+df_enhancers_tmp <- fread('/home/cbl02/Storage/data/to_remot_cnxplore_3_result.txt')
 # 
 # enh_post <- remove_duplicated_regions(enh_post, seg_dup, self_chain)
-# 
-# crossmap_id <- read.table('to_remot/enhancer_apolo_crossmap_cleaned')
-# 
-# enh_def <- enh_post %>% left_join(crossmap_id, by = c('chrom' = 'V1', 'start' = 'V2', 'end' = 'V3')) %>%
-#   left_join(df_ge %>% select(gene, id), by = c('V4' = 'id'))
-# 
+
+df_enhancers <- df_enhancers %>% left_join(df_enhancers_tmp, by = c('chrom', 'start', 'end'))
+
 # 
 # test <- bitr(enh_def$gene, fromType="SYMBOL", toType="ENTREZID", OrgDb="org.Hs.eg.db") %>% 
 #   as_tibble()

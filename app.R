@@ -219,14 +219,7 @@ shiny::shinyApp(
         column(
           width = 3,
 
-          pickerInput(
-            inputId = "Id094",
-            label = "Select/deselect all options", 
-            choices = vector_hp,
-            options = list(
-              `live-search` = TRUE),
-            multiple = TRUE
-          ),
+
           uiOutput('n_genes'),
           uiOutput('n_enhancer'),
           
@@ -307,16 +300,12 @@ shiny::shinyApp(
         plotlyOutput('heatmap'),
         width = 12,
         overflow = TRUE
-        # options = tagList(
-        #   pickerInput(
-        #           inputId = "Id083",
-        #           label = "Choose variables:",
-        #           choices = list('pLI' = 'pLI'),
-        #           multiple = TRUE
-        #         )
-        #   
-        #   
-        # )
+      ),
+      tablerCard(
+        title = "Heatmap - Genome-wide percentile",
+        plotOutput('plotp_overlap'),
+        width = 6,
+        overflow = TRUE
       )
       
       
@@ -519,16 +508,29 @@ shiny::shinyApp(
     tablerTabItem(
       tabName = "disease",
       fluidRow(
-        tablerCard(title = 'Select a gene:',
-                   uiOutput('n_pub2med'),
-                   width = 3),
-        tablerCard(title = 'Protein Expression (Human Protein Atlas)',
+        # tablerCard(title = 'Select a gene:',
+        
+        multiInput(
+          inputId = "chosen_hp",
+          label = "Phenotype:", 
+          choices = NULL,
+          choiceNames = vector_term,
+          choiceValues = vector_hp
+          
+        ),
+        uiOutput('n_hp_chosen'),
+        uiOutput('check_genes_hp'),
+        tablerCard(title = 'Genes associated with the phenotype',
+                   DTOutput('df_check_hp_genes'),
+                   width = 12),
+        # width = 6
+        # ),
+        # tablerCard(title = 'Select a gene:',
+        #            uiOutput('n_pub2med'),
+        #            width = 3),
+        tablerCard(title = 'Pubmed articles',
                    DTOutput('disease_pubmed'),
-                   width = 9)),
-      tablerCard(title = 'RNA Expression (GTEx)',
-                 plotlyOutput('tissue2_555gtex'),
-                 width = 12)
-      
+                   width = 12))
     ),
     tablerTabItem(
       tabName = "model",
@@ -631,6 +633,68 @@ tablerTabItem(
       
     })
     
+    
+    check_hp_genes <- reactive({
+      
+      req(input$start_analysis > 0)
+      
+      
+      hp_chosen <- input$chosen_hp
+      genes_chosen <- data_selected() %>% select(entrez_id) %>% pull()
+      
+      
+      df_tmp <- hpo_genes %>%
+        filter(hp %in% hp_chosen) %>%
+        filter(entrez_id %in% genes_chosen)
+      
+        df_tmp2 <<- df_tmp %>%
+          select(hp) %>%
+          distinct() %>%
+          mutate(description = map_chr(hp, function(x) termDesc(term(go, x))))
+
+      df_tmp <- df_tmp %>% left_join(df_tmp2, by = 'hp')
+      
+      df_tmp
+      
+    })
+    
+    output$check_genes_hp <- renderUI({
+      
+      req(input$start_analysis > 0)
+      
+      test66 <<- check_hp_genes()
+
+      tablerStatCard(
+        value =  nrow(check_hp_genes()),
+        title = "Number of genes associated with the phenotype(s)",
+        # trend = -10,
+        width = 12
+      )
+      
+    })
+    
+    output$df_check_hp_genes <- renderDT({
+      
+      req(input$start_analysis > 0)
+      
+      
+      
+      datatable(check_hp_genes())
+    })
+    
+    output$n_hp_chosen <- renderUI({
+      
+      req(input$start_analysis > 0)
+      
+      tablerStatCard(
+        value =  length(input$chosen_hp),
+        title = "Clinical features selected",
+        # trend = -10,
+        width = 12
+      )
+
+    })
+    
     output$n_cnv <- renderUI({
       
       req(input$start_analysis > 0)
@@ -650,7 +714,32 @@ tablerTabItem(
     
     query_pubmed <- reactive({
       
-      query_pubmed <- entrez_search(db="pubmed", term="22q11.2", retmax = 200 )
+      req(input$start_analysis > 0)
+      
+      
+      if (input$input_geno_karyo == 'Genomic coordinates') {
+        
+        chrom_tmp <<- input$input_chrom
+        start_tmp <<- input$int_start
+        end_tmp <<- input$int_end
+        
+        query_region <-  chromPlot::hg_cytoBandIdeo %>%
+          filter(Chrom %in% chrom_tmp) %>%
+          mutate(keep = map2_chr(Start, End, function(x,y) c(start_tmp, end_tmp) %overlaps% c(x,y))) %>%
+          filter(keep == TRUE) %>%
+          select(Name) %>%
+          pull() %>%
+          map_chr(function(x) paste0(chrom_tmp, x)) %>%
+          paste0(collapse = ' OR ')
+
+      } else {
+        query_region <- paste0(input$input_chrom, input$input_karyotype)
+
+      }
+      
+      test67 <<- query_region
+      
+      query_pubmed <- entrez_search(db="pubmed", term= query_region, retmax = 200 )
    
 
       
@@ -697,17 +786,19 @@ tablerTabItem(
       
       if(input$input_geno_karyo == 'Genomic coordinates') {
         
-        data_raw <- data_raw  %>% mutate(keep = NA)
-        for (i in 1:nrow(data_raw)) {
-          data_raw$keep[i] <- c(data_raw$start_position[i], data_raw$end_position[i]) %overlaps% c(input$int_start, input$int_end)
-
-        }
-
-        data_raw <- data_raw %>% filter(keep == TRUE) %>% select(-keep)
+        data_raw <- data_raw  %>% mutate(keep = NA) %>%
+          rowwise() %>%
+          mutate(keep = c(start_position, end_position) %overlaps% c(input$int_start, input$int_end)) %>%
+          filter(keep == TRUE) %>% 
+          select(-keep) %>%
+          ungroup()
+        
+        test0 <<- data_raw
 
       } else {
         
-        data_raw  <- data_raw %>% filter(location == paste0(input$input_chrom, input$input_karyotype))
+        data_raw  <- data_raw %>% 
+          filter(location == paste0(input$input_chrom, input$input_karyotype))
 
       }
       
@@ -717,7 +808,12 @@ tablerTabItem(
         mutate(oe = paste0(oe_lof, ' (', oe_lof_lower, '-',oe_lof_upper, ')')) %>%
         select(-ensembl_gene_id, -transcript, -oe_lof, -oe_lof_lower, -oe_lof_upper, -vg)
       
+      
+      
+      data_raw <- get_perc_genes(data_raw, input$int_start, input$int_end)
+      
       test1 <<- data_raw
+      
     })
     
     output$dgenes <- renderDataTable({
@@ -752,14 +848,26 @@ tablerTabItem(
                 ))
     })
     
-    output$distPlot <- renderPlot({
-      if (input$enable_distPlot) hist(rnorm(input$obs))
+    output$plotp_overlap <- renderPlot({
+      
+      
+      data_selected() %>%
+        ggplot(aes(p_overlap)) +
+        geom_histogram(bandwidth = 10, fill = 'steelblue', color = 'black') +
+        theme_minimal() +
+        xlab('Percentage of overlapping (%)') +
+        ylab('Number of genes')
+      
+      
+      
+      
     })
     
     output$tissue_gtex <- renderPlotly({
  
       
       filtered_gene <- input$input_gene_tissue
+      
       p <- gtex %>%
         filter(gene == !!filtered_gene) %>%
         ggplot(aes(reorder(tissue, -value), value)) +
@@ -867,6 +975,9 @@ tablerTabItem(
     
     output$plot_chrom <- renderPlot({
       
+      req(input$start_analysis > 0)
+      
+      
       input_chr <- paste0('chr', input$input_chrom)
       
       # data_input <- data_selected()
@@ -876,8 +987,8 @@ tablerTabItem(
       # plotTracks(ideoTrack, from= input$int_start , to= input$int_end, showBandId=TRUE,
       #            cex.bands=0.5)
       # 
-      ideoTrack <- IdeogramTrack(genome="hg19", chromosome= 'chr1')
-      plotTracks(ideoTrack, from= 1000 , to= 10000000, showBandId=TRUE,
+      ideoTrack <- IdeogramTrack(genome="hg19", chromosome= input_chr)
+      plotTracks(ideoTrack, from= input$int_start , to= input$int_end, showBandId=TRUE,
                  cex.bands=0.5)
         
       # plotKaryotype(chromosomes = input_chr, plot.type = 2) %>%
@@ -1565,6 +1676,7 @@ tablerTabItem(
     #   
     #   
     # })
+    
     
   }
 )

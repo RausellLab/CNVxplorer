@@ -2,8 +2,49 @@
 
 
 
+
+
+
+
+
+
+
+
+test1 %>%
+  ggplot(aes(p_overlap)) +
+  geom_histogram(bandwidth = 10, fill = 'steelblue', color = 'black') +
+  theme_minimal() +
+  xlab('Percentage of overlapping (%)') +
+  ylab('Number of genes')
+
+
+
+
+
+
+
+
+
+
+
+cnv_region <- GRanges(
+  seqnames = "1",
+  ranges = IRanges(1000, 10000000))
+
+genes_region <- test1 %>% 
+  select(chrom, start_position, end_position) %>%
+  rename(start = start_position, end = end_position) %>%
+  makeGRangesFromDataFrame()
+
+overlaps_hits <- pintersect(genes_region, cnv_region)
+
+percentOverlap <- width(gr2) /  width(overlaps_hits)
+
+
 library(tidyverse)
 library(randomForest)
+
+
 
 url <- 'https://archive.ics.uci.edu/ml/machine-learning-databases/heart-disease/processed.cleveland.data'
 
@@ -25,6 +66,25 @@ df <- df %>%
          thal = as.factor(thal)) %>%
   mutate(hd = as.factor(if_else(hd == 0, 'Healthy', 'Unhealthy')))
 
+
+test66
+go <- Ontology("hp")
+
+
+chrom_tmp <- '1'
+start_tmp <- 1000
+end_tmp <- 10000
+
+
+chromPlot::hg_cytoBandIdeo %>%
+  filter(Chrom %in% chrom_tmp) %>%
+  mutate(keep = map2_chr(Start, End, function(x,y) c(1000, 243700000) %overlaps% c(x,y)))
+
+
+
+test66 %>%
+  mutate(description = map_chr(hp, function(x) termDesc(term(go, x))))
+  
 
 
 set.seed(42)
