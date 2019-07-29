@@ -1755,5 +1755,19 @@ shiny::shinyApp(
     })
     
     
+    output$download_button <- downloadHandler(
+      
+      filename = 'sample_nome_pcr.zip',
+      
+      content = function(result.zip) {
+        
+        fs <- paste0('./sample_seq/NOMe-PCR_module/',
+                     list.files('sample_seq/NOMe-PCR_module'))
+        zip(zipfile= result.zip, files=fs)
+        contentType = "application/zip"
+        
+      })
+    
+    
   }
 )
