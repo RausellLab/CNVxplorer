@@ -1,27 +1,47 @@
 
 
 
+reactable(hgcn_genes,  rvis = colDef(name = "RVIS",
+                                                   cell = function(value) {
+                                                        if (value > 90) {
+                                                          classes <- "tag num-high"
+                                                        } else {
+                                                          classes <- "tag num-low"
+                                                        }
+                                                        value <- format(value, nsmall = 1)
+                                                        span(class = classes, value)
+                                                      })
+
+                                                      )
+
+
+reactable(hgcn_genes, columns = list(
+  pLI = colDef(style = function(value) {
+    if (is.na(value)) {
+      color <- "green"
+    } else if (value >= 0.9) {
+      color <- 'blue'
+    } else  {
+      color <- "#777"
+    }
+    list(color = color, fontWeight = "bold")
+  })
+))
 
 
 
 
+1000000
+
+cnv_df %>%
+  filter(length_cnv < 100000)
+  
 
 
-
-
-
-test1 %>%
-  ggplot(aes(p_overlap)) +
-  geom_histogram(bandwidth = 10, fill = 'steelblue', color = 'black') +
-  theme_minimal() +
-  xlab('Percentage of overlapping (%)') +
-  ylab('Number of genes')
-
-
-
-
-
-
+cnv_df %>%
+  ggplot(aes(length_cnv)) +
+  geom_density(aes(fill = source), alpha = 0.4) +
+  xlim(0, 100000)
 
 
 

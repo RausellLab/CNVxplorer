@@ -22,6 +22,7 @@ library(patchwork)
 library(DOSE)
 library(enrichplot)
 library(rentrez)
+library(reactable)
 
 
 
@@ -36,7 +37,7 @@ hg_cytoBandIdeo <- chromPlot::hg_cytoBandIdeo
 
 # app
 shiny::shinyApp(
- 
+  
   ui = tablerDashPage(
     # enable_preloader = TRUE,
     # loading_duration = 4,
@@ -45,11 +46,7 @@ shiny::shinyApp(
     navbar = tablerDashNav(
       
       navMenu = tablerNavMenu(
-        tablerNavMenuItem(
-          tabName = "Home",
-          icon = "home",
-          "Home"
-        ),
+
         tablerNavMenuItem(
           tabName = "Page1",
           icon = "box",
@@ -91,10 +88,13 @@ shiny::shinyApp(
           "Download report"
         ),
         tablerNavMenuItem(
-          tabName = "Documentation",
-          icon = icon("doc", lib = 'glyphicon'),
+          tabName = "Docu",
+          icon = "book",
           "Documentation"
-        )),
+        )
+        
+        
+        ),
       id = "mymenu",
       src = "https://preview.tabler.io/demo/brand/tabler.svg",
       uiOutput('ref_user_genes'),
@@ -132,451 +132,479 @@ shiny::shinyApp(
       tablerTabItems(
         
         tablerTabItem(
-          tabName = "Home",
+            
+          tabName = "Docu",
           fluidRow(
+            tablerCard(
+              title = "Welcome to CNVxplore",
+              
+              'Description and more',
+              width = 9,
+              overflow = TRUE
+            ),
+            tablerCard(width = 3,
+                       tablerTimeline(
+                         tablerTimelineItem(
+                           title = "Overview",
+                           status = "green",
+                           date = ""
+                         ),
+                         tablerTimelineItem(
+                           title = "Functional analysis",
+                           status = NULL,
+                           date = ""
+                         ),
+                         tablerTimelineItem(
+                           title = "Model organism",
+                           status = NULL,
+                           date = ""
+                         ),
+                         tablerTimelineItem(
+                           title = "Regulatory regions",
+                           status = NULL,
+                           date = ""
+                         ),
+                         tablerTimelineItem(
+                           title = "Tissue-specificity",
+                           status = NULL,
+                           date = ""
+                         )
+                       ))),
           tablerCard(
             title = "Welcome to CNVxplore",
             
-            'Description and more',
-            width = 9,
-            overflow = TRUE
-          ),
-          tablerCard(width = 3,
-          tablerTimeline(
-            tablerTimelineItem(
-              title = "Overview",
-              status = "green",
-              date = ""
-            ),
-            tablerTimelineItem(
-              title = "Functional analysis",
-              status = NULL,
-              date = ""
-            ),
-            tablerTimelineItem(
-              title = "Model organism",
-              status = NULL,
-              date = ""
-            ),
-            tablerTimelineItem(
-              title = "Regulatory regions",
-              status = NULL,
-              date = ""
-            ),
-            tablerTimelineItem(
-              title = "Tissue-specificity",
-              status = NULL,
-              date = ""
-            )
-          ))),
-          tablerCard(
-            title = "Welcome to CNVxplore",
-            
-           DTOutput('score_references'),
+            DTOutput('score_references'),
             width = 12,
             overflow = FALSE
           )
         ),
-
+        
         tablerTabItem(
           tabName = "Page1",
-      
-      use_waiter(),
-      setZoom(class = "card"),
-      chooseSliderSkin("Nice"),
-      
-      fluidRow(
-        column(
-          width = 3,
-          selectizeInput(inputId = 'input_chrom', label = 'Genomic interval - Chromosome', choices = human_chrom,
-                         selected = NULL, multiple = FALSE,
-                         options = NULL),
-          prettyRadioButtons(
-            inputId = "input_geno_karyo",
-            label = "Choose:", 
-            choices = c("Genomic coordinates", "G banding"),
-            inline = TRUE, 
-            status = "primary",
-            fill = TRUE
+          
+          use_waiter(),
+          setZoom(class = "card"),
+          chooseSliderSkin("Nice"),
+          
+          fluidRow(
+            column(
+              width = 3,
+              selectizeInput(inputId = 'input_chrom', label = 'Genomic interval - Chromosome', choices = human_chrom,
+                             selected = NULL, multiple = FALSE,
+                             options = NULL),
+              prettyRadioButtons(
+                inputId = "input_geno_karyo",
+                label = "Choose:", 
+                choices = c("Genomic coordinates", "G banding"),
+                inline = TRUE, 
+                status = "primary",
+                fill = TRUE
+              ),
+              uiOutput('choose_geno_karyo1'),
+              uiOutput('choose_geno_karyo2'),
+              # tags$hr(),
+              actionBttn(
+                inputId = "start_analysis",
+                label = "Start!",
+                color = "success",
+                style = "material-flat",
+                # icon = icon("sliders"),
+                block = TRUE
+              ),
+              tags$br(),
+              tags$br(),
+              tags$br()
+            ),
+            column(6,
+                   plotOutput('plot_chrom', height = 200)),
+            column(
+              width = 3,
+              
+              
+              uiOutput('n_genes'),
+              uiOutput('n_enhancer'),
+              
+              uiOutput("info")
+            )
           ),
-         uiOutput('choose_geno_karyo1'),
-         uiOutput('choose_geno_karyo2'),
-         # tags$hr(),
-         actionBttn(
-           inputId = "start_analysis",
-           label = "Start!",
-           color = "success",
-           style = "material-flat",
-           # icon = icon("sliders"),
-           block = TRUE
-         ),
-         tags$br(),
-         tags$br(),
-         tags$br()
-        ),
-        column(6,
-               plotOutput('plot_chrom', height = 200)),
-        column(
-          width = 3,
-
-
-          uiOutput('n_genes'),
-          uiOutput('n_enhancer'),
-          
-          uiOutput("info")
-          )
-    ),
-    fluidRow(
-      # column(
-      #   width = 6,
-      #   tablerCard(
-      #     title = "Plots",
-      #     zoomable = FALSE,
-      #     closable = FALSE,
-      #     options = tagList(
-      #       switchInput(
-      #         inputId = "enable_distPlot",
-      #         label = "Plot?",
-      #         value = TRUE,
-      #         onStatus = "success",
-      #         offStatus = "danger"
-      #       )
-      #     ),
-      #     plotOutput("distPlot"),
-      #     status = "info",
-      #     statusSide = "left",
-      #     width = 12,
-      #     footer = tagList(
-      #       column(
-      #         width = 12,
-      #         align = "center",
-      #         sliderInput(
-      #           "obs",
-      #           "Number of observations:",
-      #           min = 0,
-      #           max = 1000,
-      #           value = 500
-      #         )
-      #       )
-      #     )
-      #   )
-      # ),
-
-        tablerCard(
-          title = "Gene dataset",
- 
-          DTOutput("dgenes"),
-          width = 12,
-          overflow = TRUE
-        ),
-       
-          column(width = 3,
-                 
-          uiOutput('n_cnv'),
-          uiOutput('n_clinvar'),
-          uiOutput('n_gwas'),
-          uiOutput('n_lncrna'),
-          uiOutput('n_hi')),
-          column(width = 3,
-                 
-          uiOutput('n_dev'),
-          uiOutput('n_tads'),
-          uiOutput('n_omim'),
-          uiOutput('n_pubmed'),
-          uiOutput('n_pli')),
-        column(width = 6,
-        tablerCard(
-          title = "Genome-wide percentile (pLI - RVIS scores)",
-          
-          plotlyOutput("dot_comparison"),
-          width = 12,
-          overflow = TRUE
-        ))
-      
-    ),
-    fluidRow(
-      tablerCard(
-        title = "Heatmap - Genome-wide percentile",
-        plotlyOutput('heatmap'),
-        width = 12,
-        overflow = TRUE
-      ),
-      tablerCard(
-        title = "Heatmap - Genome-wide percentile",
-        plotOutput('plotp_overlap'),
-        width = 6,
-        overflow = TRUE
-      )
-      
-      
-    )
-    # tablerCard(
-    #   title = "Functional analysis",
-    #   width = 12,
-    #   zoomable = FALSE,
-    #   closable = FALSE,
-    #   plotOutput('func_an1alysis') %>% withSpinner(type = 5),
-    #   options = tagList(
-    #     switchInput(
-    #       inputId = "enable1_func_analysis",
-    #       label = "Run?",
-    #       value = FALSE,
-    #       onStatus = "success",
-    #       offStatus = "danger"
-    # 
-    #     ),
-    #     pickerInput(
-    #       inputId = "sign_1vline",
-    #       label = tags$b("P.value threshold:"),
-    #       choices = c("0.05", "0.01", "0.005"),
-    #       width = 130),
-    #     prettyRadioButtons(
-    #       inputId = "choos1e_go",
-    #       label = tags$b("Select one option:"),
-    #       choices = c("biological process", "molecular function", "cellular component"),
-    #       inline = TRUE,
-    #       status = "primary",
-    #       fill = TRUE
-    #     )
-    #   )),
-    # tablerCard(
-    #   title = "Gene-disease association",
-    #   plotOutput('func_anal1ysis_diseases') %>% withSpinner(type = 5),
-    #   width = 12,
-    #   zoomable = FALSE,
-    #   closable = FALSE
-    # 
-    # 
-    # )
-    # tablerCard(
-    #   title = "Gene-disease association",
-    #   plotOutput('func_2nalysis_mesh') %>% withSpinner(type = 5),
-    #   width = 12,
-    #   zoomable = FALSE,
-    #   closable = FALSE
-    #   
-    #   
-    # )
-        ),
-    
-    tablerTabItem(
-      tabName = "fa",
-      # fluidRow(
-      #   
-      #   tablerCard(
-      #     
-      #     title = 'P.value threshold',
-      #     width = 3,
-      #     pickerInput(
-      #       inputId = "sign_vline",
-      #       label = tags$b("P.value threshold:"), 
-      #       choices = c("0.05", "0.01", "0.005"),
-      #       width = 12)
-      #     
-      #     
-      #   )
-      #   
-      #   
-      # ),
-      tablerCard(
-        title = "Gene ontology",
-        width = 12,
-        zoomable = FALSE,
-        closable = FALSE,
-        uiOutput('plot_df') ,
-        options = tagList(
-          switchInput(
-            inputId = "enable_group_go",
-            label = "Run?",
-            value = FALSE,
-            onStatus = "success",
-            offStatus = "danger"
+          fluidRow(
+            # column(
+            #   width = 6,
+            #   tablerCard(
+            #     title = "Plots",
+            #     zoomable = FALSE,
+            #     closable = FALSE,
+            #     options = tagList(
+            #       switchInput(
+            #         inputId = "enable_distPlot",
+            #         label = "Plot?",
+            #         value = TRUE,
+            #         onStatus = "success",
+            #         offStatus = "danger"
+            #       )
+            #     ),
+            #     plotOutput("distPlot"),
+            #     status = "info",
+            #     statusSide = "left",
+            #     width = 12,
+            #     footer = tagList(
+            #       column(
+            #         width = 12,
+            #         align = "center",
+            #         sliderInput(
+            #           "obs",
+            #           "Number of observations:",
+            #           min = 0,
+            #           max = 1000,
+            #           value = 500
+            #         )
+            #       )
+            #     )
+            #   )
+            # ),
+            
+            tablerCard(
+              title = "Gene dataset",
+              
+              DTOutput("dgenes"),
+              width = 12,
+              overflow = TRUE
+            ),
+            
+            column(width = 3,
+                   
+                   uiOutput('n_cnv'),
+                   uiOutput('n_clinvar'),
+                   uiOutput('n_gwas'),
+                   uiOutput('n_lncrna'),
+                   uiOutput('n_hi')),
+            column(width = 3,
+                   
+                   uiOutput('n_dev'),
+                   uiOutput('n_tads'),
+                   uiOutput('n_omim'),
+                   uiOutput('n_pubmed'),
+                   uiOutput('n_pli')),
+            column(width = 6,
+                   tablerCard(
+                     title = "Genome-wide percentile (pLI - RVIS scores)",
+                     
+                     plotlyOutput("dot_comparison"),
+                     width = 12,
+                     overflow = TRUE
+                   ))
             
           ),
-          switchInput(
-            inputId = "user_df_plot",
-            label = "Table?",
-            value = FALSE,
-            onStatus = "success",
-            offStatus = "danger"
+          fluidRow(
+            tablerCard(
+              title = "Heatmap - Genome-wide percentile",
+              plotlyOutput('heatmap'),
+              width = 12,
+              overflow = TRUE
+            ),
+            tablerCard(
+              title = "Heatmap - Genome-wide percentile",
+              plotOutput('plotp_overlap'),
+              width = 6,
+              overflow = TRUE
+            )
             
-          ),
-          pickerInput(
-            inputId = "user_level",
-            label = tags$b("Level:"), 
-            choices = 1:52,
-            width = 130,
-            options = list(
-              size = 10,
-              `live-search` = TRUE)),
-          prettyRadioButtons(
-            inputId = "choose_group_go",
-            label = tags$b("Select one option:"), 
-            choices = c("biological process", "molecular function", "cellular component"),
-            inline = TRUE, 
-            status = "primary",
-            fill = TRUE
-          )
-          
-          
-          )
-      ),
-      # tablerCard(
-      #   title = "Gene ontology",
-      #   width = 12,
-      #   zoomable = FALSE,
-      #   closable = FALSE,
-      #   DTOutput('df_22go') %>% withSpinner(type = 5)
-      # ),
-      tablerCard(
-        title = "Gene Ontology",
-        width = 12,
-        zoomable = FALSE,
-        closable = FALSE,
-        plotOutput('func_analysis') %>% withSpinner(type = 5),
-        options = tagList(
-          switchInput(
-            inputId = "enable_func_analysis",
-            label = "Run?",
-            value = FALSE,
-            onStatus = "success",
-            offStatus = "danger"
             
-          ),
-          pickerInput(
-            inputId = "sign_vline",
-            label = tags$b("P.value threshold:"), 
-            choices = c("0.05", "0.01", "0.005"),
-            width = 130),
-          prettyRadioButtons(
-            inputId = "choose_go",
-            label = tags$b("Select one option:"), 
-            choices = c("biological process", "molecular function", "cellular component"),
-            inline = TRUE, 
-            status = "primary",
-            fill = TRUE
           )
-        )),
-      tablerCard(
-        title = "Pathway analysis",
-        width = 12,
-        zoomable = FALSE,
-        closable = FALSE,
-        plotOutput('func_pathways') %>% withSpinner(type = 5)
+          # tablerCard(
+          #   title = "Functional analysis",
+          #   width = 12,
+          #   zoomable = FALSE,
+          #   closable = FALSE,
+          #   plotOutput('func_an1alysis') %>% withSpinner(type = 5),
+          #   options = tagList(
+          #     switchInput(
+          #       inputId = "enable1_func_analysis",
+          #       label = "Run?",
+          #       value = FALSE,
+          #       onStatus = "success",
+          #       offStatus = "danger"
+          # 
+          #     ),
+          #     pickerInput(
+          #       inputId = "sign_1vline",
+          #       label = tags$b("P.value threshold:"),
+          #       choices = c("0.05", "0.01", "0.005"),
+          #       width = 130),
+          #     prettyRadioButtons(
+          #       inputId = "choos1e_go",
+          #       label = tags$b("Select one option:"),
+          #       choices = c("biological process", "molecular function", "cellular component"),
+          #       inline = TRUE,
+          #       status = "primary",
+          #       fill = TRUE
+          #     )
+          #   )),
+          # tablerCard(
+          #   title = "Gene-disease association",
+          #   plotOutput('func_anal1ysis_diseases') %>% withSpinner(type = 5),
+          #   width = 12,
+          #   zoomable = FALSE,
+          #   closable = FALSE
+          # 
+          # 
+          # )
+          # tablerCard(
+          #   title = "Gene-disease association",
+          #   plotOutput('func_2nalysis_mesh') %>% withSpinner(type = 5),
+          #   width = 12,
+          #   zoomable = FALSE,
+          #   closable = FALSE
+          #   
+          #   
+          # )
         ),
-      tablerCard(
-        title = "Gene-disease association",
-        plotOutput('func_analysis_diseases') %>% withSpinner(type = 5),
-        width = 12,
-        zoomable = FALSE,
-        closable = FALSE
-      )
-      
-    ),
-    tablerTabItem(
-      tabName = "reg_region",
-      fluidRow(
-        # tablerCard(title = 'Select a region:',
-        #            uiOutput('gen2e_2tissue'),
-        #            width = 3),
-        uiOutput('n_enhancer_total'),
-        uiOutput('n_enhancer_inside'),
-        uiOutput('redund_n_enhancer'),
-        tablerCard(title = 'List enhancers',
-                   DTOutput('df_enhancer'),
-                   width = 12)),
-      tablerCard(title = 'RNA Expression (GTEx)',
-                 DTOutput('lncrna_df'),
-                 width = 12)
-      
-    ),
-    
-    tablerTabItem(
-      tabName = "tissue",
-      fluidRow(
-      tablerCard(title = 'Select a gene:',
-                 uiOutput('gene_tissue'),
-                 width = 3),
-      tablerCard(title = 'Protein Expression (Human Protein Atlas)',
-                 DTOutput('tissue_hpa'),
-                 width = 9)),
-      tablerCard(title = 'RNA Expression (GTEx)',
-                 plotlyOutput('tissue_gtex'),
-                 width = 12)
-
-    ),
-    tablerTabItem(
-      tabName = "disease",
-      fluidRow(
-        # tablerCard(title = 'Select a gene:',
         
-        multiInput(
-          inputId = "chosen_hp",
-          label = "Phenotype:", 
-          choices = NULL,
-          choiceNames = vector_term,
-          choiceValues = vector_hp
+        tablerTabItem(
+          tabName = "fa",
+          # fluidRow(
+          #   
+          #   tablerCard(
+          #     
+          #     title = 'P.value threshold',
+          #     width = 3,
+          #     pickerInput(
+          #       inputId = "sign_vline",
+          #       label = tags$b("P.value threshold:"), 
+          #       choices = c("0.05", "0.01", "0.005"),
+          #       width = 12)
+          #     
+          #     
+          #   )
+          #   
+          #   
+          # ),
+          tablerCard(
+            title = "Gene ontology",
+            width = 12,
+            zoomable = FALSE,
+            closable = FALSE,
+            uiOutput('plot_df') ,
+            options = tagList(
+              switchInput(
+                inputId = "enable_group_go",
+                label = "Run?",
+                value = FALSE,
+                onStatus = "success",
+                offStatus = "danger"
+                
+              ),
+              switchInput(
+                inputId = "user_df_plot",
+                label = "Table?",
+                value = FALSE,
+                onStatus = "success",
+                offStatus = "danger"
+                
+              ),
+              pickerInput(
+                inputId = "user_level",
+                label = tags$b("Level:"), 
+                choices = 1:52,
+                width = 130,
+                options = list(
+                  size = 10,
+                  `live-search` = TRUE)),
+              prettyRadioButtons(
+                inputId = "choose_group_go",
+                label = tags$b("Select one option:"), 
+                choices = c("biological process", "molecular function", "cellular component"),
+                inline = TRUE, 
+                status = "primary",
+                fill = TRUE
+              )
+              
+              
+            )
+          ),
+          # tablerCard(
+          #   title = "Gene ontology",
+          #   width = 12,
+          #   zoomable = FALSE,
+          #   closable = FALSE,
+          #   DTOutput('df_22go') %>% withSpinner(type = 5)
+          # ),
+          tablerCard(
+            title = "Gene Ontology",
+            width = 12,
+            zoomable = FALSE,
+            closable = FALSE,
+            plotOutput('func_analysis') %>% withSpinner(type = 5),
+            options = tagList(
+              switchInput(
+                inputId = "enable_func_analysis",
+                label = "Run?",
+                value = FALSE,
+                onStatus = "success",
+                offStatus = "danger"
+                
+              ),
+              pickerInput(
+                inputId = "sign_vline",
+                label = tags$b("P.value threshold:"), 
+                choices = c("0.05", "0.01", "0.005"),
+                width = 130),
+              prettyRadioButtons(
+                inputId = "choose_go",
+                label = tags$b("Select one option:"), 
+                choices = c("biological process", "molecular function", "cellular component"),
+                inline = TRUE, 
+                status = "primary",
+                fill = TRUE
+              )
+            )),
+          tablerCard(
+            title = "Pathway analysis",
+            width = 12,
+            zoomable = FALSE,
+            closable = FALSE,
+            plotOutput('func_pathways') %>% withSpinner(type = 5)
+          ),
+          tablerCard(
+            title = "Gene-disease association",
+            plotOutput('func_analysis_diseases') %>% withSpinner(type = 5),
+            width = 12,
+            zoomable = FALSE,
+            closable = FALSE
+          )
           
         ),
-        uiOutput('n_hp_chosen'),
-        uiOutput('check_genes_hp'),
-        tablerCard(title = 'Genes associated with the phenotype',
-                   DTOutput('df_check_hp_genes'),
-                   width = 12),
-        # width = 6
-        # ),
-        # tablerCard(title = 'Select a gene:',
-        #            uiOutput('n_pub2med'),
-        #            width = 3),
-        tablerCard(title = 'Pubmed articles',
-                   DTOutput('disease_pubmed'),
-                   width = 12))
-    ),
-    tablerTabItem(
-      tabName = "model",
-      tablerCard(title = 'Phenotypes associated with the list of genes',
-                 echarts4rOutput('agg_model'),
-                 width = 12),
-      fluidRow(
-        # tablerCard(title = 'Select a gene:',
-        #            uiOutput('gene_model'),
-        #            width = 3),
-        tablerCard(title = 'Genes associated with phenotypes in mouse (MGI)',
-                   DTOutput('model_genes'),
-                   width = 12))
-      
-      ),
-tablerTabItem(
-  tabName = "down_report",
-  fluidRow(
-    tablerCard(
-      title = "Funnel overview",
-      
-      echarts4rOutput("funnel_genes"),
-      width = 5,
-      overflow = TRUE
-    ),
-    tablerCard(title = '',
-               DTOutput('mode2l_genes'),
-               width = 9))
-  
-)
+        tablerTabItem(
+          tabName = "reg_region",
+          fluidRow(
+            # tablerCard(title = 'Select a region:',
+            #            uiOutput('gen2e_2tissue'),
+            #            width = 3),
+            uiOutput('n_enhancer_total'),
+            uiOutput('n_enhancer_inside'),
+            uiOutput('redund_n_enhancer'),
+            tablerCard(title = 'List enhancers',
+                       DTOutput('df_enhancer'),
+                       width = 12)),
+          tablerCard(title = 'RNA Expression (GTEx)',
+                     DTOutput('lncrna_df'),
+                     width = 12)
+          
+        ),
+        
+        tablerTabItem(
+          tabName = "gene",
+          fluidRow(
+            tablerCard(title = '19,281 protein-coding genes ',
+                       reactableOutput("table_all_genes"),
+                       width = 12)),
+          tablerCard(title = 'RNA Expression (GTEx)',
+                     DTOutput('lncrn2a_df'),
+                     width = 12)
+          
+        ),
+        
+        tablerTabItem(
+          tabName = "tissue",
+          fluidRow(
+            tablerCard(title = 'Select a gene:',
+                       uiOutput('gene_tissue'),
+                       width = 3),
+            tablerCard(title = 'Protein Expression (Human Protein Atlas)',
+                       DTOutput('tissue_hpa'),
+                       width = 9)),
+          tablerCard(title = 'RNA Expression (GTEx)',
+                     plotlyOutput('tissue_gtex'),
+                     width = 12)
+          
+        ),
+        tablerTabItem(
+          tabName = "disease",
+          fluidRow(
+            # tablerCard(title = 'Select a gene:',
+            
+            multiInput(
+              inputId = "chosen_hp",
+              label = "Phenotype:", 
+              choices = NULL,
+              choiceNames = vector_term,
+              choiceValues = vector_hp
+              
+            ),
+            uiOutput('n_hp_chosen'),
+            uiOutput('check_genes_hp'),
+            tablerCard(title = 'Genes associated with the phenotype',
+                       DTOutput('df_check_hp_genes'),
+                       width = 12),
+            # width = 6
+            # ),
+            # tablerCard(title = 'Select a gene:',
+            #            uiOutput('n_pub2med'),
+            #            width = 3),
+            tablerCard(title = 'Pubmed articles',
+                       DTOutput('disease_pubmed'),
+                       width = 12))
+        ),
+        tablerTabItem(
+          tabName = "model",
+          tablerCard(title = 'Phenotypes associated with the list of genes',
+                     echarts4rOutput('agg_model'),
+                     width = 12),
+          fluidRow(
+            # tablerCard(title = 'Select a gene:',
+            #            uiOutput('gene_model'),
+            #            width = 3),
+            tablerCard(title = 'Genes associated with phenotypes in mouse (MGI)',
+                       DTOutput('model_genes'),
+                       width = 12))
+          
+        ),
+        tablerTabItem(
+          tabName = "down_report",
+          fluidRow(
+            tablerCard(
+              title = "Select your report's modules:",
+              
+              multiInput(
+                inputId = "Id010",
+                label = "Countries :", 
+                choices = NULL,
+                choiceNames = as.character(1:10), 
+                choiceValues = as.character(1:10)
+                ),
 
-
+              width = 12,
+              overflow = TRUE
+            ),
+            tablerCard(
+              title = "Funnel overview",
+              
+              echarts4rOutput("funnel_genes"),
+              width = 5,
+              overflow = TRUE
+            ),
+            downloadButton('button_download', label = "Download"),
+            tablerCard(title = '',
+                       DTOutput('mode2l_genes'),
+                       width = 9))
+          
+        )
+        
+        
+        
+        
+        
+        
+        
+        
+      )
       
-    
-    
-    
-    
-    
-    )
-   
     )
   ),
   server = function(input, output) {
     
     gene_selected <- reactive({
-
+      
       test4 <<- input$dgenes_rows_selected
       print(test4)
     })
@@ -603,7 +631,7 @@ tablerTabItem(
     
     output$gene_model <- renderUI({
       
-
+      
       input_data <- data_selected() %>% select(gene) %>% pull()
       
       pickerInput(
@@ -647,11 +675,11 @@ tablerTabItem(
         filter(hp %in% hp_chosen) %>%
         filter(entrez_id %in% genes_chosen)
       
-        df_tmp2 <<- df_tmp %>%
-          select(hp) %>%
-          distinct() %>%
-          mutate(description = map_chr(hp, function(x) termDesc(term(go, x))))
-
+      df_tmp2 <<- df_tmp %>%
+        select(hp) %>%
+        distinct() %>%
+        mutate(description = map_chr(hp, function(x) termDesc(term(go, x))))
+      
       df_tmp <- df_tmp %>% left_join(df_tmp2, by = 'hp')
       
       df_tmp
@@ -663,7 +691,7 @@ tablerTabItem(
       req(input$start_analysis > 0)
       
       test66 <<- check_hp_genes()
-
+      
       tablerStatCard(
         value =  nrow(check_hp_genes()),
         title = "Number of genes associated with the phenotype(s)",
@@ -692,7 +720,7 @@ tablerTabItem(
         # trend = -10,
         width = 12
       )
-
+      
     })
     
     output$n_cnv <- renderUI({
@@ -731,17 +759,17 @@ tablerTabItem(
           pull() %>%
           map_chr(function(x) paste0(chrom_tmp, x)) %>%
           paste0(collapse = ' OR ')
-
+        
       } else {
         query_region <- paste0(input$input_chrom, input$input_karyotype)
-
+        
       }
       
       test67 <<- query_region
       
       query_pubmed <- entrez_search(db="pubmed", term= query_region, retmax = 200 )
-   
-
+      
+      
       
     })
     
@@ -765,8 +793,8 @@ tablerTabItem(
       n_cites <- unname(map_chr(query_tmp, function(x) x[["pmcrefcount"]]))
       
       df_output <- tibble(title = title, n_cites = n_cites)
-
-  
+      
+      
       datatable(df_output, rownames = FALSE, filter = 'top', 
                 options = list(
                   pageLength = 5, autoWidth = TRUE, style = 'bootstrap', list(searchHighlight = TRUE),
@@ -794,12 +822,12 @@ tablerTabItem(
           ungroup()
         
         test0 <<- data_raw
-
+        
       } else {
         
         data_raw  <- data_raw %>% 
           filter(location == paste0(input$input_chrom, input$input_karyotype))
-
+        
       }
       
       data_raw <- data_raw %>% 
@@ -820,7 +848,7 @@ tablerTabItem(
       
       server <- TRUE
       data_input <- data_selected() %>% select(-start_position, -end_position) %>% select(-chrom)
-
+      
       datatable(data_input, rownames = FALSE, filter = 'top', 
                 # extensions = 'Responsive',
                 options = list(
@@ -839,7 +867,7 @@ tablerTabItem(
     
     output$score_references <- renderDataTable({
       
-
+      
       datatable(ref_scores, rownames = FALSE,
                 options = list(
                   pageLength = 5, autoWidth = TRUE, style = 'bootstrap',
@@ -864,7 +892,7 @@ tablerTabItem(
     })
     
     output$tissue_gtex <- renderPlotly({
- 
+      
       
       filtered_gene <- input$input_gene_tissue
       
@@ -890,8 +918,8 @@ tablerTabItem(
       datatable(hpa %>% filter(gene == !!filtered_gene),
                 options = list(searchHighlight = TRUE), filter = 'top', style = 'bootstrap')
       
-
-
+      
+      
     })
     
     
@@ -917,8 +945,8 @@ tablerTabItem(
     
     output$model_genes <- renderDT({
       
-     df_tmp <- model_genes_phenotype() %>% select(-entrez_id, -gene_mouse)
-        
+      df_tmp <- model_genes_phenotype() %>% select(-entrez_id, -gene_mouse)
+      
       datatable(df_tmp,
                 options = list(searchHighlight = TRUE,  style = 'bootstrap'))
       
@@ -932,7 +960,7 @@ tablerTabItem(
       validate(
         need(input$dgenes_rows_selected != '', "Please, select a gene in the datatable.")
       )
-     
+      
       red_line <- data_selected() %>% slice(input$dgenes_rows_selected) %>% select(pLI) %>% pull()
       symbol_chosen <- data_selected() %>% slice(input$dgenes_rows_selected) %>% select(gene) %>% pull()
       
@@ -953,7 +981,7 @@ tablerTabItem(
       )
       
       name_gene_filtered <- data_selected() %>% slice(input$dgenes_rows_selected) %>% select(gene) %>% pull()
-
+      
       p <- data_selected() %>%
         
         ggplot(aes(pLI, rvis)) +
@@ -990,7 +1018,7 @@ tablerTabItem(
       ideoTrack <- IdeogramTrack(genome="hg19", chromosome= input_chr)
       plotTracks(ideoTrack, from= input$int_start , to= input$int_end, showBandId=TRUE,
                  cex.bands=0.5)
-        
+      
       # plotKaryotype(chromosomes = input_chr, plot.type = 2) %>%
       # kpDataBackground(data.panel = 1)
       # kpAddBaseNumbers() %>%
@@ -1008,11 +1036,11 @@ tablerTabItem(
           inputId = "int_start",
           label = "Genomic interval - Start",
           value = 1000)
-
+        
       } else {
         
         karyotype_filtered <- as.list(chromPlot::hg_cytoBandIdeo %>% filter(Chrom == input$input_chrom) %>% select(Name))
-
+        
         # selectizeInput(inputId = 'input_karyotype', label = 'Karyotype', choices = karyotype_filtered,
         #                selected = NULL, multiple = FALSE,
         #                options = NULL)
@@ -1024,12 +1052,12 @@ tablerTabItem(
           options = list(
             `live-search` = TRUE)
         )
-
+        
       }
-
+      
     })
     
-
+    
     
     output$n_genes <- renderUI({
       
@@ -1127,15 +1155,15 @@ tablerTabItem(
       datatable(tmp_lncrna, rownames = FALSE, 
                 options = list(
                   pageLength = 5, autoWidth = TRUE, list(searchHighlight = TRUE)))
-                
+      
       
       
     })
     
     
     output$n_lncrna <- renderUI({
-
-        tablerStatCard(
+      
+      tablerStatCard(
         value =  length(lncrna_raw()),
         title = "Number of lncRNA disrupted",
         # trend = -10,
@@ -1174,7 +1202,7 @@ tablerTabItem(
       
       data_tmp <- prev_enhancer() %>% select(id) %>% distinct() %>% pull(id)
       
-
+      
       tablerStatCard(
         value =  length(data_tmp),
         title = "Number of Enhancers",
@@ -1194,10 +1222,10 @@ tablerTabItem(
     output$redund_n_enhancer <- renderUI({
       
       test24 <<-  redundancy_enhancers() 
-
+      
       data_tmp <- redundancy_enhancers() %>% filter(n == 1)
-
-
+      
+      
       tablerStatCard(
         value =  nrow(data_tmp),
         title = "Number of genes whose have one enhancer and it is disrupted",
@@ -1208,12 +1236,12 @@ tablerTabItem(
     
     output$df_enhancer <- renderDT({
       
-                datatable(prev_enhancer(), rownames = FALSE, filter = 'top', 
-                          options = list(
-                            pageLength = 5, autoWidth = TRUE, style = 'bootstrap', list(searchHighlight = TRUE),
-                            selection = 'single'
-                            # columnDefs = list(list(className = 'dt-center', targets = '_all'))
-                          ))
+      datatable(prev_enhancer(), rownames = FALSE, filter = 'top', 
+                options = list(
+                  pageLength = 5, autoWidth = TRUE, style = 'bootstrap', list(searchHighlight = TRUE),
+                  selection = 'single'
+                  # columnDefs = list(list(className = 'dt-center', targets = '_all'))
+                ))
       
       
     })
@@ -1235,7 +1263,7 @@ tablerTabItem(
     
     output$n_dev <- renderUI({
       
-
+      
       n_dev_yes <- data_selected() %>% filter(dev == 1) %>% nrow()
       n_total <- nrow(data_selected())
       tablerStatCard(
@@ -1294,9 +1322,9 @@ tablerTabItem(
       test15 <- data_selected() %>% select(entrez_id) %>% pull()
       
       
-     n_pli_yes <- data_selected() %>% filter(pLI >= 0.9) %>% nrow()
-     n_total <- nrow(data_selected())  
-     
+      n_pli_yes <- data_selected() %>% filter(pLI >= 0.9) %>% nrow()
+      n_total <- nrow(data_selected())  
+      
       tablerStatCard(
         value =  paste(n_pli_yes, n_total, sep = '/'),
         title =  paste("Intolerant to LoF mutations", '(pLI >= 0.9)'),
@@ -1307,11 +1335,11 @@ tablerTabItem(
     
     output$n_omim <- renderUI({
       
-    gene_id <- data_selected() %>% select(gene) %>% pull()
-    n_omim  <- morbidmap %>% filter(gene %in% gene_id) %>% nrow()
-    n_total <- nrow(data_selected())  
-    
-     # morbidmap
+      gene_id <- data_selected() %>% select(gene) %>% pull()
+      n_omim  <- morbidmap %>% filter(gene %in% gene_id) %>% nrow()
+      n_total <- nrow(data_selected())  
+      
+      # morbidmap
       
       tablerStatCard(
         value =  paste(n_omim, n_total, sep = '/'),
@@ -1322,7 +1350,7 @@ tablerTabItem(
     })
     
     output$p_pli <- renderUI({
-
+      
       tablerStatCard(
         value =  hgcn_genes %>% mutate(p_pli = ntile(pLI, 100)) %>% filter(gene == 'AADACL4') %>% select(p_pli) %>% pull(),
         title = "Percentile pLI score",
@@ -1341,7 +1369,7 @@ tablerTabItem(
       )
     })
     
-
+    
     
     output$n_genes_pli <- renderUI({
       
@@ -1357,7 +1385,7 @@ tablerTabItem(
       
     })
     
-
+    
     
     output$choose_geno_karyo2 <- renderUI({
       if (input$input_geno_karyo == 'Genomic coordinates') {
@@ -1373,7 +1401,7 @@ tablerTabItem(
       
       
       go <- Ontology("mp")
-
+      
       test_tmp <- data_selected() %>% select(gene) %>% pull()
       mgi_tmp <- mgi %>% filter(gene %in% test_tmp)
       mgi_tmp <- mgi_tmp %>% separate(pheno, into = LETTERS[1:230], sep = ' ') %>%
@@ -1384,18 +1412,18 @@ tablerTabItem(
       vector_mpo <- mgi_tmp %>% select(mpo_id) %>% unique() %>%
         mutate(description = map_chr(mpo_id, function(x) termLabel(term(go, x)))) %>%
         mutate(description = str_remove(description, ' phenotype'))
-
+      
       mgi_tmp <- mgi_tmp %>% left_join(vector_mpo)
       
       mgi_tmp
-
+      
       
       
     })
     
     
     output$agg_model <- renderEcharts4r({
-
+      
       model_genes_phenotype() %>% count(description) %>% arrange(n) %>%
         e_charts() %>% 
         e_treemap(description, description, n) %>%
@@ -1406,14 +1434,14 @@ tablerTabItem(
     })
     
     output$funnel_genes <- renderEcharts4r({
-
+      
       funnel <- data.frame(stage = c("19,192 genes", "182 genes", "60 genes"), value = c(1, 0.5, 0.25))
       
       funnel %>% 
         e_charts() %>% 
         e_funnel(value, stage) %>% 
         e_title("")
-
+      
     })
     
     
@@ -1429,7 +1457,7 @@ tablerTabItem(
     
     
     output$heatmap <- renderPlotly({
-
+      
       # a <- matrix(NA, nrow = 2, ncol = 100)
       # a[1,] <- hgcn_genes$pLI[1:100]
       # a[2,] <- hgcn_genes$rvis[1:100]
@@ -1440,7 +1468,7 @@ tablerTabItem(
       # a
       n_genes <- nrow(data_selected())
       data_raw <- data_selected() %>% mutate(p_li = ntile(pLI, 100), p_rvis = ntile(rvis, 100),
-                                        p_ncrvis = ntile(ncrvis, 100), p_ncgerp = ntile(ncgerp, 100))
+                                             p_ncrvis = ntile(ncrvis, 100), p_ncgerp = ntile(ncgerp, 100))
       m <- matrix(NA, nrow = 4, ncol = n_genes)
       m[1,] <- data_raw$p_li[1:n_genes]
       m[2,] <- data_raw$p_rvis[1:n_genes]
@@ -1463,7 +1491,7 @@ tablerTabItem(
     output$func_analysis <- renderPlot({
       
       if (input$enable_func_analysis == TRUE) {
-      
+        
         if (input$choose_go == 'biological process') {
           go_chosen <- 'BP'
         } else if (input$choose_go == 'molecular function') {
@@ -1474,45 +1502,45 @@ tablerTabItem(
         
         filtered_genes <- data_selected() %>% select(entrez_id) %>% pull()  %>% as.character()
         univ <- hgcn_genes %>% select(entrez_id) %>% pull() %>% as.character()
-
-      go_analysis <- enrichGO(gene  = filtered_genes,
-                      universe      = univ,
-                      OrgDb         = org.Hs.eg.db,
-                      ont           = go_chosen,
-                      pAdjustMethod = "BH",
-                      pvalueCutoff  = 0.05,
-                      qvalueCutoff  = 0.05)
-      
-      validate(
-        need(nrow(filtered_genes) != 0, "0 enriched terms found")
-      )
-      
-      pathway_analysis <- enrichPathway(gene=de,pvalueCutoff=0.05, readable=T)
-      
-      a <-  go_analysis %>%
-        as_tibble() %>%
-        slice(1:10) %>%
-        mutate(p.adjust = -log10(p.adjust)) %>%
-        ggplot(aes(reorder(Description, p.adjust), p.adjust)) +
-        geom_col(aes(fill = Description), color = 'black', show.legend = FALSE) +
-        scale_fill_viridis_d() +
-        coord_flip() +
-        xlab('') +
-        ylab('-log10(p-adjusted)') +
-        ggtitle('GO analysis') +
-        geom_hline(yintercept =-log10(as.numeric(input$sign_vline)), color = 'red', alpha = 0.6, linetype = 'dashed', size = 2) +
-        geom_text(
-          aes(label = GeneRatio, y = p.adjust + 0.05),
-          position = position_stack(vjust = 0.5),
-          vjust = 0
-        ) +
-        theme_minimal() +
-        theme(axis.text=element_text(size=12),
-              axis.title=element_text(size=14,face="bold"))
-      
-      a
-
-      
+        
+        go_analysis <- enrichGO(gene  = filtered_genes,
+                                universe      = univ,
+                                OrgDb         = org.Hs.eg.db,
+                                ont           = go_chosen,
+                                pAdjustMethod = "BH",
+                                pvalueCutoff  = 0.05,
+                                qvalueCutoff  = 0.05)
+        
+        validate(
+          need(nrow(filtered_genes) != 0, "0 enriched terms found")
+        )
+        
+        pathway_analysis <- enrichPathway(gene=de,pvalueCutoff=0.05, readable=T)
+        
+        a <-  go_analysis %>%
+          as_tibble() %>%
+          slice(1:10) %>%
+          mutate(p.adjust = -log10(p.adjust)) %>%
+          ggplot(aes(reorder(Description, p.adjust), p.adjust)) +
+          geom_col(aes(fill = Description), color = 'black', show.legend = FALSE) +
+          scale_fill_viridis_d() +
+          coord_flip() +
+          xlab('') +
+          ylab('-log10(p-adjusted)') +
+          ggtitle('GO analysis') +
+          geom_hline(yintercept =-log10(as.numeric(input$sign_vline)), color = 'red', alpha = 0.6, linetype = 'dashed', size = 2) +
+          geom_text(
+            aes(label = GeneRatio, y = p.adjust + 0.05),
+            position = position_stack(vjust = 0.5),
+            vjust = 0
+          ) +
+          theme_minimal() +
+          theme(axis.text=element_text(size=12),
+                axis.title=element_text(size=14,face="bold"))
+        
+        a
+        
+        
       }
     })
     
@@ -1544,12 +1572,12 @@ tablerTabItem(
         
         
         error= function(e) stop("Please, reduce the level assigned"))
-
+      
       
       validate(
         need(ggo %>% as_tibble() %>% select(Count) %>% sum() != 0, "0 terms found. Please reduce the level assigned")
       )
-  
+      
       ggo
       
     })
@@ -1565,7 +1593,7 @@ tablerTabItem(
         plotOutput('group_go')
         
       }
-
+      
     })
     
     
@@ -1621,7 +1649,7 @@ tablerTabItem(
       validate(
         need(nrow(filtered_genes) != 0, "0 enriched terms found")
       )
-
+      
       pathway_analysis <- enrichPathway(gene= filtered_genes ,pvalueCutoff=0.05, readable=T)
       pathway_analysis %>%
         as_tibble() %>% 
@@ -1646,7 +1674,7 @@ tablerTabItem(
     })
     
     output$func_analysis_diseases  <- renderPlot({
-       
+      
       # enrichNCG
       # enrichDGN
       # gseNCG
@@ -1669,13 +1697,62 @@ tablerTabItem(
       
     })
     
-    # output$func_analysis_mesh  <- renderPlot({
-    #   
-    #   # x <- enrichMeSH(de, MeSHDb = "MeSH.Hsa.eg.db", database='gendoo', category = 'C')
-    #   dotplot(x)
-    #   
-    #   
-    # })
+    output$table_all_genes  <-  renderReactable({
+      
+     reactable(hgcn_genes,
+               filterable = TRUE,
+               selection = "single", 
+               selectionId = "selected",
+               
+               columns = list(chrom = colDef(name = "Chromosome"),
+                              start_position = colDef(name = "Start"),
+                              end_position = colDef(name = "End"),
+                              location = colDef(name = "Location"),
+                              gene = colDef(name = "Gene"),
+                              haplo = colDef(name = "Haploinsufficiency",
+                                             cell = function(value) {
+                                               
+                                               if (value == 0) "\u2718" else "\u2713"
+                                             }),
+                              triplo = colDef(name = "Triplosensitivity",
+                                              cell = function(value) {
+                                                
+                                                if (value == 0) "\u2718" else "\u2713"
+                                              }),
+                              dev = colDef(name = "Developmental disorder gene",
+                                           cell = function(value) {
+                                             
+                                             if (value == 0) "\u2718" else "\u2713"
+                                           }),
+                              fda = colDef(name = "FDA-approved drug targets",
+                                           cell = function(value) {
+                                             
+                                             if (value == 0) "\u2718" else "\u2713"
+                                           }),
+                              clinvar = colDef(name = "ClinVar genes",
+                                               cell = function(value) {
+                                                 
+                                                 if (value == 0) "\u2718" else "\u2713"
+                                               }),
+                              ccr = colDef(name = "CCR"),
+                              ncrvis = colDef(name = "Ncrvis"),
+                              ncgerp = colDef(name = "Ncgerp"),
+                              hi = colDef(name = "HI index", 
+                                          format = colFormat(suffix = " %", digits = 1))
+                              # cell = function(value) {
+                              #   if (is.na(value)) {
+                              #     classes <- "tag num-low"
+                              #   } else if (value >= 0.9) {
+                              #     classes <- 'tag num-high'
+                              #   } else  {
+                              #     classes <- "tag num-high"
+                              #   }
+                              #   value <- format(value, nsmall = 1)
+                              #   span(class = classes, value)
+                              # })
+               ))
+      
+    })
     
     
   }
