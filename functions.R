@@ -85,15 +85,15 @@ check_regions <- function(chrom = NULL, start = NULL, end = NULL) {
 
 
 # ------------------------------------------------------------------------------
-# Name: get_perc_genes
-# Description: Calculate the percentage of overlapping between genes and the CNV interval
+# Name: get_perc_overlap
+# Description: Calculate the percentage of overlapping between regions(chrom:start-end) and the CNV interval
 # Input: dataframe
 # Output: dataframe - p_overlap  (column)
 # ------------------------------------------------------------------------------
 
 
 
-get_perc_genes <- function(df, start_cnv, end_cnv) {
+get_perc_overlap <- function(df, start_cnv, end_cnv) {
   
   # start_cnv <- 1000
   # end_cnv <- 100000

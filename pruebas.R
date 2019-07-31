@@ -1,33 +1,66 @@
 
 
 
-reactable(hgcn_genes,  rvis = colDef(name = "RVIS",
-                                                   cell = function(value) {
-                                                        if (value > 90) {
-                                                          classes <- "tag num-high"
-                                                        } else {
-                                                          classes <- "tag num-low"
-                                                        }
-                                                        value <- format(value, nsmall = 1)
-                                                        span(class = classes, value)
-                                                      })
 
-                                                      )
+snv_df <- read.table('/home/cbl02/Desktop/input_snv.bed', sep = '\t', header = FALSE) %>%
+  rename(chrom = V1, start = V2, end = V3)
 
 
-reactable(hgcn_genes, columns = list(
-  pLI = colDef(style = function(value) {
-    if (is.na(value)) {
-      color <- "green"
-    } else if (value >= 0.9) {
-      color <- 'blue'
-    } else  {
-      color <- "#777"
-    }
-    list(color = color, fontWeight = "bold")
-  })
-))
+for (i in 1:nrow(snv_df)) {
+  
+  df_add <- hgcn_genes %>% 
+    filter(chrom == snv_df$chrom[i]) %>%
+    mutate(keep = NA) %>%
+    rowwise() %>%
+    mutate(keep = c(start_position, end_position) %overlaps% c(snv_df$start[i], snv_df$end[i])) %>%
+    filter(keep == TRUE) %>% 
+    select(-keep) %>%
+    ungroup()
+  # check with snvs that overlap in more than 1 gene
+  if (!df_add$gene %in% data_raw$gene) {
+    data_raw <-  bind_rows(hgcn_genes, df_add)
+  }
+}
 
+
+
+
+
+
+
+test99 %>%
+  count(source) %>%
+  mutate(total = sum(n)) %>%
+  rowwise() %>%
+  mutate((percentage = n / total) * 100)
+  
+
+get_perc_overlap(test99 %>% rename(start_position = start, end_position = end), 1000, 10000000) %>% count(p_overlap)
+
+
+cnv_df %>%
+  ggplot(aes(length_cnv)) +
+  geom_density(aes(fill = source), alpha = 0.5, color = 'black') +
+  coord_cartesian(xlim = c(0,250000)) +
+  geom_vline(aes(xintercept = 50000), linetype = 2) +
+  theme_minimal()
+
+cnv_df %>%
+  ggplot(aes(length_cnv, y = source)) +
+  stat_density_ridges(quantile_lines = TRUE, quantiles = 2, aes(fill = source), alpha = 0.6, show.legend = FALSE) +
+  geom_vline(aes(xintercept = 50000), linetype = 2, color = 'red', size = 1.5) +
+  scale_x_log10() +
+  scale_y_discrete(expand = c(0.01, 0)) +
+  scale_fill_viridis_d() +
+  xlab('CNVs size') +
+  ylab('Database') +
+  theme_ridges()
+
+cnv_df %>%
+  ggplot(aes(x = source, length_cnv)) +
+  geom_boxplot(aes(fill = source), alpha = 0.8) +
+  theme_minimal() +
+  scale_y_log10()
 
 
 

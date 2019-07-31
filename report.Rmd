@@ -1,5 +1,5 @@
 ---
-title: "Vignette Title"
+title: "CNVxplorer report"
 author: "Vignette Author"
 date: "`r Sys.Date()`"
 output:
@@ -11,6 +11,16 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
+
+## Input data
+
+```{r}
+def_variable <- c('Start interval:')
+def_value <- c(params$start)
+df_tmp <- tibble('Variable' = def_variable, 'Value' = def_value)
+datatable(df_tmp)
+```
+
 
 Vignettes are long form documentation commonly included in packages. Because
 they are part of the distribution of the package, they need to be as compact as

@@ -23,6 +23,8 @@ library(DOSE)
 library(enrichplot)
 library(rentrez)
 library(reactable)
+# library(shinycssloaders)
+library(ggridges)
 
 
 
@@ -41,6 +43,8 @@ shiny::shinyApp(
   ui = tablerDashPage(
     # enable_preloader = TRUE,
     # loading_duration = 4,
+    
+
     
     
     navbar = tablerDashNav(
@@ -219,7 +223,21 @@ shiny::shinyApp(
                    plotOutput('plot_chrom', height = 200)),
             column(
               width = 3,
-              
+
+              prettyRadioButtons(
+                inputId = "snv_yes_no",
+                label = "Upload SNVs file (.bed)?", 
+                choices = c("No", "Yes"),
+                inline = TRUE, 
+                status = "primary",
+                fill = TRUE
+              ),
+              conditionalPanel(
+                condition = "input.snv_yes_no == 'Yes'",
+                fileInput("file_snv", label = h5("Upload file:"))
+              ),
+                # hr(),
+              uiOutput('n_snv'),
               
               uiOutput('n_genes'),
               uiOutput('n_enhancer'),
@@ -303,11 +321,30 @@ shiny::shinyApp(
               overflow = TRUE
             ),
             tablerCard(
-              title = "Heatmap - Genome-wide percentile",
+              title = "Overlapping of genes and CNV",
               plotOutput('plotp_overlap'),
               width = 6,
               overflow = TRUE
+            ),
+            tablerCard(
+              title = "Comparison CNV size and gnomAD, DGV and DECIPHER databases",
+              plotOutput('plot_size'),
+              width = 6,
+              overflow = TRUE
+            ),
+            tablerCard(
+              title = "Overlapping with other CNVs",
+              DTOutput('df_overlap_cnvs'),
+              width = 12,
+              overflow = TRUE
+            ),
+            tablerCard(
+              title = "Comparison CNV size and gnomAD, DGV and DECIPHER databases",
+              DTOutput('test_reading_snv_file'),
+              width = 12,
+              overflow = TRUE
             )
+            
             
             
           )
@@ -486,7 +523,7 @@ shiny::shinyApp(
             tablerCard(title = 'List enhancers',
                        DTOutput('df_enhancer'),
                        width = 12)),
-          tablerCard(title = 'RNA Expression (GTEx)',
+          tablerCard(title = 'Long noncoding RNA (lncRNA) associated with genes',
                      DTOutput('lncrna_df'),
                      width = 12)
           
@@ -830,15 +867,39 @@ shiny::shinyApp(
         
       }
       
+
+      
+      # !is.null('input$file_snv'
+      if (input$snv_yes_no == 'Yes') {
+        
+        snv_df <- reading_snv_file()
+        
+
+        for (i in 1:nrow(snv_df)) {
+          
+          df_add <- hgcn_genes %>% 
+            filter(chrom == snv_df$chrom[i]) %>%
+            mutate(keep = NA) %>%
+            rowwise() %>%
+            mutate(keep = c(start_position, end_position) %overlaps% c(snv_df$start[i], snv_df$end[i])) %>%
+            filter(keep == TRUE) %>% 
+            select(-keep) %>%
+            ungroup()
+          # check with snvs that overlap in more than 1 gene
+          if (!df_add$gene %in% data_raw$gene) {
+            data_raw <-  bind_rows(data_raw, df_add)
+          }
+        }}
+        
+       
       data_raw <- data_raw %>% 
         rename(band = location) %>% 
         mutate(coordinates = paste0(chrom,':', start_position,'-', end_position)) %>% 
         mutate(oe = paste0(oe_lof, ' (', oe_lof_lower, '-',oe_lof_upper, ')')) %>%
         select(-ensembl_gene_id, -transcript, -oe_lof, -oe_lof_lower, -oe_lof_upper, -vg)
+         
       
-      
-      
-      data_raw <- get_perc_genes(data_raw, input$int_start, input$int_end)
+      data_raw <- get_perc_overlap(data_raw, input$int_start, input$int_end)
       
       test1 <<- data_raw
       
@@ -881,10 +942,32 @@ shiny::shinyApp(
       
       data_selected() %>%
         ggplot(aes(p_overlap)) +
-        geom_histogram(bandwidth = 10, fill = 'steelblue', color = 'black') +
+        geom_histogram(binwidth = 10, fill = '#FDE725FF', color = 'black', alpha = 0.6) +
         theme_minimal() +
         xlab('Percentage of overlapping (%)') +
         ylab('Number of genes')
+      
+      
+      
+      
+    })
+    
+    output$plot_size <- renderPlot({
+      
+      req(input$start_analysis > 0)
+      
+      size_cnv_query = input$int_end - input$int_start + 1
+      
+      cnv_df %>%
+        ggplot(aes(length_cnv, y = source)) +
+        stat_density_ridges(quantile_lines = TRUE, quantiles = 2, aes(fill = source), alpha = 0.6, show.legend = FALSE, size = 1.25) +
+        geom_vline(aes(xintercept = size_cnv_query), linetype = 2, color = 'red', size = 1.5) +
+        scale_x_log10() +
+        scale_y_discrete(expand = c(0.01, 0)) +
+        scale_fill_viridis_d() +
+        xlab('Log10 CNVs size') +
+        ylab('Database') +
+        theme_ridges()
       
       
       
@@ -1001,7 +1084,10 @@ shiny::shinyApp(
       mtcars[, c("mpg", input$variable), drop = FALSE]
     }, rownames = TRUE)
     
-    output$plot_chrom <- renderPlot({
+    
+    
+    plot_chrom_react <- reactive({
+      
       
       req(input$start_analysis > 0)
       
@@ -1024,6 +1110,14 @@ shiny::shinyApp(
       # kpAddBaseNumbers() %>%
       # kpRect(chr= input_chr, x0= data_input$start_position, x1= data_input$end_position, y0=0.2, y1=0.4)
       
+      
+    })
+    
+    
+    output$plot_chrom <- renderPlot({
+      
+     
+      plot_chrom_react()
       
       
     })
@@ -1079,6 +1173,18 @@ shiny::shinyApp(
         width = 12
       )
     })
+    
+    output$n_snv <- renderUI({
+      
+      tablerStatCard(
+        value = nrow(reading_snv_file()),
+        title = "Number of SNVs",
+        # trend = 19192,
+        width = 12
+      )
+      
+    })
+    
     
     
     output$ref_user_genes <- renderUI({
@@ -1755,18 +1861,47 @@ shiny::shinyApp(
     })
     
     
-    output$download_button <- downloadHandler(
+    output$button_download <- downloadHandler(
       
-      filename = 'sample_nome_pcr.zip',
+      filename = 'report.html',
       
-      content = function(result.zip) {
+      content = function(file) {
         
-        fs <- paste0('./sample_seq/NOMe-PCR_module/',
-                     list.files('sample_seq/NOMe-PCR_module'))
-        zip(zipfile= result.zip, files=fs)
-        contentType = "application/zip"
+        params <- list(start = input$int_start)
         
+        tempReport <- file.path(tempdir(), "report.Rmd")
+        file.copy("report.Rmd", tempReport, overwrite = TRUE)
+        rmarkdown::render(tempReport, output_file = file)
+                          params = params
+                          # envir = new.env(parent = globalenv())
       })
+    
+    
+    reading_snv_file <- reactive({
+      
+      # conditional of errors!
+      req(input$snv_yes_no == 'Yes')
+      req(input$file_snv)
+      
+      file1 <- input$file_snv
+      data1 <- read.table(file1$datapath, sep = '\t', header = FALSE) %>%
+                rename(chrom = V1, start = V2, end = V3)
+    })
+    
+    output$test_reading_snv_file <- renderDT({
+      
+      datatable(reading_snv_file())
+      
+    })
+    
+    
+    output$df_overlap_cnvs <- renderDT({
+      
+      req(input$start_analysis > 0)
+  
+      tmp_df <-  get_perc_overlap(check_cnv_df() %>% rename(start_position = start, end_position = end), input$int_start, input$int_end)
+      datatable(tmp_df)
+    })
     
     
   }
