@@ -600,18 +600,21 @@ shiny::shinyApp(
           tabName = "down_report",
           fluidRow(
             tablerCard(
-              title = "Select your report's modules:",
+              title = "Personalize your report:",
               
               multiInput(
                 inputId = "Id010",
                 label = "Countries :", 
                 choices = NULL,
-                choiceNames = as.character(1:10), 
-                choiceValues = as.character(1:10)
+                choiceNames = c('Name clinician', 'Age', 'Sex', 'Add comment'), 
+                choiceValues = as.character(1:4)
                 ),
-
-              width = 12,
-              overflow = TRUE
+              textInput("name_report", "Name:", "Doctor Requena"),
+              textInput("age_report", "Age:", "4"),
+              pickerInput("sex_report", "Sex:", c("Male", "Female")),
+              textAreaInput("comment_report", "Comment:", "Alea iacta est...", width = '500px', heigh = '250px'),
+              overflow = TRUE,
+              width = 12
             ),
             tablerCard(
               title = "Funnel overview",
@@ -901,8 +904,8 @@ shiny::shinyApp(
       
       data_raw <- get_perc_overlap(data_raw, input$int_start, input$int_end)
       
-      test1 <<- data_raw
-      
+      # test1 <<- data_raw
+      return(data_raw)
     })
     
     output$dgenes <- renderDataTable({
@@ -1867,7 +1870,13 @@ shiny::shinyApp(
       
       content = function(file) {
         
-        params <- list(start = input$int_start)
+        params <- list(start = input$int_start,
+                       end = input$int_end,
+                       chrom = input$input_chrom,
+                       name = input$name_report,
+                       age = input$age_report,
+                       sex = input$sex_report)
+                       # gene_content = data_selected())
         
         tempReport <- file.path(tempdir(), "report.Rmd")
         file.copy("report.Rmd", tempReport, overwrite = TRUE)

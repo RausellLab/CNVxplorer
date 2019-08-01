@@ -188,9 +188,6 @@ vg <- vg_raw %>% left_join(test, by = c('gene' = 'ENSEMBL')) %>% select(-gene) %
 # Access: 06/06/19
 # ------------------------------------------------------------------------------
 
-
-# POR QUÉ SALE 14 GENES SOLAMENTE???
-
 clingen_raw <- read.table('data/ClinGen_haploinsufficiency_gene_GRCh37.bed', col.names = c('chrom', 'start', 'end', 'gene', 'score'), stringsAsFactors = FALSE,
                           skip = 1)
 
@@ -579,13 +576,11 @@ inbio_network <- inbio_network_raw %>%
 # ------------------------------------------------------------------------------
 
 # ERROR - LESS ROWS THAN  FILE!!
-# ERROR - CHECK THE OTHER FILE!!
 
 url <- 'http://compbio.charite.de/jenkins/job/hpo.annotations.monthly/lastSuccessfulBuild/artifact/annotation/ALL_SOURCES_ALL_FREQUENCIES_genes_to_phenotype.txt'
 hpo_raw <- read.table(url, sep = '\t', skip = 1, stringsAsFactors = FALSE)
 
 hpo_genes <- hpo_raw %>% as_tibble() %>% rename(entrez_id = V1, gene = V2, term = V3, hp = V4)
-
 
 
 # ------------------------------------------------------------------------------

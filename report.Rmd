@@ -12,17 +12,51 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-## Input data
+## 1. Input data
 
-```{r}
-def_variable <- c('Start interval:')
-def_value <- c(params$start)
+```{r echo= FALSE, comment = NA, message=FALSE}
+
+params$name
+params$sex
+params$age
+
+```
+
+## 1. Input data
+
+```{r echo= FALSE, comment = NA, message=FALSE}
+
+
+
+size_cnv <- params$end - params$start + 1
+
+def_variable <- c('Chromosome', 'Start interval:', 'End interval:', 'Size:', 'Nº of genes:')
+def_value <- c(params$chrom, params$start, params$end, paste(size_cnv, 'bp'), nrow(data_selected()))
+
 df_tmp <- tibble('Variable' = def_variable, 'Value' = def_value)
-datatable(df_tmp)
+knitr::kable(df_tmp)
+
+```
+
+## Comparison size
+
+
+
+## 2. Gene content
+
+```{r echo= FALSE, comment = NA, message=FALSE}
+library(knitr)
+library(kableExtra)
+knitr::kable( data_selected()) %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+
+
 ```
 
 
-Vignettes are long form documentation commonly included in packages. Because
+## Comment
+
+Vignettes are params$chrom long form documentation commonly included in packages. Because
 they are part of the distribution of the package, they need to be as compact as
 possible. The `html_pretty` output format in package
 [**prettydoc**](http://github.com/yixuan/prettydoc/) , an alternative
