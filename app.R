@@ -61,11 +61,11 @@ shiny::shinyApp(
           icon = "box",
           "Functional analysis"
         ),
-        tablerNavMenuItem(
-          tabName = "model",
-          icon = "box",
-          "Model organism"
-        ),
+        # tablerNavMenuItem(
+        #   tabName = "model",
+        #   icon = "box",
+        #   "Model organism"
+        # ),
         tablerNavMenuItem(
           tabName = "reg_region",
           icon = "box",
@@ -81,15 +81,15 @@ shiny::shinyApp(
           icon = "box",
           "Disease-specificity"
         ),
-        tablerNavMenuItem(
-          tabName = "gene",
-          icon = "plus",
-          "Gene Panel"
-        ),
+        # tablerNavMenuItem(
+        #   tabName = "gene",
+        #   icon = "plus",
+        #   "Gene Panel"
+        # ),
         tablerNavMenuItem(
           tabName = "down_report",
           icon = "download",
-          "Download report"
+          "Automated report"
         ),
         tablerNavMenuItem(
           tabName = "Docu",
@@ -140,7 +140,7 @@ shiny::shinyApp(
           tabName = "Docu",
           fluidRow(
             tablerCard(
-              title = "Welcome to CNVxplore",
+              title = "Documentation - CNVxplorer",
               
               'Description and more',
               width = 9,
@@ -314,12 +314,12 @@ shiny::shinyApp(
             
           ),
           fluidRow(
-            tablerCard(
-              title = "Heatmap - Genome-wide percentile",
-              plotlyOutput('heatmap'),
-              width = 12,
-              overflow = TRUE
-            ),
+            # tablerCard(
+            #   title = "Heatmap - Genome-wide percentile",
+            #   plotlyOutput('heatmap'),
+            #   width = 12,
+            #   overflow = TRUE
+            # ),
             tablerCard(
               title = "Overlapping of genes and CNV",
               plotOutput('plotp_overlap'),
@@ -602,17 +602,32 @@ shiny::shinyApp(
             tablerCard(
               title = "Personalize your report:",
               
-              multiInput(
-                inputId = "Id010",
-                label = "Countries :", 
-                choices = NULL,
-                choiceNames = c('Name clinician', 'Age', 'Sex', 'Add comment'), 
-                choiceValues = as.character(1:4)
-                ),
-              textInput("name_report", "Name:", "Doctor Requena"),
-              textInput("age_report", "Age:", "4"),
-              pickerInput("sex_report", "Sex:", c("Male", "Female")),
-              textAreaInput("comment_report", "Comment:", "Alea iacta est...", width = '500px', heigh = '250px'),
+              # multiInput(
+              #   inputId = "Id010",
+              #   label = "Countries :", 
+              #   choices = NULL,
+              #   choiceNames = c('Name clinician', 'Age', 'Sex', 'Add comment'), 
+              #   choiceValues = as.character(1:4)
+              #   ),
+              fluidRow(
+              column(width = 2,
+                     tags$b('Patient information'),
+                     tags$hr(),
+              # textInput("name_report", "Name:", "Doctor Requena"),
+              # textInput("age_report", "Age:", "4"),
+              dateInput("age_report", "Date of birth:", value = "2012-02-29", format = "mm/dd/yy"),
+              pickerInput("sex_report", "Sex:", c("Male", "Female"))),
+              column(width = 2,
+                     tags$b('Clinician information'),
+                     tags$hr(),
+                     textInput("name_report", "Name:", placeholder = '')),
+                     # textInput("age_report", "Age:", "4"),
+                     # dateInput("age_report", "Date of birth:", value = "2012-02-29", format = "mm/dd/yy"),
+                     # pickerInput("sex_report", "Sex:", c("Male", "Female"))),
+              column(width = 8,
+              textAreaInput("comment_report", "Notes:", placeholder =  "You can write your notes...", 
+                            # width = '700px', 
+                            heigh = '250px'))),
               overflow = TRUE,
               width = 12
             ),
@@ -623,7 +638,10 @@ shiny::shinyApp(
               width = 5,
               overflow = TRUE
             ),
-            downloadButton('button_download', label = "Download"),
+            tablerCard(title = 'Download report (.html)',
+                       downloadButton('button_download', label = "Download"),                       
+                       width = 7),
+           
             tablerCard(title = '',
                        DTOutput('mode2l_genes'),
                        width = 9))
@@ -1509,7 +1527,7 @@ shiny::shinyApp(
     model_genes_phenotype <- reactive({
       
       
-      go <- Ontology("mp")
+      go <- Ontology("hp")
       
       test_tmp <- data_selected() %>% select(gene) %>% pull()
       mgi_tmp <- mgi %>% filter(gene %in% test_tmp)
@@ -1565,36 +1583,36 @@ shiny::shinyApp(
     # })
     
     
-    output$heatmap <- renderPlotly({
-      
-      # a <- matrix(NA, nrow = 2, ncol = 100)
-      # a[1,] <- hgcn_genes$pLI[1:100]
-      # a[2,] <- hgcn_genes$rvis[1:100]
-      # a[1,][as.numeric(which(is.na(a[1,])))] <- 0
-      # a[2,][as.numeric(which(is.na(a[2,])))] <- 0
-      # colnames(a) <- hgcn_genes$gene[1:100]
-      # a <- pheatmap(a, cluster_rows = FALSE, cluster_cols = FALSE)
-      # a
-      n_genes <- nrow(data_selected())
-      data_raw <- data_selected() %>% mutate(p_li = ntile(pLI, 100), p_rvis = ntile(rvis, 100),
-                                             p_ncrvis = ntile(ncrvis, 100), p_ncgerp = ntile(ncgerp, 100))
-      m <- matrix(NA, nrow = 4, ncol = n_genes)
-      m[1,] <- data_raw$p_li[1:n_genes]
-      m[2,] <- data_raw$p_rvis[1:n_genes]
-      m[3,] <- data_raw$p_ncrvis[1:n_genes]
-      m[4,] <- data_raw$p_ncgerp[1:n_genes]
-      # m <- m[colSums(!is.na(m)) > 0]
-      
-      # heatmaply(as.matrix(m))
-      
-      plot_ly(
-        x = data_selected() %>% select(gene) %>% pull(), y = c("RVIS", "pLI", 'ncRVIS', 'ncGERP'),
-        z = m, 
-        type = "heatmap"
-        # width = 1200,
-        # height = 500
-      )
-    })
+    # output$heatmap <- renderPlotly({
+    #   
+    #   # a <- matrix(NA, nrow = 2, ncol = 100)
+    #   # a[1,] <- hgcn_genes$pLI[1:100]
+    #   # a[2,] <- hgcn_genes$rvis[1:100]
+    #   # a[1,][as.numeric(which(is.na(a[1,])))] <- 0
+    #   # a[2,][as.numeric(which(is.na(a[2,])))] <- 0
+    #   # colnames(a) <- hgcn_genes$gene[1:100]
+    #   # a <- pheatmap(a, cluster_rows = FALSE, cluster_cols = FALSE)
+    #   # a
+    #   n_genes <- nrow(data_selected())
+    #   data_raw <- data_selected() %>% mutate(p_li = ntile(pLI, 100), p_rvis = ntile(rvis, 100),
+    #                                          p_ncrvis = ntile(ncrvis, 100), p_ncgerp = ntile(ncgerp, 100))
+    #   m <- matrix(NA, nrow = 4, ncol = n_genes)
+    #   m[1,] <- data_raw$p_li[1:n_genes]
+    #   m[2,] <- data_raw$p_rvis[1:n_genes]
+    #   m[3,] <- data_raw$p_ncrvis[1:n_genes]
+    #   m[4,] <- data_raw$p_ncgerp[1:n_genes]
+    #   # m <- m[colSums(!is.na(m)) > 0]
+    #   
+    #   # heatmaply(as.matrix(m))
+    #   
+    #   plot_ly(
+    #     x = data_selected() %>% select(gene) %>% pull(), y = c("RVIS", "pLI", 'ncRVIS', 'ncGERP'),
+    #     z = m, 
+    #     type = "heatmap"
+    #     # width = 1200,
+    #     # height = 500
+    #   )
+    # })
     
     
     output$func_analysis <- renderPlot({
