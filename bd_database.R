@@ -582,6 +582,9 @@ hpo_raw <- read.table(url, sep = '\t', skip = 1, stringsAsFactors = FALSE)
 
 hpo_genes <- hpo_raw %>% as_tibble() %>% rename(entrez_id = V1, gene = V2, term = V3, hp = V4)
 
+vector_term <- hpo_genes %>% select(term, hp) %>% distinct() %>% pull(term)
+vector_hp <- hpo_genes %>% select(term, hp) %>% distinct() %>% pull(hp)
+
 
 # ------------------------------------------------------------------------------
 # Dataset: TADs

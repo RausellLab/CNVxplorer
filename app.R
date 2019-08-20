@@ -52,7 +52,7 @@ shiny::shinyApp(
       navMenu = tablerNavMenu(
 
         tablerNavMenuItem(
-          tabName = "Page1",
+          tabName = "overview",
           icon = "box",
           "Overview"
         ),
@@ -90,17 +90,18 @@ shiny::shinyApp(
           tabName = "down_report",
           icon = "download",
           "Automated report"
-        ),
-        tablerNavMenuItem(
-          tabName = "Docu",
-          icon = "book",
-          "Documentation"
         )
+        # tablerNavMenuItem(
+        #   tabName = "Docu",
+        #   icon = "book",
+        #   "Documentation"
+        # )
         
         
         ),
       id = "mymenu",
-      src = "https://preview.tabler.io/demo/brand/tabler.svg",
+      src = "https://www.onlinelogomaker.com/applet_userdata/version2/5/0/18611424/projects/18611424.png",
+      uiOutput('ref_user_filter_genes'),
       uiOutput('ref_user_genes'),
       uiOutput('ref_user_length')
       
@@ -133,58 +134,18 @@ shiny::shinyApp(
     title = "CNVxplore",
     body = tablerDashBody(
       
+      tags$head(tags$script('
+  $(document).on("shiny:sessioninitialized", function(event) {
+    $(\'a[data-value="Page1"]\').tab("show");
+  });
+')),
+      
       tablerTabItems(
         
-        tablerTabItem(
-            
-          tabName = "Docu",
-          fluidRow(
-            tablerCard(
-              title = "Documentation - CNVxplorer",
-              
-              'Description and more',
-              width = 9,
-              overflow = TRUE
-            ),
-            tablerCard(width = 3,
-                       tablerTimeline(
-                         tablerTimelineItem(
-                           title = "Overview",
-                           status = "green",
-                           date = ""
-                         ),
-                         tablerTimelineItem(
-                           title = "Functional analysis",
-                           status = NULL,
-                           date = ""
-                         ),
-                         tablerTimelineItem(
-                           title = "Model organism",
-                           status = NULL,
-                           date = ""
-                         ),
-                         tablerTimelineItem(
-                           title = "Regulatory regions",
-                           status = NULL,
-                           date = ""
-                         ),
-                         tablerTimelineItem(
-                           title = "Tissue-specificity",
-                           status = NULL,
-                           date = ""
-                         )
-                       ))),
-          tablerCard(
-            title = "Welcome to CNVxplore",
-            
-            DTOutput('score_references'),
-            width = 12,
-            overflow = FALSE
-          )
-        ),
+
         
         tablerTabItem(
-          tabName = "Page1",
+          tabName = "overview",
           
           use_waiter(),
           setZoom(class = "card"),
@@ -320,33 +281,31 @@ shiny::shinyApp(
             #   width = 12,
             #   overflow = TRUE
             # ),
+            # tablerCard(
+            #   title = "Overlapping of genes and CNV",
+            #   plotOutput('plotp_overlap'),
+            #   width = 6,
+            #   overflow = TRUE
+            # ),
             tablerCard(
-              title = "Overlapping of genes and CNV",
-              plotOutput('plotp_overlap'),
-              width = 6,
-              overflow = TRUE
-            ),
-            tablerCard(
-              title = "Comparison CNV size and gnomAD, DGV and DECIPHER databases",
+              title = "Comparison CNV size with other CNVs databases (gnomAD, DGV and DECIPHER)",
               plotOutput('plot_size'),
-              width = 6,
+              width = 12,
               overflow = TRUE
             ),
             tablerCard(
-              title = "Overlapping with other CNVs",
+              title = "Overlapping with other CNVs databases (gnomAD, DGV and DECIPHER)",
               DTOutput('df_overlap_cnvs'),
               width = 12,
               overflow = TRUE
-            ),
-            tablerCard(
-              title = "Comparison CNV size and gnomAD, DGV and DECIPHER databases",
-              DTOutput('test_reading_snv_file'),
-              width = 12,
-              overflow = TRUE
             )
-            
-            
-            
+            # tablerCard(
+            #   title = "Comparison CNV size with other CNVs (gnomAD, DGV and DECIPHER)",
+            #   DTOutput('test_reading_snv_file'),
+            #   width = 12,
+            #   overflow = TRUE
+            # )
+
           )
           # tablerCard(
           #   title = "Functional analysis",
@@ -417,28 +376,23 @@ shiny::shinyApp(
           #   
           # ),
           tablerCard(
-            title = "Gene ontology",
+            title = "Functional Profile",
             width = 12,
-            zoomable = FALSE,
+            collapsible = FALSE,
             closable = FALSE,
             uiOutput('plot_df') ,
             options = tagList(
-              switchInput(
-                inputId = "enable_group_go",
-                label = "Run?",
-                value = FALSE,
-                onStatus = "success",
-                offStatus = "danger"
-                
-              ),
-              switchInput(
-                inputId = "user_df_plot",
-                label = "Table?",
-                value = FALSE,
-                onStatus = "success",
-                offStatus = "danger"
-                
-              ),
+            # column(width = 1
+            # 
+            #   # switchInput(
+            #   #   inputId = "user_df_plot",
+            #   #   label = "Table?",
+            #   #   value = FALSE,
+            #   #   onStatus = "success",
+            #   #   offStatus = "danger"
+            #   # )
+            #   ),
+
               pickerInput(
                 inputId = "user_level",
                 label = tags$b("Level:"), 
@@ -447,6 +401,7 @@ shiny::shinyApp(
                 options = list(
                   size = 10,
                   `live-search` = TRUE)),
+            tags$hr(),
               prettyRadioButtons(
                 inputId = "choose_group_go",
                 label = tags$b("Select one option:"), 
@@ -454,7 +409,26 @@ shiny::shinyApp(
                 inline = TRUE, 
                 status = "primary",
                 fill = TRUE
-              )
+              ),
+            prettyRadioButtons(
+              inputId = "user_df_plot",
+              label = tags$b("Select one option:"), 
+              choices = c("Bar plot", "Table"),
+              inline = TRUE, 
+              status = "primary",
+              fill = TRUE
+            ),
+            
+            switchInput(
+              inputId = "enable_group_go",
+              label = "Run?",
+              value = FALSE,
+              onStatus = "success",
+              offStatus = "danger",
+              width = 'auto',
+              size = 'mini'
+              
+            )
               
               
             )
@@ -469,18 +443,10 @@ shiny::shinyApp(
           tablerCard(
             title = "Gene Ontology",
             width = 12,
-            zoomable = FALSE,
+            collapsible = FALSE,
             closable = FALSE,
-            plotOutput('func_analysis') %>% withSpinner(type = 5),
+            uiOutput('plot_enrichgo') %>% withSpinner(type = 5),
             options = tagList(
-              switchInput(
-                inputId = "enable_func_analysis",
-                label = "Run?",
-                value = FALSE,
-                onStatus = "success",
-                offStatus = "danger"
-                
-              ),
               pickerInput(
                 inputId = "sign_vline",
                 label = tags$b("P.value threshold:"), 
@@ -493,21 +459,96 @@ shiny::shinyApp(
                 inline = TRUE, 
                 status = "primary",
                 fill = TRUE
+              ),
+              prettyRadioButtons(
+                inputId = "table_plot_go",
+                label = tags$b("Select one option:"), 
+                choices = c("Bar plot", "Table"),
+                inline = TRUE, 
+                status = "primary",
+                fill = TRUE
+              ),
+              switchInput(
+                size = 'mini',
+                inputId = "enable_func_analysis",
+                label = "Run?",
+                value = FALSE,
+                onStatus = "success",
+                offStatus = "danger",
+                width = 'auto'
+                
               )
             )),
           tablerCard(
             title = "Pathway analysis",
             width = 12,
-            zoomable = FALSE,
+            collapsible = FALSE,
             closable = FALSE,
-            plotOutput('func_pathways') %>% withSpinner(type = 5)
-          ),
+            uiOutput("ui_path") %>% withSpinner(type = 5),
+            options = tagList(
+              pickerInput(
+                inputId = "sign_vline_path",
+                label = tags$b("P.value threshold:"), 
+                choices = c("0.05", "0.01", "0.005"),
+                width = 130),
+              prettyRadioButtons(
+                inputId = "kegg_reactome",
+                label = tags$b("Select a database:"), 
+                choices = c("Reactome", "KEGG"),
+                inline = TRUE, 
+                status = "primary",
+                fill = TRUE
+              ),
+              prettyRadioButtons(
+                inputId = "table_path_go",
+                label = tags$b("Select one option:"), 
+                choices = c("Bar plot", "Table"),
+                inline = TRUE, 
+                status = "primary",
+                fill = TRUE
+              ),
+              switchInput(
+                size = 'mini',
+                inputId = "enable_path_analysis",
+                label = "Run?",
+                value = FALSE,
+                onStatus = "success",
+                offStatus = "danger",
+                width = 'auto'
+                
+              )
+          )),
           tablerCard(
             title = "Gene-disease association",
-            plotOutput('func_analysis_diseases') %>% withSpinner(type = 5),
+            uiOutput('ui_do') %>% withSpinner(type = 5),
             width = 12,
-            zoomable = FALSE,
-            closable = FALSE
+            collapsible = FALSE,
+            closable = FALSE,
+            options = tagList(
+              pickerInput(
+                inputId = "pvalue_do",
+                label = tags$b("P.value threshold:"), 
+                choices = c("0.05", "0.01", "0.005"),
+                width = 130),
+              prettyRadioButtons(
+                inputId = "table_plot_do",
+                label = tags$b("Select one option:"), 
+                choices = c("Gene-disease plot", "Table"),
+                inline = TRUE, 
+                status = "primary",
+                fill = TRUE
+              ),
+              switchInput(
+                size = 'mini',
+                inputId = "enable_do_analysis",
+                label = "Run?",
+                value = FALSE,
+                onStatus = "success",
+                offStatus = "danger",
+                width = 'auto'
+                
+              )
+            )
           )
           
         ),
@@ -655,6 +696,7 @@ shiny::shinyApp(
         
         
         
+        
       )
       
     )
@@ -664,7 +706,37 @@ shiny::shinyApp(
     gene_selected <- reactive({
       
       test4 <<- input$dgenes_rows_selected
+      
+      test19999 <<- 'casademiprimalatuerta'
       print(test4)
+    })
+    
+    coord_user <- reactive({
+      
+      
+      if (input$input_geno_karyo == 'Genomic coordinates') {
+        
+        coord_start <- input$int_start
+        coord_end <-  input$int_end
+
+        
+      } else {
+        
+        df_tmp <- chromPlot::hg_cytoBandIdeo %>%
+          filter(Chrom == input$input_chrom) %>%
+          filter(Name == input$input_karyotype)
+        
+        coord_start <- df_tmp %>% select(Start) %>% pull()
+        coord_end <-  df_tmp %>% select(End) %>% pull()
+        
+
+        
+      }
+      
+      c_output <- c(coord_start, coord_end)
+      
+      
+      
     })
     
     
@@ -868,13 +940,19 @@ shiny::shinyApp(
       
       req(input$start_analysis > 0)
       
-      data_raw <- hgcn_genes %>% filter(chrom == input$input_chrom)
+      start_coordinates <- coord_user()[1]
+      end_coordinates <- coord_user()[2]
+      chrom_coordinates <- input$input_chrom
+      
+      
+      
+      data_raw <- hgcn_genes %>% filter(chrom == chrom_coordinates)
       
       if(input$input_geno_karyo == 'Genomic coordinates') {
         
         data_raw <- data_raw  %>% mutate(keep = NA) %>%
           rowwise() %>%
-          mutate(keep = c(start_position, end_position) %overlaps% c(input$int_start, input$int_end)) %>%
+          mutate(keep = c(start_position, end_position) %overlaps% c(start_coordinates, end_coordinates)) %>%
           filter(keep == TRUE) %>% 
           select(-keep) %>%
           ungroup()
@@ -884,13 +962,9 @@ shiny::shinyApp(
       } else {
         
         data_raw  <- data_raw %>% 
-          filter(location == paste0(input$input_chrom, input$input_karyotype))
+          filter(location == paste0(chrom_coordinates, input$input_karyotype))
         
       }
-      
-
-      
-      # !is.null('input$file_snv'
       if (input$snv_yes_no == 'Yes') {
         
         snv_df <- reading_snv_file()
@@ -920,9 +994,11 @@ shiny::shinyApp(
         select(-ensembl_gene_id, -transcript, -oe_lof, -oe_lof_lower, -oe_lof_upper, -vg)
          
       
-      data_raw <- get_perc_overlap(data_raw, input$int_start, input$int_end)
       
-      # test1 <<- data_raw
+      
+      data_raw <- get_perc_overlap(data_raw, start_coordinates, end_coordinates)
+      
+      
       return(data_raw)
     })
     
@@ -936,6 +1012,7 @@ shiny::shinyApp(
                 options = list(
                   pageLength = 5, autoWidth = TRUE, style = 'bootstrap', list(searchHighlight = TRUE),
                   selection = 'single',
+                  stateSave = TRUE,
                   columnDefs = list(list(className = 'dt-center', targets = '_all'))
                 )) %>%
         formatStyle(
@@ -986,7 +1063,7 @@ shiny::shinyApp(
         scale_x_log10() +
         scale_y_discrete(expand = c(0.01, 0)) +
         scale_fill_viridis_d() +
-        xlab('Log10 CNVs size') +
+        xlab('-log10(CNVs size)') +
         ylab('Database') +
         theme_ridges()
       
@@ -1112,6 +1189,8 @@ shiny::shinyApp(
       
       req(input$start_analysis > 0)
       
+      start_coordinates <- coord_user()[1]
+      end_coordinates <- coord_user()[2]
       
       input_chr <- paste0('chr', input$input_chrom)
       
@@ -1123,7 +1202,7 @@ shiny::shinyApp(
       #            cex.bands=0.5)
       # 
       ideoTrack <- IdeogramTrack(genome="hg19", chromosome= input_chr)
-      plotTracks(ideoTrack, from= input$int_start , to= input$int_end, showBandId=TRUE,
+      plotTracks(ideoTrack, from= start_coordinates , to= end_coordinates, showBandId=TRUE,
                  cex.bands=0.5)
       
       # plotKaryotype(chromosomes = input_chr, plot.type = 2) %>%
@@ -1137,7 +1216,8 @@ shiny::shinyApp(
     
     output$plot_chrom <- renderPlot({
       
-     
+      test1000 <<-coord_user()
+      
       plot_chrom_react()
       
       
@@ -1208,6 +1288,29 @@ shiny::shinyApp(
     
     
     
+    output$ref_user_filter_genes <- renderUI({
+      
+      if (input$input_geno_karyo == 'Genomic coordinates') {
+        
+        name_region <- paste0('chr',input$input_chrom, ':', input$int_start, '-', input$int_end)
+        
+      } else {
+        name_region <- paste0(input$input_chrom, input$input_karyotype)
+        
+      }
+      
+      test_1993 <<- input$dgenes_state
+      tablerInfoCard(
+        width = 12,
+        value = paste0(length(input$dgenes_rows_all), " genes"),
+        status = "warning",
+        icon = "crop",
+        description =  'Filtered genes'
+      )
+      
+      
+    })
+    
     output$ref_user_genes <- renderUI({
       
       if (input$input_geno_karyo == 'Genomic coordinates') {
@@ -1237,20 +1340,33 @@ shiny::shinyApp(
       
       if (input$input_geno_karyo == 'Genomic coordinates') {
         
-        length_region <-  round((input$int_end - input$int_start + 1) / 1e6,2)
+        name_region <- paste0('chr',input$input_chrom, ':', input$int_start, '-', input$int_end)
+        
+      } else {
+        name_region <- paste0(input$input_chrom, input$input_karyotype)
+        
+      }
+      
+      
+      if (input$input_geno_karyo == 'Genomic coordinates') {
+        
+        length_region <-  round((input$int_end - input$int_start + 1) / 1e6, 2)
         
       } else {
         
         # name_region <- paste0(input$input_chrom, input$input_karyotype)
-        length_region <-  round((input$int_end - input$int_start + 1) / 1e6,2)
+        length_region <-  round((input$int_end - input$int_start + 1) / 1e6, 2)
       }
+      
+      length_region <- paste(length_region, " Mb")
       
       tablerInfoCard(
         width = 12,
-        value = paste(length_region, " Mb"),
+        value =  length_region,
         status = "primary",
         icon = "database",
         description =  'Length of the genomic region'
+
       )
       
       
@@ -1261,11 +1377,16 @@ shiny::shinyApp(
       
       req(input$start_analysis > 0)
       
-      data_tmp <- lncrna_coord %>% filter(chrom == input$input_chrom) %>%
+      
+      start_coordinates <- coord_user()[1]
+      end_coordinates <- coord_user()[2]
+      chrom_coordinates <- input$input_chrom
+      
+      data_tmp <- lncrna_coord %>% filter(chrom == chrom_coordinates) %>%
         mutate(keep = 0)
       
       for (i in 1:nrow(data_tmp)) {
-        data_tmp$keep[i] <- c(data_tmp$start[i], data_tmp$end[i]) %overlaps% c(input$int_start, input$int_end)
+        data_tmp$keep[i] <- c(data_tmp$start[i], data_tmp$end[i]) %overlaps% c(start_coordinates, end_coordinates)
       }
       
       data_tmp <- data_tmp %>% filter(keep == 1) %>% select(id) %>% distinct() %>% pull(id)
@@ -1302,11 +1423,16 @@ shiny::shinyApp(
       
       req(input$start_analysis > 0)
       
-      data_tmp <- df_enhancers %>% filter(chrom == input$input_chrom) %>%
+      
+      start_coordinates <- coord_user()[1]
+      end_coordinates <- coord_user()[2]
+      chrom_coordinates <- input$input_chrom
+      
+      data_tmp <- df_enhancers %>% filter(chrom == chrom_coordinates) %>%
         mutate(keep = 0)
       
       for (i in 1:nrow(data_tmp)) {
-        data_tmp$keep[i] <- c(data_tmp$start[i], data_tmp$end[i]) %overlaps% c(input$int_start, input$int_end)
+        data_tmp$keep[i] <- c(data_tmp$start[i], data_tmp$end[i]) %overlaps% c(start_coordinates, end_coordinates)
       }
       data_tmp <- data_tmp %>% filter(keep == 1) %>% select(-keep)
     })
@@ -1615,10 +1741,10 @@ shiny::shinyApp(
     # })
     
     
-    output$func_analysis <- renderPlot({
+    running_enrich_go <- reactive({
       
-      if (input$enable_func_analysis == TRUE) {
-        
+      req(isTRUE(input$enable_func_analysis))
+      
         if (input$choose_go == 'biological process') {
           go_chosen <- 'BP'
         } else if (input$choose_go == 'molecular function') {
@@ -1630,23 +1756,33 @@ shiny::shinyApp(
         filtered_genes <- data_selected() %>% select(entrez_id) %>% pull()  %>% as.character()
         univ <- hgcn_genes %>% select(entrez_id) %>% pull() %>% as.character()
         
+        validate(
+          need(length(filtered_genes) != 0, "0 enriched terms found.")
+        )
+        
         go_analysis <- enrichGO(gene  = filtered_genes,
                                 universe      = univ,
                                 OrgDb         = org.Hs.eg.db,
                                 ont           = go_chosen,
-                                pAdjustMethod = "BH",
-                                pvalueCutoff  = 0.05,
-                                qvalueCutoff  = 0.05)
+                                # pAdjustMethod = "BH",
+                                pvalueCutoff  = as.numeric(input$sign_vline),
+                                readable = TRUE)
         
-        validate(
-          need(nrow(filtered_genes) != 0, "0 enriched terms found")
-        )
+                                # qvalueCutoff  = 0.05)
         
-        pathway_analysis <- enrichPathway(gene=de,pvalueCutoff=0.05, readable=T)
-        
-        a <-  go_analysis %>%
+
+      
+      
+      
+      
+      
+      })
+    
+    
+    output$func_analysis <- renderPlot({
+    
+        plot_output <-  running_enrich_go() %>%
           as_tibble() %>%
-          slice(1:10) %>%
           mutate(p.adjust = -log10(p.adjust)) %>%
           ggplot(aes(reorder(Description, p.adjust), p.adjust)) +
           geom_col(aes(fill = Description), color = 'black', show.legend = FALSE) +
@@ -1665,10 +1801,31 @@ shiny::shinyApp(
           theme(axis.text=element_text(size=12),
                 axis.title=element_text(size=14,face="bold"))
         
-        a
+        plot_output
+
+    })
+    
+    
+    
+    output$df_enrichgo <- renderDT({
+      
+      df <- running_enrich_go()  %>%
+        as_tibble() %>%
+        filter(Count != 0) %>%
+        arrange(desc(Count)) %>%
+        separate(geneID, sep = '/', into = as.character(1:1000)) %>%
+        gather('delete', 'gene', -ID, -Description, -Count, -GeneRatio, -pvalue, -p.adjust, -qvalue, -BgRatio) %>%
+        select(-delete) %>%
+        na.omit() %>%
+        distinct() %>%
+        mutate(pvalue = round(pvalue, 3)) %>%
+        mutate(p.adjust = round(p.adjust, 3)) %>%
+        mutate(qvalue = round(qvalue, 3))
         
-        
-      }
+      
+      datatable(df)
+      
+      
     })
     
     running_go <- reactive({
@@ -1710,9 +1867,23 @@ shiny::shinyApp(
     })
     
     
+    output$plot_enrichgo <- renderUI({
+      
+      if (input$table_plot_go == 'Table') {
+        
+        DTOutput('df_enrichgo')
+        
+      } else {
+        plotOutput('func_analysis')
+        
+      }
+      
+    })
+    
+    
     output$plot_df <- renderUI({
       
-      if (isTRUE(input$user_df_plot)) {
+      if (input$user_df_plot == 'Table') {
         
         DTOutput('df_go')
         
@@ -1755,6 +1926,8 @@ shiny::shinyApp(
     
     output$df_go  <- renderDT({
       
+      test222 <<- running_go()
+      
       df <- running_go() %>%
         as_tibble() %>%
         filter(Count != 0) %>%
@@ -1769,17 +1942,98 @@ shiny::shinyApp(
       
     })
     
-    output$func_pathways  <- renderPlot({
+    running_path <- reactive({
+      
+      req(isTRUE(input$enable_path_analysis))
+      
       
       filtered_genes <- data_selected() %>% select(entrez_id) %>% pull()  %>% as.character()
       
+      test456 <<- filtered_genes
+      
       validate(
-        need(nrow(filtered_genes) != 0, "0 enriched terms found")
+        need(length(filtered_genes) != 0, "0 enriched terms found.")
       )
       
-      pathway_analysis <- enrichPathway(gene= filtered_genes ,pvalueCutoff=0.05, readable=T)
+      if (input$kegg_reactome == 'Reactome') {
+        
+        pathway_analysis <- enrichPathway(gene= filtered_genes ,
+                                          pvalueCutoff = as.numeric(input$sign_vline_path), 
+                                          universe = hgcn_genes %>% select(entrez_id) %>% pull() %>% as.character(),
+                                          readable= TRUE)  %>% 
+          as_tibble()
+      } else {
+        pathway_analysis <- clusterProfiler::enrichKEGG(gene= filtered_genes ,
+                                                        pvalueCutoff= as.numeric(input$sign_vline_path),
+                                                        universe = hgcn_genes %>% select(entrez_id) %>% pull() %>% as.character(),
+                                                        readable = TRUE) %>% 
+          as_tibble()
+      }
+      
+      
+      validate(
+        need(nrow(pathway_analysis) != 0, "0 enriched terms found.")
+      )      
+      
       pathway_analysis %>%
-        as_tibble() %>% 
+        mutate(pvalue = round(pvalue, 3)) %>%
+        mutate(p.adjust = round(p.adjust, 3)) %>%
+        mutate(qvalue = round(qvalue, 3))
+      
+    })
+    
+    
+    
+    output$ui_path <- renderUI({
+      
+      if (input$table_path_go == 'Table') {
+        
+        DTOutput('df_path')
+        
+      } else {
+        plotOutput('func_pathways')
+        
+      }
+      
+    })
+    
+    
+    running_do <- reactive({
+      
+      
+      
+      
+      
+    })
+    
+    
+    
+
+    
+    output$df_path  <- renderDT({
+      
+
+      df <- running_path()  %>%
+        filter(Count != 0) %>%
+        arrange(desc(Count)) %>%
+        separate(geneID, sep = '/', into = as.character(1:1000)) %>%
+        gather('delete', 'gene', -ID, -Description, -Count, -GeneRatio, -pvalue, -p.adjust, -qvalue, -BgRatio) %>%
+        select(-delete) %>%
+        na.omit() %>%
+        distinct()
+      
+      datatable(df)
+
+    })
+    
+    
+    
+      
+    
+    
+    output$func_pathways  <- renderPlot({
+      
+      running_path() %>%
         mutate(p.adjust = -log10(p.adjust)) %>%
         ggplot(aes(reorder(Description, p.adjust), p.adjust)) +
         geom_col(aes(fill = Description), color = 'black', show.legend = FALSE) +
@@ -1788,7 +2042,7 @@ shiny::shinyApp(
         xlab('') +
         ylab('-log10(p-adjusted)') +
         ggtitle('Enriched pathways') +
-        geom_hline(yintercept =-log10(as.numeric(input$sign_vline)), color = 'red', alpha = 0.6, linetype = 'dashed', size = 2) +
+        geom_hline(yintercept =-log10(as.numeric(input$sign_vline_path)), color = 'red', alpha = 0.6, linetype = 'dashed', size = 2) +
         geom_text(
           aes(label = GeneRatio, y = p.adjust + 0.05),
           position = position_stack(vjust = 0.5),
@@ -1800,29 +2054,76 @@ shiny::shinyApp(
       
     })
     
-    output$func_analysis_diseases  <- renderPlot({
+    output$ui_do <- renderUI({
+      
+      if (input$table_plot_do == 'Table') {
+        
+        DTOutput('df_do')
+        
+      } else {
+        
+        plotOutput('func_do')
+        
+      }
+      
+    })
+    
+    running_do  <- reactive({
       
       # enrichNCG
       # enrichDGN
       # gseNCG
       # gseDGN
       
-      test <<- data_selected()
-      list_genes <- test  %>% slice(1:100) %>% select(entrez_id) %>% pull()  %>% as.character()
+      req(isTRUE(input$enable_do_analysis))
       
-      # analysis_input <- enrichDGN(list_genes, minGSSize = 5)
-      # barplot(analysis_input, showCategory=20)
       
-      # enrich_dgn <- enrichDGN(list_genes)
-      enrich_dgn <- enrichDO(list_genes)
+      filtered_genes <- data_selected() %>% select(entrez_id) %>% pull()  %>% as.character()
+  test4577 <<- filtered_genes
+      validate(
+        need(length(filtered_genes) != 0, "0 enriched terms found.")
+      )
+
+      enrich_dgn <- enrichDO(gene  = filtered_genes,
+                                                    universe      = hgcn_genes %>% select(entrez_id) %>% pull() %>% as.character(),
+                                                    # pAdjustMethod = "BH",
+                                                    pvalueCutoff  = as.numeric(input$pvalue_do),
+                                                    readable = TRUE)
       
+      test444 <<- enrich_dgn
       
       validate(
         need(nrow(enrich_dgn) != 0, "0 enriched terms found")
       )
-      cnetplot(enrich_dgn, foldChange= hgcn_genes$entrez_id, readable = TRUE)
+      
+      enrich_dgn
+
+    })
+    
+    
+    output$df_do <- renderDataTable({
+      
+      df <- running_do()  %>%
+        as_tibble() %>%
+        filter(Count != 0) %>%
+        arrange(desc(Count)) %>%
+        separate(geneID, sep = '/', into = as.character(1:1000)) %>%
+        gather('delete', 'gene', -ID, -Description, -Count, -GeneRatio, -pvalue, -p.adjust, -qvalue, -BgRatio) %>%
+        select(-delete) %>%
+        na.omit() %>%
+        distinct() %>%
+        mutate(pvalue = round(pvalue, 3)) %>%
+        mutate(p.adjust = round(p.adjust, 3)) %>%
+        mutate(qvalue = round(qvalue, 3))
+
+      datatable(df)
       
     })
+
+output$func_do  <- renderPlot({
+  
+    cnetplot(running_do(), foldChange= hgcn_genes$entrez_id, readable = TRUE)
+})
     
     output$table_all_genes  <-  renderReactable({
       
@@ -1927,7 +2228,10 @@ shiny::shinyApp(
       req(input$start_analysis > 0)
   
       tmp_df <-  get_perc_overlap(check_cnv_df() %>% rename(start_position = start, end_position = end), input$int_start, input$int_end)
-      datatable(tmp_df)
+      datatable(tmp_df, colnames = c('ID', 'Chrom', 'Start', 'End', 'Database', 'CNV size', 'Percentage Overlap (%)'),
+                
+                options = list(
+                  columnDefs = list(list(className = 'dt-center',  targets = 0:6))),  rownames= FALSE)
     })
     
     

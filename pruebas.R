@@ -1,5 +1,13 @@
 
 
+library(rjson)
+
+json_file <- 'http://myvariant.info/v1/query?q=chr1:69000-70000'
+
+json_data <- fromJSON(file=json_file)
+
+
+
 
 
 snv_df <- read.table('/home/cbl02/Desktop/input_snv.bed', sep = '\t', header = FALSE) %>%
