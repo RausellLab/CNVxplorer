@@ -1,5 +1,38 @@
 
 
+
+library(biomaRt)
+
+
+human  <- useMart("ensembl", dataset = "hsapiens_gene_ensembl",
+                  host    = "grch37.ensembl.org",
+                  path    = "/biomart/martservice")
+
+interval_genes <- getBM(attributes = c('ensembl_gene_id_version', 'start_position','end_position', 'chromosome_name'), 
+                        mart = human ) %>% as_tibble()
+
+
+
+interval_genes %>% filter(str_detect(ensembl_gene_id_version, 'ENSG00000270806'))
+
+
+m <- matrix(1:100, ncol = 5, nrow = 10) %>% as.data.frame()
+
+plus_1 <- function(x, y = 1) {
+  x <- x + y + 1 
+  return(x)
+}
+
+
+m %>%
+map_df(function(x) plus_1(x, 2))
+
+enrichDO(gene  = test4577,
+         universe      = hgcn_genes %>% select(entrez_id) %>% pull() %>% as.character(),
+         # pAdjustMethod = "BH",
+         pvalueCutoff  = 0.05,
+         readable = TRUE)
+
 library(rjson)
 
 json_file <- 'http://myvariant.info/v1/query?q=chr1:69000-70000'

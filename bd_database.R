@@ -8,17 +8,17 @@ library(data.table)
 
 # TODO
 
-# 398 genes does not have coordinates (start/end)
+# 400 genes does not have coordinates (start/end)
 # OMIM
 # HI%
 # Percentile RVIS or original data
-# Functional analysis - Gene Ontology - Pathway analysis (which db?)
 # ReactomePA analysis 423MB careful!
-# Gene ontology based of non-coding regions
+# Gene ontology based on non-coding regions
 # difference between pLI and o/e
 # should a put a minus + plus to the output from remot
-# PIK3CD duplicated because database HI have two observations
+# PIK3CD duplicated because database HI has two observations
 # warning message with input outside of the maximum chromosomes
+# 17q12 genes that do not have a proper chromosome (e.g. ENSG00000270806)
 
 # QUESTIONS NECKER
 

@@ -599,18 +599,20 @@ shiny::shinyApp(
         tablerTabItem(
           tabName = "disease",
           fluidRow(
-            # tablerCard(title = 'Select a gene:',
-            
+            tablerCard(title = 'Phenotype:',
+            width = 9,
             multiInput(
               inputId = "chosen_hp",
-              label = "Phenotype:", 
+              label = "", 
               choices = NULL,
+              width = '100%',
               choiceNames = vector_term,
               choiceValues = vector_hp
               
-            ),
+            )),
+            column(width = 3,
             uiOutput('n_hp_chosen'),
-            uiOutput('check_genes_hp'),
+            uiOutput('check_genes_hp')),
             tablerCard(title = 'Genes associated with the phenotype',
                        DTOutput('df_check_hp_genes'),
                        width = 12),
@@ -619,7 +621,7 @@ shiny::shinyApp(
             # tablerCard(title = 'Select a gene:',
             #            uiOutput('n_pub2med'),
             #            width = 3),
-            tablerCard(title = 'Pubmed articles',
+            tablerCard(title = 'Pubmed articles associated with the region',
                        DTOutput('disease_pubmed'),
                        width = 12))
         ),
@@ -707,6 +709,9 @@ shiny::shinyApp(
       
       test4 <<- input$dgenes_rows_selected
       
+      test_1993 <<- input$dgenes_state
+      
+      
       test19999 <<- 'casademiprimalatuerta'
       print(test4)
     })
@@ -744,14 +749,20 @@ shiny::shinyApp(
     
     output$gene_tissue <- renderUI({
       
-      input_data <- data_selected() %>% select(gene) %>% pull()
+      if (is.null(input$dgenes_rows_all)) {
+        df_genes <- data_selected()
+      } else {
+        df_genes <- data_selected()[input$dgenes_rows_all,]
+      }
+      
+      input_data <- df_genes %>% select(gene) %>% pull()
       
       pickerInput(
         inputId = "input_gene_tissue",
         # label = "Select gene:", 
         choices = input_data,
         options = list(
-          size = 10,
+          size = 5,
           `live-search` = TRUE))
       
       
@@ -797,8 +808,15 @@ shiny::shinyApp(
       req(input$start_analysis > 0)
       
       
+      if (is.null(input$dgenes_rows_all)) {
+        df_genes <- data_selected()
+      } else {
+        df_genes <- data_selected()[input$dgenes_rows_all,]
+      }
+      
+      
       hp_chosen <- input$chosen_hp
-      genes_chosen <- data_selected() %>% select(entrez_id) %>% pull()
+      genes_chosen <- df_genes %>% select(entrez_id) %>% pull()
       
       
       df_tmp <- hpo_genes %>%
@@ -831,13 +849,13 @@ shiny::shinyApp(
       
     })
     
-    output$df_check_hp_genes <- renderDT({
+    output$df_check_hp_genes <- renderDataTable({
       
       req(input$start_analysis > 0)
       
-      
-      
-      datatable(check_hp_genes())
+
+      datatable(check_hp_genes(), options = list(
+        pageLength = 5))
     })
     
     output$n_hp_chosen <- renderUI({
@@ -877,17 +895,18 @@ shiny::shinyApp(
       
       if (input$input_geno_karyo == 'Genomic coordinates') {
         
-        chrom_tmp <<- input$input_chrom
-        start_tmp <<- input$int_start
-        end_tmp <<- input$int_end
+        
+        start_coordinates <- coord_user()[1]
+        end_coordinates <- coord_user()[2]
+        chrom_coordinates <- input$input_chrom
         
         query_region <-  chromPlot::hg_cytoBandIdeo %>%
-          filter(Chrom %in% chrom_tmp) %>%
-          mutate(keep = map2_chr(Start, End, function(x,y) c(start_tmp, end_tmp) %overlaps% c(x,y))) %>%
+          filter(Chrom %in% chrom_coordinates) %>%
+          mutate(keep = map2_chr(Start, End, function(x,y) c(start_coordinates, end_coordinates) %overlaps% c(x,y))) %>%
           filter(keep == TRUE) %>%
           select(Name) %>%
           pull() %>%
-          map_chr(function(x) paste0(chrom_tmp, x)) %>%
+          map_chr(function(x) paste0(chrom_coordinates, x)) %>%
           paste0(collapse = ' OR ')
         
       } else {
@@ -916,16 +935,25 @@ shiny::shinyApp(
     
     output$disease_pubmed <- renderDT({
       
+      
+      validate(
+        need(length(query_pubmed()) != 0, "Please, select a gene in the datatable.")
+      )
+      
       test21 <<- query_pubmed()
       query_tmp <- entrez_summary(db="pubmed", id= query_pubmed()[['ids']])
       
+      test987 <<-query_tmp
+      
       title <- unname(map_chr(query_tmp, function(x) x[["title"]]))
       n_cites <- unname(map_chr(query_tmp, function(x) x[["pmcrefcount"]]))
-      
-      df_output <- tibble(title = title, n_cites = n_cites)
+      authors <- unname(map_chr(query_tmp, function(x) x[["pmcrefcount"]]))
+
+      df_output <- tibble(title = title, authors = authors, n_cites = n_cites)
       
       
       datatable(df_output, rownames = FALSE, filter = 'top', 
+                colnames = c('Title', 'Authors','Number of cites' ),
                 options = list(
                   pageLength = 5, autoWidth = TRUE, style = 'bootstrap', list(searchHighlight = TRUE),
                   selection = 'single'
@@ -961,9 +989,12 @@ shiny::shinyApp(
         
       } else {
         
-        data_raw  <- data_raw %>% 
-          filter(location == paste0(chrom_coordinates, input$input_karyotype))
-        
+        data_raw <- data_raw  %>% mutate(keep = NA) %>%
+          rowwise() %>%
+          mutate(keep = c(start_position, end_position) %overlaps% c(start_coordinates, end_coordinates)) %>%
+          filter(keep == TRUE) %>% 
+          select(-keep) %>%
+          ungroup()
       }
       if (input$snv_yes_no == 'Yes') {
         
@@ -985,6 +1016,8 @@ shiny::shinyApp(
             data_raw <-  bind_rows(data_raw, df_add)
           }
         }}
+      
+
         
        
       data_raw <- data_raw %>% 
@@ -1000,31 +1033,61 @@ shiny::shinyApp(
       
       
       return(data_raw)
+      
     })
+    
+
+    # data_selected <- reactive({
+    #   
+    #   
+    #   if (is.null(input$dgenes_rows_all)) {
+    #     df_output <- data_selected_prev()
+    #   } else {
+    #     df_output <- data_selected_prev()[input$dgenes_rows_all,]
+    #   }
+    # 
+    # 
+    #   # if (length(input$dgenes_rows_all) != nrow(data_selected_prev())) {
+    #   # 
+    #   #   data_selected <- data_selected_prev()
+    #   #   data_selected <- data_selected[input$dgenes_rows_all,]
+    #   # }
+    # 
+    # 
+    #   df_output
+    # 
+    # 
+    # })
     
     output$dgenes <- renderDataTable({
       
+      
+      
       server <- TRUE
-      data_input <- data_selected() %>% select(-start_position, -end_position) %>% select(-chrom)
+      data_input <- data_selected() %>% select(-start_position, -end_position, -chrom)
       
       datatable(data_input, rownames = FALSE, filter = 'top', 
                 # extensions = 'Responsive',
                 options = list(
                   pageLength = 5, autoWidth = TRUE, style = 'bootstrap', list(searchHighlight = TRUE),
                   selection = 'single',
-                  stateSave = TRUE,
-                  columnDefs = list(list(className = 'dt-center', targets = '_all'))
-                )) %>%
-        formatStyle(
-          'pLI',
-          background = styleColorBar(c(0,1), '#ca7171'),
-          backgroundSize = '100% 90%',
-          backgroundRepeat = 'no-repeat',
-          backgroundPosition = 'center'
-        )
+                  stateSave = FALSE,
+                  colnames = c('Entrez id', 'Band', 'Gene', 'pLI', 'Database', 'CNV size', 'Percentage Overlap (%)')
+                  # columnDefs = list(list(className = 'dt-center', targets = '_all'))
+                ))
+        # formatStyle(
+        #   'pLI',
+        #   background = styleColorBar(c(0,1), '#ca7171'),
+        #   backgroundSize = '100% 90%',
+        #   backgroundRepeat = 'no-repeat',
+        #   backgroundPosition = 'center'
+        # )
     })
     
     output$score_references <- renderDataTable({
+      
+      
+      test1945 <<- input$dgenes_rows_all
       
       
       datatable(ref_scores, rownames = FALSE,
@@ -1054,7 +1117,10 @@ shiny::shinyApp(
       
       req(input$start_analysis > 0)
       
-      size_cnv_query = input$int_end - input$int_start + 1
+      start_coordinates <- coord_user()[1]
+      end_coordinates <- coord_user()[2]
+      
+      size_cnv_query = end_coordinates - start_coordinates + 1
       
       cnv_df %>%
         ggplot(aes(length_cnv, y = source)) +
@@ -1216,6 +1282,8 @@ shiny::shinyApp(
     
     output$plot_chrom <- renderPlot({
       
+      # req(nrow(data_selected() > 0))
+      
       test1000 <<-coord_user()
       
       plot_chrom_react()
@@ -1264,11 +1332,19 @@ shiny::shinyApp(
         name_region <- paste0(input$input_chrom, input$input_karyotype)
         
       }
-      
-      test12 <<- name_region
+
+      test1111111 <- data_selected()
+      if (is.null(input$dgenes_rows_all)) {
+        final_number <- test1111111
+      } else {
+        final_number <- test1111111[input$dgenes_rows_all,]
+      }
+      test1111111 <- test1111111[input$dgenes_rows_all,]
+      test787 <<- input$dgenes_rows_all
+      test2121 <<- test1111111
       
       tablerStatCard(
-        value = nrow(data_selected()),
+        value = nrow(final_number),
         title = HTML(paste0("Number of genes<br/>", name_region)),
         # trend = 19192,
         width = 12
@@ -1290,6 +1366,8 @@ shiny::shinyApp(
     
     output$ref_user_filter_genes <- renderUI({
       
+     req(length(input$dgenes_rows_all) != nrow(data_selected()))
+      
       if (input$input_geno_karyo == 'Genomic coordinates') {
         
         name_region <- paste0('chr',input$input_chrom, ':', input$int_start, '-', input$int_end)
@@ -1299,10 +1377,9 @@ shiny::shinyApp(
         
       }
       
-      test_1993 <<- input$dgenes_state
       tablerInfoCard(
         width = 12,
-        value = paste0(length(input$dgenes_rows_all), " genes"),
+        value = paste0(length(input$dgenes_rows_all), '/', nrow(data_selected()), " genes"),
         status = "warning",
         icon = "crop",
         description =  'Filtered genes'
@@ -1315,7 +1392,7 @@ shiny::shinyApp(
       
       if (input$input_geno_karyo == 'Genomic coordinates') {
         
-        name_region <- paste0('chr',input$input_chrom, ':', input$int_start, '-', input$int_end)
+        name_region <- paste0('chr', input$input_chrom, ':', input$int_start, '-', input$int_end)
         
       } else {
         name_region <- paste0(input$input_chrom, input$input_karyotype)
@@ -1335,34 +1412,39 @@ shiny::shinyApp(
     
     output$ref_user_length <- renderUI({
       
-      req(input$start_analysis > 0)
+       req(input$start_analysis > 0)
+      # 
+      # 
+      # if (input$input_geno_karyo == 'Genomic coordinates') {
+      #   
+      #   name_region <- paste0('chr',input$input_chrom, ':', input$int_start, '-', input$int_end)
+      #   
+      # } else {
+      #   name_region <- paste0(input$input_chrom, input$input_karyotype)
+      #   
+      # }
+      # 
+      # 
+      # if (input$input_geno_karyo == 'Genomic coordinates') {
+      #   
+      #   length_region <-  round((input$int_end - input$int_start + 1) / 1e6, 2)
+      #   
+      # } else {
+      #   
+      #   # name_region <- paste0(input$input_chrom, input$input_karyotype)
+      #   length_region <-  round((input$int_end - input$int_start + 1) / 1e6, 2)
+      # }
       
+      start_coordinates <- coord_user()[1]
+      end_coordinates <- coord_user()[2]
+      chrom_coordinates <- input$input_chrom
       
-      if (input$input_geno_karyo == 'Genomic coordinates') {
-        
-        name_region <- paste0('chr',input$input_chrom, ':', input$int_start, '-', input$int_end)
-        
-      } else {
-        name_region <- paste0(input$input_chrom, input$input_karyotype)
-        
-      }
-      
-      
-      if (input$input_geno_karyo == 'Genomic coordinates') {
-        
-        length_region <-  round((input$int_end - input$int_start + 1) / 1e6, 2)
-        
-      } else {
-        
-        # name_region <- paste0(input$input_chrom, input$input_karyotype)
-        length_region <-  round((input$int_end - input$int_start + 1) / 1e6, 2)
-      }
-      
-      length_region <- paste(length_region, " Mb")
+      length_region <- end_coordinates - start_coordinates + 1
+      length_region <- round(length_region / 1e6, 2)
       
       tablerInfoCard(
         width = 12,
-        value =  length_region,
+        value =  paste(length_region, 'Mb'),
         status = "primary",
         icon = "database",
         description =  'Length of the genomic region'
@@ -1752,8 +1834,15 @@ shiny::shinyApp(
         } else {
           go_chosen <- 'CC'
         }
+      
+      
+      if (is.null(input$dgenes_rows_all)) {
+        df_genes <- data_selected()
+      } else {
+        df_genes <- data_selected()[input$dgenes_rows_all,]
+      }
         
-        filtered_genes <- data_selected() %>% select(entrez_id) %>% pull()  %>% as.character()
+        filtered_genes <- df_genes %>% select(entrez_id) %>% pull()  %>% as.character()
         univ <- hgcn_genes %>% select(entrez_id) %>% pull() %>% as.character()
         
         validate(
@@ -1844,7 +1933,14 @@ shiny::shinyApp(
       
       n_level <- as.numeric(input$user_level)
       
-      filtered_genes <- data_selected() %>% select(entrez_id) %>% pull()  %>% as.character()
+      if (is.null(input$dgenes_rows_all)) {
+        df_genes <- data_selected()
+      } else {
+        df_genes <- data_selected()[input$dgenes_rows_all,]
+      }
+      
+      
+      filtered_genes <- df_genes %>% select(entrez_id) %>% pull()  %>% as.character()
       
       tryCatch(
         
@@ -1926,6 +2022,8 @@ shiny::shinyApp(
     
     output$df_go  <- renderDT({
       
+      
+      
       test222 <<- running_go()
       
       df <- running_go() %>%
@@ -1946,11 +2044,15 @@ shiny::shinyApp(
       
       req(isTRUE(input$enable_path_analysis))
       
+      if (is.null(input$dgenes_rows_all)) {
+        df_genes <- data_selected()
+      } else {
+        df_genes <- data_selected()[input$dgenes_rows_all,]
+      }
       
-      filtered_genes <- data_selected() %>% select(entrez_id) %>% pull()  %>% as.character()
+      filtered_genes <- df_genes %>% select(entrez_id) %>% pull()  %>% as.character()
       
-      test456 <<- filtered_genes
-      
+
       validate(
         need(length(filtered_genes) != 0, "0 enriched terms found.")
       )
@@ -2078,8 +2180,13 @@ shiny::shinyApp(
       req(isTRUE(input$enable_do_analysis))
       
       
-      filtered_genes <- data_selected() %>% select(entrez_id) %>% pull()  %>% as.character()
-  test4577 <<- filtered_genes
+      if (is.null(input$dgenes_rows_all)) {
+        df_genes <- data_selected()
+      } else {
+        df_genes <- data_selected()[input$dgenes_rows_all,]
+      }
+      
+      filtered_genes <- df_genes %>% select(entrez_id) %>% pull()  %>% as.character()
       validate(
         need(length(filtered_genes) != 0, "0 enriched terms found.")
       )
