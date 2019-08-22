@@ -599,7 +599,7 @@ shiny::shinyApp(
         tablerTabItem(
           tabName = "disease",
           fluidRow(
-            tablerCard(title = 'Phenotype:',
+            tablerCard(title = 'Phenotype terms:',
             width = 9,
             multiInput(
               inputId = "chosen_hp",
@@ -613,7 +613,7 @@ shiny::shinyApp(
             column(width = 3,
             uiOutput('n_hp_chosen'),
             uiOutput('check_genes_hp')),
-            tablerCard(title = 'Genes associated with the phenotype',
+            tablerCard(title = 'Genes associated with the phenotype terms',
                        DTOutput('df_check_hp_genes'),
                        width = 12),
             # width = 6
@@ -815,6 +815,12 @@ shiny::shinyApp(
       }
       
       
+      validate(
+        need(!is.null(input$chosen_hp), "Please, select phenotype terms.")
+      )
+      
+      test322 <<- input$chosen_hp
+      
       hp_chosen <- input$chosen_hp
       genes_chosen <- df_genes %>% select(entrez_id) %>% pull()
       
@@ -853,6 +859,11 @@ shiny::shinyApp(
       
       req(input$start_analysis > 0)
       
+      test766 <<- check_hp_genes()
+      
+      validate(
+        need(nrow(check_hp_genes()) != 0, "Not genes found.")
+      )
 
       datatable(check_hp_genes(), options = list(
         pageLength = 5))

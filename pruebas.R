@@ -1,6 +1,26 @@
 
 
 
+test1 <- test766 %>% select(gene, hp) %>% mutate(id_row = row_number())
+
+vector_hp <- test1 %>% select(hp) %>% distinct() %>% pull()
+vector_genes <- test1 %>% select(gene) %>% distinct() %>% pull()
+
+list_result <- replicate(length(vector_hp), NA, simplify = FALSE)
+
+
+for (i in 1:length(vector_hp)) {
+  
+  list_result[[i]] <- test1 %>% filter(hp == !!vector_hp[i]) %>% pull(id_row)
+  names(list_result)[1] <- vector_hp[1]
+  
+}
+
+
+
+upset(fromList(list_result), empty.intersections = "on", order.by = "freq")
+
+
 library(biomaRt)
 
 
