@@ -122,6 +122,41 @@ get_perc_overlap <- function(df, start_cnv, end_cnv) {
 
 
 # ------------------------------------------------------------------------------
+# Name: plot_upset
+# Description: Plot a upset graphic which depicts overlapping of phenotype terms in genes
+# Input: dataframe
+# Output: plot
+# ------------------------------------------------------------------------------
+
+get_upset <- function(df) {
+  
+  df_tmp <- df %>% select(gene, term) %>% mutate(id_row = row_number())
+  
+  vector_hpo <- df_tmp %>% select(term) %>% distinct() %>% pull()
+  
+  validate(
+    need(length(vector_hpo) > 1, "Please, select more than one phenotype term.")
+  )
+  vector_genes <- df_tmp %>% select(gene) %>% distinct() %>% pull()
+  
+  list_result <- replicate(length(vector_hpo), NA, simplify = FALSE)
+  
+  
+  for (i in 1:length(vector_hpo)) {
+    
+    list_result[[i]] <- df_tmp %>% filter(term== !!vector_hpo[i]) %>% pull(id_row)
+    names(list_result)[i] <- vector_hpo[i]
+    
+  }
+
+  upset(fromList(list_result), empty.intersections = "on", order.by = "freq",
+        point.size = 3.5, line.size = 2, number.angles = 30,
+        mainbar.y.label = "Phenotype Terms Intersections", sets.x.label = "Genes Associated Per Phenotype Term",
+        text.scale = c(1.3, 1.3, 1, 1, 2, 0.75))
+
+}
+
+# ------------------------------------------------------------------------------
 # Name: get_score
 # Description: Conservation score given a model
 # Input: dataframe (bed format)

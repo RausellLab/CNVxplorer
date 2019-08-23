@@ -25,6 +25,8 @@ library(rentrez)
 library(reactable)
 # library(shinycssloaders)
 library(ggridges)
+library(UpSetR)
+
 
 
 
@@ -616,6 +618,9 @@ shiny::shinyApp(
             tablerCard(title = 'Genes associated with the phenotype terms',
                        DTOutput('df_check_hp_genes'),
                        width = 12),
+            tablerCard(title = 'Intersection of phenotype terms',
+                       plotOutput('plot_upset'),
+                       width = 12),
             # width = 6
             # ),
             # tablerCard(title = 'Select a gene:',
@@ -869,6 +874,13 @@ shiny::shinyApp(
         pageLength = 5))
     })
     
+    output$plot_upset <- renderPlot({
+      
+    get_upset(check_hp_genes())
+      
+      
+    })
+    
     output$n_hp_chosen <- renderUI({
       
       req(input$start_analysis > 0)
@@ -944,7 +956,8 @@ shiny::shinyApp(
     })
     
     
-    output$disease_pubmed <- renderDT({
+    running_pubmed <- reactive({
+      
       
       
       validate(
@@ -959,11 +972,18 @@ shiny::shinyApp(
       title <- unname(map_chr(query_tmp, function(x) x[["title"]]))
       n_cites <- unname(map_chr(query_tmp, function(x) x[["pmcrefcount"]]))
       authors <- unname(map_chr(query_tmp, function(x) x[["pmcrefcount"]]))
-
+      
       df_output <- tibble(title = title, authors = authors, n_cites = n_cites)
       
+      df_output
       
-      datatable(df_output, rownames = FALSE, filter = 'top', 
+      
+    })
+    
+    output$disease_pubmed <- renderDT({
+      
+      
+      datatable(running_pubmed(), rownames = FALSE, filter = 'top', 
                 colnames = c('Title', 'Authors','Number of cites' ),
                 options = list(
                   pageLength = 5, autoWidth = TRUE, style = 'bootstrap', list(searchHighlight = TRUE),
@@ -1781,8 +1801,19 @@ shiny::shinyApp(
     
     output$funnel_genes <- renderEcharts4r({
       
-      funnel <- data.frame(stage = c("19,192 genes", "182 genes", "60 genes"), value = c(1, 0.5, 0.25))
+      genes_selected <- paste(nrow(data_selected()), 'genes found in CNV') 
       
+      test1000 <<- input$dgenes_rows_all
+      
+      if (nrow(data_selected()) == length(input$dgenes_rows_all)) {
+        genes_filtered <-data_selected()
+        funnel <- data.frame(stage = c("19,146 genes", genes_selected), value = c(1, 0.5))
+        
+      } else {
+        genes_filtered <-  paste(nrow(data_selected()[input$dgenes_rows_all,]), 'genes filtered')
+        funnel <- data.frame(stage = c("19,146 genes", genes_selected, genes_filtered), value = c(1, 0.5, 0.25))
+      }
+
       funnel %>% 
         e_charts() %>% 
         e_funnel(value, stage) %>% 
@@ -1871,7 +1902,7 @@ shiny::shinyApp(
                                 # qvalueCutoff  = 0.05)
         
 
-      
+        go_analysis %>% as_tibble()
       
       
       
@@ -1881,8 +1912,7 @@ shiny::shinyApp(
     
     output$func_analysis <- renderPlot({
     
-        plot_output <-  running_enrich_go() %>%
-          as_tibble() %>%
+       running_enrich_go() %>%
           mutate(p.adjust = -log10(p.adjust)) %>%
           ggplot(aes(reorder(Description, p.adjust), p.adjust)) +
           geom_col(aes(fill = Description), color = 'black', show.legend = FALSE) +
@@ -1901,7 +1931,7 @@ shiny::shinyApp(
           theme(axis.text=element_text(size=12),
                 axis.title=element_text(size=14,face="bold"))
         
-        plot_output
+        
 
     })
     
@@ -1969,7 +1999,7 @@ shiny::shinyApp(
         need(ggo %>% as_tibble() %>% select(Count) %>% sum() != 0, "0 terms found. Please reduce the level assigned")
       )
       
-      ggo
+      ggo <- ggo %>% as_tibble()
       
     })
     
@@ -2004,8 +2034,9 @@ shiny::shinyApp(
     
     output$group_go  <- renderPlot({
       
+      test900 <<- running_go()
+      test344 <<- running_enrich_go()
       running_go() %>%
-        as_tibble() %>%
         arrange(desc(Count)) %>%
         filter(Count != 0) %>%
         slice(1:10) %>%
@@ -2145,6 +2176,8 @@ shiny::shinyApp(
     
     
     output$func_pathways  <- renderPlot({
+      
+      test800 <<- running_path()
       
       running_path() %>%
         mutate(p.adjust = -log10(p.adjust)) %>%
@@ -2312,7 +2345,8 @@ output$func_do  <- renderPlot({
                        chrom = input$input_chrom,
                        name = input$name_report,
                        age = input$age_report,
-                       sex = input$sex_report)
+                       sex = input$sex_report,
+                       comment = input$comment_report)
                        # gene_content = data_selected())
         
         tempReport <- file.path(tempdir(), "report.Rmd")

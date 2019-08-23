@@ -4,7 +4,7 @@ author: "Vignette Author"
 date: "`r Sys.Date()`"
 output:
   prettydoc::html_pretty:
-    theme: cayman
+    theme: architect
     highlight: github
 vignette: >
   %\VignetteIndexEntry{Vignette Title}
@@ -12,17 +12,20 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-## 1. Input data
+
+
+## 1. Clinical information
 
 ```{r echo= FALSE, comment = NA, message=FALSE}
 
 params$name
 params$sex
 params$age
+params$comment
 
 ```
 
-## 1. Input data
+## 2. Input data
 
 ```{r echo= FALSE, comment = NA, message=FALSE}
 
@@ -38,80 +41,221 @@ knitr::kable(df_tmp)
 
 ```
 
+
+## 2. Comparison size
+
+```{r echo= FALSE, comment = NA, message=FALSE, fig.width=12}
+
+      start_coordinates <- coord_user()[1]
+      end_coordinates <- coord_user()[2]
+      
+      size_cnv_query = end_coordinates - start_coordinates + 1
+      
+      cnv_df %>%
+        ggplot(aes(length_cnv, y = source)) +
+        stat_density_ridges(quantile_lines = TRUE, quantiles = 2, aes(fill = source), alpha = 0.6, show.legend = FALSE, size = 1.25) +
+        geom_vline(aes(xintercept = size_cnv_query), linetype = 2, color = 'red', size = 1.5) +
+        scale_x_log10() +
+        scale_y_discrete(expand = c(0.01, 0)) +
+        scale_fill_viridis_d() +
+        xlab('-log10(CNVs size)') +
+        ylab('Database') +
+        theme_ridges()
+
+```
+
+
+## 3. Functional analysis
+
+
+### 3.1 Functional profile (optional)
+
+```{r echo= FALSE, comment = NA, message=FALSE, fig.width=12}
+
+if (exists('running_go()')) {
+  
+  if (nrow(running_go()) > 0) {
+
+      running_go() %>%
+        as_tibble() %>%
+        arrange(desc(Count)) %>%
+        filter(Count != 0) %>%
+        slice(1:10) %>%
+        as_tibble() %>%
+        # mutate(p.adjust = -log10(p.adjust)) %>%
+        ggplot(aes(reorder(Description, Count), Count)) +
+        geom_col(aes(fill = Description), color = 'black', show.legend = FALSE) +
+        scale_fill_viridis_d() +
+        coord_flip() +
+        xlab('') +
+        ylab('Number of genes') +
+        geom_text(
+          aes(label = GeneRatio, y = Count + 0.05),
+          position = position_stack(vjust = 0.5),
+          vjust = 0
+        ) +
+        theme_minimal() +
+        theme(axis.text=element_text(size=12),
+              axis.title=element_text(size=14,face="bold"))
+    
+  }
+}
+```
+
+
+
+### 3.2 Gene ontology (optional)
+
+```{r echo= FALSE, comment = NA, message=FALSE, fig.width=12}
+
+if (exists('running_enrich_go()')) {
+  
+  if (nrow(running_enrich_go()) > 0) {
+    
+        running_enrich_go() %>%
+          as_tibble() %>%
+          mutate(p.adjust = -log10(p.adjust)) %>%
+          ggplot(aes(reorder(Description, p.adjust), p.adjust)) +
+          geom_col(aes(fill = Description), color = 'black', show.legend = FALSE) +
+          scale_fill_viridis_d() +
+          coord_flip() +
+          xlab('') +
+          ylab('-log10(p-adjusted)') +
+          ggtitle('GO analysis') +
+          geom_hline(yintercept =-log10(as.numeric(input$sign_vline)), color = 'red', alpha = 0.6, linetype = 'dashed', size = 2) +
+          geom_text(
+            aes(label = GeneRatio, y = p.adjust + 0.05),
+            position = position_stack(vjust = 0.5),
+            vjust = 0
+          ) +
+          theme_minimal() +
+          theme(axis.text=element_text(size=12),
+                axis.title=element_text(size=14,face="bold"))
+        
+  }
+}
+```
+
+
+### 3.3 Pathway analysis (optional)
+
+```{r echo= FALSE, comment = NA, message=FALSE, fig.width=12}
+
+if (exists('running_path()')) {
+  
+  if (nrow(running_path()) > 0) {
+      
+        running_path() %>%
+        mutate(p.adjust = -log10(p.adjust)) %>%
+        ggplot(aes(reorder(Description, p.adjust), p.adjust)) +
+        geom_col(aes(fill = Description), color = 'black', show.legend = FALSE) +
+        scale_fill_viridis_d() +
+        coord_flip() +
+        xlab('') +
+        ylab('-log10(p-adjusted)') +
+        ggtitle('Enriched pathways') +
+        geom_hline(yintercept =-log10(as.numeric(input$sign_vline_path)), color = 'red', alpha = 0.6, linetype = 'dashed', size = 2) +
+        geom_text(
+          aes(label = GeneRatio, y = p.adjust + 0.05),
+          position = position_stack(vjust = 0.5),
+          vjust = 0
+        ) +
+        theme_minimal() +
+        theme(axis.text=element_text(size=12),
+              axis.title=element_text(size=14,face="bold"))
+        
+  }  
+}
+```
+
+
+
+### 3.4 Gene-disease association (optional)
+
+```{r echo= FALSE, comment = NA, message=FALSE, fig.width=12}
+
+
+if (exists('running_do()')) {
+  
+  if (nrow(running_do()) > 0) {
+    
+    cnetplot(running_do(), foldChange= hgcn_genes$entrez_id, readable = TRUE)
+
+        
+  }     
+}
+```
+
+
+
+### 3.3 Pathway analysis (optional)
+
+```{r echo= FALSE, comment = NA, message=FALSE, fig.width=12}
+
+if (exists('running_path()')) {
+  
+  if (nrow(running_path()) > 0) {
+      
+        running_path() %>%
+        mutate(p.adjust = -log10(p.adjust)) %>%
+        ggplot(aes(reorder(Description, p.adjust), p.adjust)) +
+        geom_col(aes(fill = Description), color = 'black', show.legend = FALSE) +
+        scale_fill_viridis_d() +
+        coord_flip() +
+        xlab('') +
+        ylab('-log10(p-adjusted)') +
+        ggtitle('Enriched pathways') +
+        geom_hline(yintercept =-log10(as.numeric(input$sign_vline_path)), color = 'red', alpha = 0.6, linetype = 'dashed', size = 2) +
+        geom_text(
+          aes(label = GeneRatio, y = p.adjust + 0.05),
+          position = position_stack(vjust = 0.5),
+          vjust = 0
+        ) +
+        theme_minimal() +
+        theme(axis.text=element_text(size=12),
+              axis.title=element_text(size=14,face="bold"))
+        
+  }  
+}
+```
+
+
+
+## 4. Pubmed articles associated with the region
+
+```{r echo= FALSE, comment = NA, message=FALSE, fig.width=12}
+
+# kable(running_pubmed()) %>%
+#   kable_styling() %>%
+#   scroll_box(width = "1000px", height = "500px")
+
+datatable(running_pubmed(), 
+          rownames = FALSE,
+          options =
+            list(pageLength = 5))
+```
+
+
 ## Comparison size
 
 
 
-## 2. Gene content
+<!-- ## 2. Gene content -->
 
-```{r echo= FALSE, comment = NA, message=FALSE}
-library(knitr)
-library(kableExtra)
-knitr::kable( data_selected()) %>%
-    kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+<!-- ```{r echo= FALSE, comment = NA, message=FALSE } -->
+<!-- options(width = 400) -->
+<!-- library(knitr) -->
+<!-- library(kableExtra) -->
+<!-- # knitr::kable( data_selected()) %>% -->
+<!-- #     kable_styling(full_width = F) -->
+<!-- #    -->
+<!-- #     # scroll_box(width = "500px", height = "200px") -->
 
+<!-- # datatable(data_selected(), style = 'bootstrap',  -->
+<!-- #           options = list(pageLength = 5, autoWidth = TRUE), width = 100) -->
 
-```
+<!-- ``` -->
 
-
-## Comment
-
-Vignettes are params$chrom long form documentation commonly included in packages. Because
-they are part of the distribution of the package, they need to be as compact as
-possible. The `html_pretty` output format in package
-[**prettydoc**](http://github.com/yixuan/prettydoc/) , an alternative
-to `html_document` and `html_vignette` contained in the `rmarkdown` package,
-is able to generate small and nice HTML pages.
-
-## Styles
-
-Currently `html_pretty` supports three page themes, `cayman` (the default),
-`tactile`, and `architect`. And there are also two syntax highlight styles:
-`github` to mimic the syntax highlight on Github, and `vignette` that is used by
-`html_vignette`. If no highlight parameter is given, the default style created
-by Pandoc will be used.
-
-The theme and highlight styles can be given in the document metadata,
-for example:
-
-```yaml
-output:
-  prettydoc::html_pretty:
-    theme: cayman
-    highlight: github
-```
-
-## Happy Knitting!
-
-Feel free to use the `knitr` infrastructure with dozens of tunable options in
-your package vignette.
-
-```{r fig.width=6, fig.height=6, fig.align='center'}
-set.seed(123)
-n <- 1000
-x1  <- matrix(rnorm(n), ncol = 2)
-x2  <- matrix(rnorm(n, mean = 3, sd = 1.5), ncol = 2)
-x   <- rbind(x1, x2)
-head(x)
-smoothScatter(x, xlab = "x1", ylab = "x2")
-```
-
-You can also include code snippets of languages other than R, but note that
-the block header has no curly brackets around the language name.
-
-```cpp
-// [[Rcpp::export]]
-NumericVector timesTwo(NumericVector x) {
-    return x * 2;
-}
-```
-
-You can write math expressions, e.g. $Y = X\beta + \epsilon$,
-footnotes^[A footnote here.], and tables, e.g. using `knitr::kable()`.
-
-```{r, echo=FALSE, results='asis'}
-knitr::kable(head(iris, 10))
-```
 
 ## Stay Tuned
 
