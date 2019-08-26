@@ -203,7 +203,7 @@ shiny::shinyApp(
               uiOutput('n_snv'),
               
               uiOutput('n_genes'),
-              uiOutput('n_enhancer'),
+              # uiOutput('n_enhancer'),
               
               uiOutput("info")
             )
@@ -562,7 +562,17 @@ shiny::shinyApp(
             #            width = 3),
             uiOutput('n_enhancer_total'),
             uiOutput('n_enhancer_inside'),
+            uiOutput('n_enhancer'),
+            
             uiOutput('redund_n_enhancer'),
+            # tablerCard(title = 'Include target-genes enhancers',
+            #            uiOutput('switch_enhancers'),
+            #            collapsible = FALSE,
+            #            closable = FALSE,
+            #            width = 3),
+            uiOutput('switch_enhancers'),
+            
+            
             tablerCard(title = 'List enhancers',
                        DTOutput('df_enhancer'),
                        width = 12)),
@@ -972,15 +982,18 @@ shiny::shinyApp(
       title <- unname(map_chr(query_tmp, function(x) x[["title"]]))
       n_cites <- unname(map_chr(query_tmp, function(x) x[["pmcrefcount"]]))
       authors <- unname(map_chr(query_tmp, function(x) x[["pmcrefcount"]]))
+      date_release <- unname(map_chr(query_tmp, function(x) x[["pubdate"]]))
+      pmid_id <- unname(map_chr(query_tmp, function(x) x[["uid"]]))
       
-      df_output <- tibble(title = title, authors = authors, n_cites = n_cites)
+      
+      df_output <- tibble(title = title, authors = authors, n_cites = n_cites, date_release = date_release, pmid = pmid_id)
       
       df_output
       
       
     })
     
-    output$disease_pubmed <- renderDT({
+    output$disease_pubmed <- renderDataTable({
       
       
       datatable(running_pubmed(), rownames = FALSE, filter = 'top', 
@@ -995,7 +1008,7 @@ shiny::shinyApp(
     
     
     
-    data_selected <- reactive({
+    data_selected_prev <- reactive({
       
       req(input$start_analysis > 0)
       
@@ -1007,7 +1020,7 @@ shiny::shinyApp(
       
       data_raw <- hgcn_genes %>% filter(chrom == chrom_coordinates)
       
-      if(input$input_geno_karyo == 'Genomic coordinates') {
+      if (input$input_geno_karyo == 'Genomic coordinates') {
         
         data_raw <- data_raw  %>% mutate(keep = NA) %>%
           rowwise() %>%
@@ -1052,18 +1065,68 @@ shiny::shinyApp(
         
        
       data_raw <- data_raw %>% 
-        rename(band = location) %>% 
         mutate(coordinates = paste0(chrom,':', start_position,'-', end_position)) %>% 
         mutate(oe = paste0(oe_lof, ' (', oe_lof_lower, '-',oe_lof_upper, ')')) %>%
-        select(-ensembl_gene_id, -transcript, -oe_lof, -oe_lof_lower, -oe_lof_upper, -vg)
-         
-      
-      
-      
+        select(-transcript, -oe_lof, -oe_lof_lower, -oe_lof_upper, -vg, -ensembl_gene_id)
+
       data_raw <- get_perc_overlap(data_raw, start_coordinates, end_coordinates)
       
-      
+      test912 <<- data_raw
+
       return(data_raw)
+      
+    })
+    
+    genes_cnv <- reactive({
+      
+        list_genes_cnv <- data_selected_prev()
+        list_genes_cnv <- list_genes_cnv %>% select(gene) %>% pull()
+        list_genes_cnv
+        
+        
+        # test441 <<- genes_cnv
+        # Genes NOT mapped in CNV
+        genes_no_cnv <- prev_enhancer() %>% select(gene) %>% distinct() %>% pull()
+        genes_no_cnv <- genes_no_cnv[! genes_no_cnv %in% genes_cnv()]
+        # ADAPT IT WHEN ADDING OMIM OR OTHERS!!!
+        table_insert <- hgcn_genes %>% filter(gene %in% genes_no_cnv) %>%
+          select(-oe_lof, -oe_lof_lower, -oe_lof_upper, -vg, -transcript, -ensembl_gene_id)
+        
+        
+        result_list <- list(list_genes_cnv, table_insert )
+      
+    })
+    
+    data_selected <- reactive({
+      
+      req(input$start_analysis > 0)
+      
+      
+      
+      if (!is.null(input$enhancers_on_off)) {
+        if (input$enhancers_on_off) {
+
+
+        # test441 <<- genes_cnv
+        # Genes NOT mapped in CNV
+        genes_no_cnv <- prev_enhancer() %>% select(gene) %>% distinct() %>% pull()
+        genes_no_cnv <- genes_no_cnv[! genes_no_cnv %in% genes_cnv()]
+        # ADAPT IT WHEN ADDING OMIM OR OTHERS!!!
+        table_insert <- hgcn_genes %>% filter(gene %in% genes_no_cnv) %>%
+          select(-oe_lof, -oe_lof_lower, -oe_lof_upper, -vg, -transcript, -ensembl_gene_id)
+        
+        test888 <<- data_selected_prev()
+        test887 <<- table_insert
+        data_raw <- data_selected_prev() %>% bind_rows(table_insert)
+        data_raw
+        } else {
+          data_selected_prev()
+        }
+      } else {
+        data_selected_prev()
+      }
+      
+      
       
     })
     
@@ -1395,6 +1458,8 @@ shiny::shinyApp(
     
     
     
+    
+    
     output$ref_user_filter_genes <- renderUI({
       
      req(length(input$dgenes_rows_all) != nrow(data_selected()))
@@ -1407,6 +1472,34 @@ shiny::shinyApp(
         name_region <- paste0(input$input_chrom, input$input_karyotype)
         
       }
+      
+      tablerInfoCard(
+        width = 12,
+        value = paste0(length(input$dgenes_rows_all), '/', nrow(data_selected()), " genes"),
+        status = "warning",
+        icon = "crop",
+        description =  'Filtered genes'
+      )
+      
+      
+    })
+    
+    
+    output$genes_enhancers_selected <- renderUI({
+      
+      # req(length(input$dgenes_rows_all) != nrow(data_selected()))
+      
+      # if (input$input_geno_karyo == 'Genomic coordinates') {
+      #   
+      #   name_region <- paste0('chr',input$input_chrom, ':', input$int_start, '-', input$int_end)
+      #   
+      # } else {
+      #   name_region <- paste0(input$input_chrom, input$input_karyotype)
+      #   
+      # }
+      # 
+      
+      da
       
       tablerInfoCard(
         width = 12,
@@ -1548,6 +1641,8 @@ shiny::shinyApp(
         data_tmp$keep[i] <- c(data_tmp$start[i], data_tmp$end[i]) %overlaps% c(start_coordinates, end_coordinates)
       }
       data_tmp <- data_tmp %>% filter(keep == 1) %>% select(-keep)
+      test911 <<- data_tmp
+      data_tmp
     })
     
     output$n_enhancer_inside <- renderUI({
@@ -1590,14 +1685,33 @@ shiny::shinyApp(
       test24 <<-  redundancy_enhancers() 
       
       data_tmp <- redundancy_enhancers() %>% filter(n == 1)
-      
-      
+
       tablerStatCard(
         value =  nrow(data_tmp),
         title = "Number of genes whose have one enhancer and it is disrupted",
         # trend = -10,
         width = 12
       )
+
+    })
+    
+    
+    output$switch_enhancers <- renderUI({
+      
+      
+      validate(
+        need(nrow(prev_enhancer()) > 0, "Need a region with at least one enhancer.")
+      )
+      
+      
+      materialSwitch(
+        inputId = "enhancers_on_off",
+        label = "", 
+        status = "warning",
+        value = FALSE,
+        right = TRUE
+      )
+      
     })
     
     output$df_enhancer <- renderDT({
@@ -1883,6 +1997,8 @@ shiny::shinyApp(
       } else {
         df_genes <- data_selected()[input$dgenes_rows_all,]
       }
+      
+      
         
         filtered_genes <- df_genes %>% select(entrez_id) %>% pull()  %>% as.character()
         univ <- hgcn_genes %>% select(entrez_id) %>% pull() %>% as.character()
@@ -1902,18 +2018,24 @@ shiny::shinyApp(
                                 # qvalueCutoff  = 0.05)
         
 
-        go_analysis %>% as_tibble()
+        go_analysis <- go_analysis %>% as_tibble()
       
+        validate(
+          need(nrow(go_analysis) != 0, "0 enriched terms found.")
+        )
       
-      
-      
+        go_analysis
       })
     
     
     output$func_analysis <- renderPlot({
+      
+      test455 <<- running_enrich_go() 
     
        running_enrich_go() %>%
           mutate(p.adjust = -log10(p.adjust)) %>%
+          # arrange(desc(Count)) %>%
+          slice(1:20) %>%
           ggplot(aes(reorder(Description, p.adjust), p.adjust)) +
           geom_col(aes(fill = Description), color = 'black', show.legend = FALSE) +
           scale_fill_viridis_d() +
@@ -1994,12 +2116,14 @@ shiny::shinyApp(
         
         error= function(e) stop("Please, reduce the level assigned"))
       
+      ggo <- ggo %>% as_tibble()
+      
       
       validate(
         need(ggo %>% as_tibble() %>% select(Count) %>% sum() != 0, "0 terms found. Please reduce the level assigned")
       )
       
-      ggo <- ggo %>% as_tibble()
+      ggo
       
     })
     
@@ -2244,7 +2368,7 @@ shiny::shinyApp(
       test444 <<- enrich_dgn
       
       validate(
-        need(nrow(enrich_dgn) != 0, "0 enriched terms found")
+        need(nrow(enrich_dgn) != 0, "0 enriched terms found.")
       )
       
       enrich_dgn

@@ -106,7 +106,7 @@ ref_scores <- tibble(score = c('gwas', # we could filter out by number of hits (
 # Load datasets
 
 # ------------------------------------------------------------------------------
-# Dataset: Genes with HGCN symbol and 
+# Dataset: Protein-coding genes with HGCN symbol 
 # Source:  ftp://ftp.ebi.ac.uk/pub/databases/genenames/new/tsv/locus_types/gene_with_protein_product.txt
 # ------------------------------------------------------------------------------
 
@@ -115,7 +115,8 @@ hgcn_genes <- read_excel('/home/cbl02/Storage/data/gene_with_protein_product.xls
 hgcn_genes <- hgcn_genes %>%
   select(entrez_id, ensembl_gene_id, location, symbol) %>%
   rename(gene = symbol) %>%
-  na.omit()
+  na.omit() %>%
+  mutate(entrez_id = as.numeric(entrez_id))
 
 
 human  <- useMart("ensembl", dataset = "hsapiens_gene_ensembl",
@@ -124,13 +125,20 @@ human  <- useMart("ensembl", dataset = "hsapiens_gene_ensembl",
 
 # 
 # 'external_gene_name' - SYMBOL
-interval_genes <- getBM(attributes = c('ensembl_gene_id_version', 'start_position','end_position', 'chromosome_name'), 
-                        mart = human ) %>% as_tibble() %>% filter(!str_detect(chromosome_name, 'PATCH'))
+# interval_genes <- getBM(attributes = c('ensembl_gene_id_version', 'start_position','end_position', 'chromosome_name'),
+#                         mart = human ) %>% as_tibble() %>% filter(!str_detect(chromosome_name, 'PATCH'))
+interval_genes <- getBM(attributes = c('entrezgene_id', 'start_position','end_position', 'chromosome_name'),
+                        mart = human ) %>% 
+                        as_tibble() %>% 
+                        filter(!str_detect(chromosome_name, 'PATCH')) %>% 
+                        na.omit() %>%
+                        rename(entrez_id = entrezgene_id) %>%
+                        mutate(entrez_id = as.numeric(entrez_id))
 
 hgcn_genes <- interval_genes %>% 
-  rename(ensembl_gene_id = ensembl_gene_id_version) %>%
-  mutate(ensembl_gene_id = str_remove(ensembl_gene_id, '\\..*')) %>%
-  right_join(hgcn_genes, by = c('ensembl_gene_id'))
+  # rename(ensembl_gene_id = ensembl_gene_id_version) %>%
+  # mutate(entrez_id = str_remove(entrez_id, '\\..*')) %>%
+  right_join(hgcn_genes, by = c('entrez_id'))
 
 
 hgcn_genes %>% count(start_position) %>% arrange(desc(n))
@@ -146,13 +154,18 @@ hgcn_genes <- hgcn_genes %>%
   mutate(dev = if_else(gene %in% dev_genes, 1, 0)) %>% # developmental disorder genes - it can be extended with mode, consecuence and disease
   mutate(fda = if_else(gene %in% fda, 1, 0)) %>% #  Mechanistic targets of FDA-approved drugs 
   left_join(rvis) %>% # RVIS score based
-  mutate(clinvar = as.factor(if_else(gene %in% clinvar_raw, 1, 0))) %>% # List of genes with likely pathogenic and pathogenic variants
+  mutate(clinvar = if_else(gene %in% clinvar, 1, 0)) %>% # List of genes with likely pathogenic and pathogenic variants
   mutate(gwas = if_else(gene %in% gwas, 1, 0)) %>% # GWAS genes
   left_join(ccr) %>% # Genes with CCRs in the 99th percentile or higher 
   left_join(nc) %>% # non-coding scores RVIS and ncGERP - 5UTR + 3UTR + 250bp upstream
   left_join(hi) # Haploinsufficiency Score (HI index)
 
-hgcn_genes <- hgcn_genes %>% rename(chrom = chromosome_name)
+hgcn_genes <- hgcn_genes %>% 
+  rename(chrom = chromosome_name) %>%
+  mutate(ccr = ifelse(is.na(ccr), 0, ccr)) %>%
+  rename(band = location)
+
+
 # ------------------------------------------------------------------------------
 # Dataset: pLI
 # Source: https://storage.googleapis.com/gnomad-public/release/2.1.1/constraint/gnomad.v2.1.1.lof_metrics.by_gene.txt.bgz
@@ -278,9 +291,9 @@ rvis <- rvis %>% select(GENE, X.ExAC_0.05.popn) %>%
 # Access: 
 # ------------------------------------------------------------------------------
 
-clinvar_raw <- read.table('data/clinvar_20190527.vcf', skip = 28)
+clinvar_raw <- read.table('/home/cbl02/Storage/data/clinvar_20190527.vcf', skip = 28)
 
-clinvar_raw <- clinvar_raw %>% 
+clinvar <- clinvar_raw %>% 
   as_tibble() %>%
   filter(!str_detect(V8, 'CLNSIG=Pathogenic') | str_detect(V8, 'CLNSIG=likely_pathogenic')) %>%
   select(V8) %>%
@@ -290,45 +303,28 @@ clinvar_raw <- clinvar_raw %>%
   mutate(gene = str_remove(gene, '\\:.*')) %>%
   distinct() %>%
   na.omit() %>%
-  pull()
+  pull() 
 
 # ------------------------------------------------------------------------------
 # Dataset: Haploinsufficiency prediction
 # Source: https://decipher.sanger.ac.uk/about#downloads/data
 # Access: 6/6/19
-# ASK ANTONIO IF IT'S WORTHY
 # ------------------------------------------------------------------------------
 
 
-double_genes  <- read.table('data/HI_Predictions_Version3.bed', sep = '\t', skip = 1) %>%
+hi <- read.table('/home/cbl02/Storage/data/HI_Predictions_Version3.bed', sep = '\t', skip = 1) %>%
   as_tibble() %>%
   select(V4) %>%
   mutate(V4 = as.character(V4)) %>%
-  filter(str_detect(V4, '-')) %>%
-  separate(V4, into = as.character(1:10)) %>%
-  select(`1`, `5`, `6`) %>%
-  rename(A = `1`, D = `5`, E = `6`)
-
-
-
-
-
-
-hi <- read.table('data/HI_Predictions_Version3.bed', sep = '\t', skip = 1) %>%
-  as_tibble() %>%
-  select(V4) %>%
-  mutate(V4 = as.character(V4)) %>%
-  filter(!str_detect(V4, '-')) %>%
-  separate(V4, into = LETTERS[1:10]) %>% 
+  separate(V4, into = LETTERS[1:10]) %>%
+  mutate(A = paste(A, B, sep = '-')) %>%
+  mutate(A = str_replace(A, '-0', '')) %>%
   select(A, D, E) %>%
-  rbind(double_genes) %>%
   mutate(E = if_else(E == '', '00', E )) %>%
   mutate(hi = paste(D, E, sep = '.')) %>%
   mutate(hi = as.numeric(hi)) %>%
   select(-D, -E) %>%
   rename(gene = A)
-
-
 
 # ------------------------------------------------------------------------------
 # Dataset: GWAS genes
@@ -675,10 +671,10 @@ df_enhancers <- enhancer_raw %>% as_tibble() %>% rename(chrom = V1, start = V2, 
   mutate(id = as.character(id))
 
 df_enhancers <- df_ge %>% select(gene, id, score_enh, score_gene) %>% left_join(df_enhancers, by = 'id')
-# 
-# write.table(enhancer_raw %>% filter(!str_detect(V1, 'PATCH')) %>% distinct(),
-#             'enhancer_cnvxplore_crossmap_cleaned', quote = FALSE, row.names = FALSE,
-#             col.names = FALSE, sep = '\t', append = TRUE)
+
+write.table(enhancer_raw %>% filter(!str_detect(V1, 'PATCH')) %>% distinct(),
+            '/home/cbl02/Storage/data/enhancer_cnvxplorer', quote = FALSE, row.names = FALSE,
+            col.names = FALSE, sep = '\t', append = TRUE)
 # 
 # enh_post <- mod_remot('from_remot/enhancer_apolo_crossmap_cleaned_7_result.txt', 'EUR', 7, TRUE)
 # 

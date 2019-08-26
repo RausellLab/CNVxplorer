@@ -1,6 +1,12 @@
 
 
 
+save_object <- save_object[! save_object %in% test912$gene]
+
+
+genes_outside <- hgcn_genes %>% filter(ensembl_gene_id %in% save_object)
+
+
 test1 <- test766 %>% select(gene, term) %>% mutate(id_row = row_number())
 
 vector_hpo <- test1 %>% select(term) %>% distinct() %>% pull()
