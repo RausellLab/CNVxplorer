@@ -22,21 +22,21 @@ check_tads <- function(chrom = NULL, start = NULL, end = NULL) {
     mutate(check_tad2 = if_else(start_tmp <= end & end_tmp >= end, 1, 0 )) %>%
     mutate(check_tad3 = if_else(start_tmp <= start & end_tmp >= end, 1, 0 )) %>%
     mutate(check_final_tad = if_else(check_tad  + check_tad2 + check_tad3 > 0, 1, 0 )) %>%
-    select(id, check_final_tad) %>%
-    filter(check_final_tad > 0)
+    filter(check_final_tad > 0) %>%
+    select(-contains('check'))
   
   if (nrow(tmp_df) > 0) {
     
-    list_tads <- as.vector(tmp_df %>% pull(id))
+    df_tads <- tmp_df
     
     
   } else {
     
-    list_tads <- 0
+    df_tads <- 0
     
   }
   
-  return(list_tads)
+  return(df_tads)
   
   
 }

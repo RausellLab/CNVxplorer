@@ -1,6 +1,35 @@
 
 
 
+
+
+
+
+
+test1944 <<- data_tmp
+test111 <<- start_coordinates
+test222 <<- end_coordinates
+
+test1944 %>% 
+  left_join(hgcn_genes %>% select(gene, chrom, start_position, end_position) %>% 
+              rename(chrom_gene = chrom, start_gene = start_position, end_gene = end_position)) %>%
+  rowwise() %>%
+  mutate(inside_cnv = c(start_gene, end_gene) %overlaps% c(test111, test222)) %>%
+  mutate(inside_cnv = if_else(chrom_gene == '1', inside_cnv, FALSE))
+
+
+
+
+
+
+
+
+
+
+
+
+test1936 %>% ggplot(aes(phast100)) + geom_histogram()
+
 save_object <- save_object[! save_object %in% test912$gene]
 
 

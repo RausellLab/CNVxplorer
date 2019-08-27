@@ -104,6 +104,7 @@ shiny::shinyApp(
       id = "mymenu",
       src = "https://www.onlinelogomaker.com/applet_userdata/version2/5/0/18611424/projects/18611424.png",
       uiOutput('ref_user_filter_genes'),
+      uiOutput('n_genes_added'),
       uiOutput('ref_user_genes'),
       uiOutput('ref_user_length')
       
@@ -257,12 +258,10 @@ shiny::shinyApp(
                    uiOutput('n_cnv'),
                    uiOutput('n_clinvar'),
                    uiOutput('n_gwas'),
-                   uiOutput('n_lncrna'),
                    uiOutput('n_hi')),
             column(width = 3,
                    
                    uiOutput('n_dev'),
-                   uiOutput('n_tads'),
                    uiOutput('n_omim'),
                    uiOutput('n_pubmed'),
                    uiOutput('n_pli')),
@@ -561,23 +560,41 @@ shiny::shinyApp(
             #            uiOutput('gen2e_2tissue'),
             #            width = 3),
             uiOutput('n_enhancer_total'),
+            uiOutput('n_tads'),
+            uiOutput('n_lncrna'),
+            
             uiOutput('n_enhancer_inside'),
             uiOutput('n_enhancer'),
             
-            uiOutput('redund_n_enhancer'),
+            # uiOutput('redund_n_enhancer'),
             # tablerCard(title = 'Include target-genes enhancers',
             #            uiOutput('switch_enhancers'),
             #            collapsible = FALSE,
             #            closable = FALSE,
             #            width = 3),
-            uiOutput('switch_enhancers'),
+            # uiOutput('switch_enhancers'),
             
             
             tablerCard(title = 'List enhancers',
+                       collapsible = FALSE,
+                       closable = FALSE,
                        DTOutput('df_enhancer'),
-                       width = 12)),
-          tablerCard(title = 'Long noncoding RNA (lncRNA) associated with genes',
+                       width = 12,
+                       options = tagList(
+                        uiOutput('n_filtered_enhancers'),
+                        uiOutput('switch_enhancers')
+                        
+                         
+                         
+                         ))),
+          tablerCard(title = 'Phast100way histogram',
+                     plotOutput('histo_enhancer'),
+                     width = 6),
+          tablerCard(title = 'Long noncoding RNA (lncRNA) disrupted',
                      DTOutput('lncrna_df'),
+                     width = 12),
+          tablerCard(title = 'Topologically Associating Domains (TADs) disrupted',
+                     DTOutput('df_tads'),
                      width = 12)
           
         ),
@@ -997,7 +1014,7 @@ shiny::shinyApp(
       
       
       datatable(running_pubmed(), rownames = FALSE, filter = 'top', 
-                colnames = c('Title', 'Authors','Number of cites' ),
+                colnames = c('Title', 'Published date','Number of cites', 'PMID' ),
                 options = list(
                   pageLength = 5, autoWidth = TRUE, style = 'bootstrap', list(searchHighlight = TRUE),
                   selection = 'single'
@@ -1077,56 +1094,42 @@ shiny::shinyApp(
       
     })
     
-    genes_cnv <- reactive({
-      
-        list_genes_cnv <- data_selected_prev()
-        list_genes_cnv <- list_genes_cnv %>% select(gene) %>% pull()
-        list_genes_cnv
-        
-        
-        # test441 <<- genes_cnv
-        # Genes NOT mapped in CNV
-        genes_no_cnv <- prev_enhancer() %>% select(gene) %>% distinct() %>% pull()
-        genes_no_cnv <- genes_no_cnv[! genes_no_cnv %in% genes_cnv()]
-        # ADAPT IT WHEN ADDING OMIM OR OTHERS!!!
-        table_insert <- hgcn_genes %>% filter(gene %in% genes_no_cnv) %>%
-          select(-oe_lof, -oe_lof_lower, -oe_lof_upper, -vg, -transcript, -ensembl_gene_id)
-        
-        
-        result_list <- list(list_genes_cnv, table_insert )
-      
-    })
-    
-    data_selected <- reactive({
-      
-      req(input$start_analysis > 0)
-      
-      
+    data_selected_enhancers <- reactive({
       
       if (!is.null(input$enhancers_on_off)) {
         if (input$enhancers_on_off) {
-
-
-        # test441 <<- genes_cnv
+      
+        # Genes  mapped in CNV
+        genes_cnv <- data_selected_prev()
+        genes_cnv <- genes_cnv %>% select(gene) %>% pull()
         # Genes NOT mapped in CNV
-        genes_no_cnv <- prev_enhancer() %>% select(gene) %>% distinct() %>% pull()
-        genes_no_cnv <- genes_no_cnv[! genes_no_cnv %in% genes_cnv()]
-        # ADAPT IT WHEN ADDING OMIM OR OTHERS!!!
-        table_insert <- hgcn_genes %>% filter(gene %in% genes_no_cnv) %>%
-          select(-oe_lof, -oe_lof_lower, -oe_lof_upper, -vg, -transcript, -ensembl_gene_id)
-        
-        test888 <<- data_selected_prev()
-        test887 <<- table_insert
-        data_raw <- data_selected_prev() %>% bind_rows(table_insert)
-        data_raw
+        if (is.null(input$df_enhancer_rows_all)) {
+          enhancers_df <- prev_enhancer()
         } else {
-          data_selected_prev()
+          enhancers_df <- prev_enhancer()[input$df_enhancer_rows_all,]
+        }
+        genes_no_cnv <- enhancers_df %>% select(gene) %>% distinct() %>% pull()
+        genes_no_cnv <- genes_no_cnv[! genes_no_cnv %in% genes_cnv]
+        # ADAPT IT WHEN ADDING OMIM OR OTHERS!!!
+        table_output <- hgcn_genes %>% filter(gene %in% genes_no_cnv) %>%
+          select(-oe_lof, -oe_lof_lower, -oe_lof_upper, -vg, -transcript, -ensembl_gene_id)
+
+        } else {
+          table_output <- tibble()
         }
       } else {
-        data_selected_prev()
+        table_output <- tibble()
       }
+      table_output
+    })
+    
+    
+    data_selected <- reactive({
       
       
+      table_output <- data_selected_prev() %>% mutate(source = 'CNV') %>% 
+        bind_rows(data_selected_enhancers() %>% mutate(source = 'Enhancer'))
+      table_output
       
     })
     
@@ -1463,6 +1466,7 @@ shiny::shinyApp(
     output$ref_user_filter_genes <- renderUI({
       
      req(length(input$dgenes_rows_all) != nrow(data_selected()))
+
       
       if (input$input_geno_karyo == 'Genomic coordinates') {
         
@@ -1579,6 +1583,24 @@ shiny::shinyApp(
     })
     
     
+    output$n_genes_added <- renderUI({
+      
+      req(nrow(data_selected_enhancers()) > 0)
+      
+    
+      tablerInfoCard(
+        width = 12,
+        value =  paste0('+', nrow(data_selected_enhancers()), ' genes'),
+        status = "info",
+        icon = "database",
+        description =  'Target-genes enhancers'
+        
+      )
+      
+      
+    })
+    
+    
     lncrna_raw <- reactive({
       
       req(input$start_analysis > 0)
@@ -1600,13 +1622,14 @@ shiny::shinyApp(
       
     })
     
-    output$lncrna_df <- renderDT({
+    output$lncrna_df <- renderDataTable({
       
       lncrna_selected <- lncrna_raw()
       
       tmp_lncrna <- lncrna %>% filter(id %in% lncrna_selected) %>% select(-genomic_class)
       
       datatable(tmp_lncrna, rownames = FALSE, 
+                colnames = c('ID', 'Chromosome', 'Dynamic', 'Ensembl75 ID', 'Name', 'Conservation', 'Nearest coding gene'),
                 options = list(
                   pageLength = 5, autoWidth = TRUE, list(searchHighlight = TRUE)))
       
@@ -1640,12 +1663,47 @@ shiny::shinyApp(
       for (i in 1:nrow(data_tmp)) {
         data_tmp$keep[i] <- c(data_tmp$start[i], data_tmp$end[i]) %overlaps% c(start_coordinates, end_coordinates)
       }
-      data_tmp <- data_tmp %>% filter(keep == 1) %>% select(-keep)
-      test911 <<- data_tmp
+      
+      data_tmp <- data_tmp %>% 
+        # mutate(keep = c(start, end) %overlaps% c(start_coordinates, end_coordinates)) %>%
+        filter(keep == 1) %>% 
+        select(-keep) %>% 
+        mutate(phast100 = round(rnorm(n(), 2, 1),2))
+      
+      
+      
+      test1944 <<- data_tmp
+      test111 <<- start_coordinates
+      test222 <<- end_coordinates
+      
+      data_tmp <- data_tmp %>% 
+        left_join(hgcn_genes %>% select(gene, chrom, start_position, end_position, chrom) %>% 
+                     rename(chrom_gene = chrom, start_gene = start_position, end_gene = end_position)) %>%
+        rowwise() %>%
+        mutate(inside_cnv = c(start_gene, end_gene) %overlaps% c(start_coordinates, end_coordinates)) %>%
+        mutate(inside_cnv = if_else(chrom_gene == chrom_coordinates, inside_cnv, FALSE)) %>%
+        select(-chrom_gene, -start_gene, -end_gene)
+        
+        test1946 <<- data_tmp
+        
+      # get_coord_genes <- hgcn_genes %>% 
+      #   filter(gene %in% (data_tmp %>% pull(gene))) %>%
+      #   mutate(inside_cnv = c(start, end) %overlaps% c(start_coordinates, end_coordinates)) %>%
+      #   select(gene, inside_cnv)
+      # 
+      #   test1946 <<- get_coord_genes
+      #   
+      #   data_tmp <- data_tmp %>% left_join(get_coord_genes)
+        
+
       data_tmp
+      
+      
     })
     
     output$n_enhancer_inside <- renderUI({
+      
+      test1936 <<- prev_enhancer()
       
       list_genes_total <- prev_enhancer() %>% select(gene) %>% distinct() %>% pull(gene)
       data_tmp <- data_selected() %>% filter(gene %in% list_genes_total) %>% pull(gene)
@@ -1680,18 +1738,35 @@ shiny::shinyApp(
       test25 <<- df_output
     })
     
-    output$redund_n_enhancer <- renderUI({
+    # output$redund_n_enhancer <- renderUI({
+    #   
+    #   test24 <<-  redundancy_enhancers() 
+    #   
+    #   data_tmp <- redundancy_enhancers() %>% filter(n == 1)
+    # 
+    #   tablerStatCard(
+    #     value =  nrow(data_tmp),
+    #     title = "Number of genes whose have one enhancer and it is disrupted",
+    #     # trend = -10,
+    #     width = 12
+    #   )
+    # 
+    # })
+    
+    output$histo_enhancer <- renderPlot({
       
-      test24 <<-  redundancy_enhancers() 
-      
-      data_tmp <- redundancy_enhancers() %>% filter(n == 1)
-
-      tablerStatCard(
-        value =  nrow(data_tmp),
-        title = "Number of genes whose have one enhancer and it is disrupted",
-        # trend = -10,
-        width = 12
+      validate(
+        need(input$df_enhancer_rows_selected != '', "Please, select an enhancer in the datatable.")
       )
+      
+      score_filtered <- prev_enhancer() %>% slice(input$df_enhancer_rows_selected) %>% select(phast100) %>% pull()
+
+      prev_enhancer() %>% ggplot(aes(phast100)) + 
+        geom_histogram() + 
+        theme_classic() +
+        geom_vline(xintercept = score_filtered, color = 'red')
+
+
 
     })
     
@@ -1704,21 +1779,27 @@ shiny::shinyApp(
       )
       
       
-      materialSwitch(
+      switchInput(
         inputId = "enhancers_on_off",
-        label = "", 
-        status = "warning",
-        value = FALSE,
-        right = TRUE
+        label = "Add target genes to analysis?",
+        inline = TRUE,
+        width = 'auto',
+        # status = "warning",
+        value = FALSE
+        # right = TRUE
       )
       
     })
     
-    output$df_enhancer <- renderDT({
+    output$df_enhancer <- renderDataTable({
       
-      datatable(prev_enhancer(), rownames = FALSE, filter = 'top', 
+    
+      
+      datatable(prev_enhancer(), rownames = FALSE, filter = 'top', selection = 'single',
+                colnames = c('Gene symbol', 'ID enhancer', 'Score enhancer', 'Score association', 'Chromosome',
+                              'Start',  'End', 'Phast100way', 'Mapped in CNV'),
                 options = list(
-                  pageLength = 5, autoWidth = TRUE, style = 'bootstrap', list(searchHighlight = TRUE),
+                  pageLength = 5, style = 'bootstrap', list(searchHighlight = TRUE),
                   selection = 'single'
                   # columnDefs = list(list(className = 'dt-center', targets = '_all'))
                 ))
@@ -1730,15 +1811,57 @@ shiny::shinyApp(
       
       req(input$start_analysis > 0)
       
+      start_coordinates <- coord_user()[1]
+      end_coordinates <- coord_user()[2]
+      chrom_coordinates <- input$input_chrom
       
-      n_tads <- check_tads(input$input_chrom, input$int_start, input$int_end )
-      n_total <- nrow(data_selected())
+      
+      n_tads <- check_tads(chrom_coordinates, start_coordinates, end_coordinates )
       tablerStatCard(
-        value =  length(n_tads),
+        value =  nrow(n_tads),
         title = "Number of TADs disrupted",
         # trend = -10,
         width = 12
       )
+    })
+    
+    
+output$n_filtered_enhancers <- renderUI({
+      
+  
+  if (is.null(input$df_enhancer_rows_all)) {
+    n_enhancers <- prev_enhancer()
+  } else {
+    n_enhancers <- prev_enhancer()[input$df_enhancer_rows_all,]
+  }
+  
+  n_total_enhancers <- prev_enhancer() %>% nrow()
+  
+  n_enhancers <- n_enhancers %>% nrow()
+    
+    tablerInfoCard(
+      width = 12,
+      value =  paste0(n_enhancers, '/', n_total_enhancers, ' enhancers'),
+      status = "warning",
+      icon = "database",
+      description =  'Filtered enhancers'
+      
+    )
+  
+})
+    
+    output$df_tads <- renderDataTable({
+      
+      req(input$start_analysis > 0)
+      
+      start_coordinates <- coord_user()[1]
+      end_coordinates <- coord_user()[2]
+      chrom_coordinates <- input$input_chrom
+      
+      
+      n_tads <- check_tads(chrom_coordinates, start_coordinates, end_coordinates )
+      datatable(n_tads,
+                colnames = c('ID', 'Chromosome', 'Start', 'End'))
     })
     
     output$n_dev <- renderUI({
