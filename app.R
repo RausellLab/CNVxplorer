@@ -1014,7 +1014,7 @@ shiny::shinyApp(
       
       
       datatable(running_pubmed(), rownames = FALSE, filter = 'top', 
-                colnames = c('Title', 'Published date','Number of cites', 'PMID' ),
+                colnames = c('Title','Authors', 'Published date','Number of cites', 'PMID' ),
                 options = list(
                   pageLength = 5, autoWidth = TRUE, style = 'bootstrap', list(searchHighlight = TRUE),
                   selection = 'single'
