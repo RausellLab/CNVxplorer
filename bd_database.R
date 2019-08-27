@@ -156,6 +156,7 @@ hgcn_genes <- hgcn_genes %>%
   left_join(rvis) %>% # RVIS score based
   mutate(clinvar = if_else(gene %in% clinvar, 1, 0)) %>% # List of genes with likely pathogenic and pathogenic variants
   mutate(gwas = if_else(gene %in% gwas, 1, 0)) %>% # GWAS genes
+  mutate(omim = if_else(gene %in% omim, 1, 0)) %>% # GWAS genes
   left_join(ccr) %>% # Genes with CCRs in the 99th percentile or higher 
   left_join(nc) %>% # non-coding scores RVIS and ncGERP - 5UTR + 3UTR + 250bp upstream
   left_join(hi) # Haploinsufficiency Score (HI index)
@@ -237,24 +238,49 @@ dev_genes <- read.table('data/DDG2P_6_6_2019.csv',
 
 # ------------------------------------------------------------------------------
 # Dataset: OMIM 
-# Source: https://decipher.sanger.ac.uk/ddd#ddgenes
+# Source: morbidmap.txt
 # Access: ####
 # ------------------------------------------------------------------------------
 
-## there are some genes with duplicated symbol on the same row
 
-omim <- read.table('data/', sep = '\t', header = TRUE,
-                   stringsAsFactors = F)
-omim <- omim[-3087,]
-colnames(omim) <- c('pheno', 'gene','id_gene', 'location')
+# 1 - The disorder is placed on the map based on its association with
+# a gene, but the underlying defect is not known.
+# 2 - The disorder has been placed on the map by linkage or other
+# statistical method; no mutation has been found.
+# 3 - The molecular basis for the disorder is known; a mutation has been
+# found in the gene.
+# 4 - A contiguous gene deletion or duplication syndrome, multiple genes
+# are deleted or duplicated causing the phenotype.
+#
+
+
+omim <- read_excel('/home/cbl02/Storage/data/morbidmap.xlsx', skip = 4, col_names = c('phenotype', 
+                                                                                      'gene', 'gene_id', 'location'))
+omim <- omim[1:7745,] # description of the (id) 
 
 omim$gene <-map_chr(omim$gene, function(x) str_split(x, ',')[[1]][1])
-omim$id_pheno <-map_chr(omim$pheno, function(x) str_extract(x, '\\d{6}'))
-omim$pheno <-map_chr(omim$pheno, function(x) str_replace(x, '\\d{6}', ''))
-omim$pheno <-map_chr(omim$pheno, function(x) str_replace(x, '\\d{6}', ''))
-omim$pheno <-map_chr(omim$pheno, function(x) gsub( '*\\(.*?\\) *', '', x)) 
+omim$id_pheno <-map_chr(omim$phenotype, function(x) str_extract(x, '\\d{6}'))
+# omim$map_key <-map_chr(omim$phenotype, function(x) str_extract(x, '\\(([^)]+)\\)'))
+omim$map_key <-map_chr(omim$phenotype, function(x) str_extract(x, '\\(([[0-9]]+)\\)'))
 
+omim$map_key <-map_chr(omim$map_key, function(x) str_remove(x, '\\('))
+omim$map_key <-map_chr(omim$map_key, function(x) str_remove(x, '\\)'))
 
+omim$phenotype <-map_chr(omim$phenotype, function(x) str_replace(x, '\\d{6}', ''))
+omim$phenotype <-map_chr(omim$phenotype, function(x) str_replace(x, '\\d{6}', ''))
+omim$phenotype <-map_chr(omim$phenotype, function(x) gsub( '*\\(.*?\\) *', '', x)) 
+omim$phenotype <-map_chr(omim$phenotype, function(x) str_remove( x, ',  ')) 
+omim  <- omim %>% 
+  filter(map_key %in% c(1:4)) %>%
+  pull(gene)
+
+omim %>% count(map_key)
+# A tibble: 4 x 2
+# map_key       n
+#   1          68
+#   2        1083
+#   3        6444
+#   4         148
 
 # ------------------------------------------------------------------------------
 # Dataset: FDA 

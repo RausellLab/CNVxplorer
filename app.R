@@ -1938,14 +1938,13 @@ output$n_filtered_enhancers <- renderUI({
     
     output$n_omim <- renderUI({
       
-      gene_id <- data_selected() %>% select(gene) %>% pull()
-      n_omim  <- morbidmap %>% filter(gene %in% gene_id) %>% nrow()
-      n_total <- nrow(data_selected())  
+      gene_id <- data_selected() %>% filter(omim == 1) %>% pull(gene)
+      n_total <- data_selected() %>% nrow()
       
       # morbidmap
       
       tablerStatCard(
-        value =  paste(n_omim, n_total, sep = '/'),
+        value =  paste(length(gene_id), n_total, sep = '/'),
         title = "OMIM diseases",
         # trend = -10,
         width =  12
