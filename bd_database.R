@@ -149,16 +149,16 @@ hgcn_genes %>% filter(is.na(start_position)) %>% select(ensembl_gene_id) %>% pul
 hgcn_genes <- hgcn_genes %>%
   left_join(pli) %>% # pli score
   left_join(vg) %>% # variance gene expression
-  mutate(haplo = if_else(gene %in% clingen, 1, 0)) %>% # haploinsufficiency genes
-  mutate(triplo = if_else(gene %in% triplo, 1, 0)) %>% # triploinsufficiency genes 
-  mutate(dev = if_else(gene %in% dev_genes, 1, 0)) %>% # developmental disorder genes - it can be extended with mode, consecuence and disease
-  mutate(fda = if_else(gene %in% fda, 1, 0)) %>% #  Mechanistic targets of FDA-approved drugs 
-  left_join(rvis) %>% # RVIS score based
-  mutate(clinvar = if_else(gene %in% clinvar, 1, 0)) %>% # List of genes with likely pathogenic and pathogenic variants
-  mutate(gwas = if_else(gene %in% gwas, 1, 0)) %>% # GWAS genes
-  mutate(omim = if_else(gene %in% omim, 1, 0)) %>% # GWAS genes
+  mutate(haplo = as.factor(if_else(gene %in% clingen, 'Yes', 'No'))) %>% # haploinsufficiency genes
+  mutate(triplo = as.factor(if_else(gene %in% triplo, 'Yes', 'No'))) %>% # triploinsufficiency genes 
+  mutate(dev = as.factor(if_else(gene %in% dev_genes, 'Yes', 'No'))) %>% # developmental disorder genes - it can be extended with mode, consecuence and disease
+  mutate(fda = as.factor(if_else(gene %in% fda, 'Yes', 'No'))) %>% #  Mechanistic targets of FDA-approved drugs 
+  mutate(clinvar = as.factor(if_else(gene %in% clinvar, 'Yes', 'No'))) %>% # List of genes with likely pathogenic and pathogenic variants
+  mutate(gwas = as.factor(if_else(gene %in% gwas, 'Yes', 'No'))) %>% # GWAS genes
+  mutate(omim = as.factor(if_else(gene %in% omim, 'Yes', 'No'))) %>% # GWAS genes
   left_join(ccr) %>% # Genes with CCRs in the 99th percentile or higher 
   left_join(nc) %>% # non-coding scores RVIS and ncGERP - 5UTR + 3UTR + 250bp upstream
+  left_join(rvis) %>% # RVIS score based
   left_join(hi) # Haploinsufficiency Score (HI index)
 
 hgcn_genes <- hgcn_genes %>% 

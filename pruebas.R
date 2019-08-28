@@ -1,21 +1,36 @@
 
 
+start_p <- 34813719
+end_p <- 36278623
+
+points_check <- seq(start_p, end_p, by = 100)
+
+df_test <- tibble(id = 1:length(points_check), pos = points_check, n_times = NA)
+n_rows <- nrow(df_test)
+
+ole_df <- test1492 %>% filter(source == 'decipher')
+
+for (i in 1:n_rows) {
+  score = 0
+  for (j in 1:nrow(ole_df)) {
+  keep <- df_test$pos[i] %overlaps% c(ole_df$start_position[j], ole_df$end_position[j])
+  if (isTRUE(keep)) {
+    score <- score +  1
+  }
+  }
+  df_test$n_times[i] <- score
+  print(paste0(i, '/', n_rows))
+}
 
 
+theo_value <- ole_df %>% mutate(diff = end_position - start_position + 1) %>% pull(diff) %>% sum()    / (end_p - start_p + 1)
+
+df_test %>% ggplot(aes(pos, n_times)) +
+  geom_point() +
+  geom_line() +
+  geom_hline(yintercept = theo_value, color = 'red')
 
 
-
-
-test1944 <<- data_tmp
-test111 <<- start_coordinates
-test222 <<- end_coordinates
-
-test1944 %>% 
-  left_join(hgcn_genes %>% select(gene, chrom, start_position, end_position) %>% 
-              rename(chrom_gene = chrom, start_gene = start_position, end_gene = end_position)) %>%
-  rowwise() %>%
-  mutate(inside_cnv = c(start_gene, end_gene) %overlaps% c(test111, test222)) %>%
-  mutate(inside_cnv = if_else(chrom_gene == '1', inside_cnv, FALSE))
 
 
 
