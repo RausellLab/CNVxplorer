@@ -29,7 +29,7 @@ library(data.table)
 ref_scores <- tibble(score = c('gwas', # we could filter out by number of hits (no filter - 8652, >1 4498)
                                'fda',
                                'pli',
-                               'deg', # CRISPR - mice K.O - aggregated dataset (DEG) (last source from 2013)
+                               'deg', # 
                                'omim', # omim total - autosomal dominant - recessive - X-linked
                                'dev_disorder',
                                'haplo',
@@ -156,10 +156,13 @@ hgcn_genes <- hgcn_genes %>%
   mutate(clinvar = as.factor(if_else(gene %in% clinvar, 'Yes', 'No'))) %>% # List of genes with likely pathogenic and pathogenic variants
   mutate(gwas = as.factor(if_else(gene %in% gwas, 'Yes', 'No'))) %>% # GWAS genes
   mutate(omim = as.factor(if_else(gene %in% omim, 'Yes', 'No'))) %>% # GWAS genes
+  mutate(essent = as.factor(if_else(ensembl_gene_id %in% e_intersect$V1 , 'Yes', 'No'))) %>% # essential genes (intersection mgi_invitro)
   left_join(ccr) %>% # Genes with CCRs in the 99th percentile or higher 
   left_join(nc) %>% # non-coding scores RVIS and ncGERP - 5UTR + 3UTR + 250bp upstream
   left_join(rvis) %>% # RVIS score based
-  left_join(hi) # Haploinsufficiency Score (HI index)
+  left_join(hi) %>% # Haploinsufficiency Score (HI index)
+  left_join(snipre) %>% # SNIPre score
+  left_join(gdi) # GDI score (High GDI values reflect highly damaged genes. )
 
 hgcn_genes <- hgcn_genes %>% 
   rename(chrom = chromosome_name) %>%
@@ -701,6 +704,31 @@ df_enhancers <- df_ge %>% select(gene, id, score_enh, score_gene) %>% left_join(
 write.table(enhancer_raw %>% filter(!str_detect(V1, 'PATCH')) %>% distinct(),
             '/home/cbl02/Storage/data/enhancer_cnvxplorer', quote = FALSE, row.names = FALSE,
             col.names = FALSE, sep = '\t', append = TRUE)
+
+
+from_python <- read.table('/home/cbl02/Storage/data/enhancer_cnvxplorer_cons', header = TRUE, 
+                     sep = '\t', stringsAsFactors = FALSE) %>% as_tibble()
+
+from_remot <- read.table('/home/cbl02/Storage/data/enhancer_cnvxplorer_3_result.txt', header = TRUE,
+                         sep = '\t', stringsAsFactors = FALSE) %>% 
+                as_tibble()  %>%
+                mutate(meanCov =  as.double(meanCov)) %>%
+                mutate(oe = obs / expProba) %>%
+                mutate(oe = ntile(oe, 100)) %>%
+                select(-meanCov, -expProba, -obs)
+
+ 
+
+df_enhancers <- df_enhancers %>% 
+  mutate(phast100 = round(phast100, 3)) %>% 
+  mutate(phast46pla = round(phast46pla, 3)) %>% 
+  mutate(phast46pri = round(phast46pri, 3))
+
+
+df_enhancers <- df_enhancers %>% 
+  left_join(from_python %>% select(id, phast100, phast46pla, phast46pri), by = 'id') %>%
+  left_join(from_remot, by = c('chrom', 'start', 'end'))
+  
 # 
 # enh_post <- mod_remot('from_remot/enhancer_apolo_crossmap_cleaned_7_result.txt', 'EUR', 7, TRUE)
 # 
@@ -839,12 +867,154 @@ dgv_df <- read.table('/home/cbl02/Storage/data/GRCh37_hg19_variants_2016-05-15.t
   select(id, chrom, start, end) %>%
   mutate(source = 'dgv')
 
+# ------------------------------------------------------------------------------
+# Dataset: Essential genes (intersection mgi + invitro (paper: ))
+# Source: Email from Bartha
+# ------------------------------------------------------------------------------
 
+# 3262 genes found it / 3326 total nº genes
+e_mgi <- read.table('/home/cbl02/Storage/data/essential_gene_lists/mgi', header = FALSE,
+                    stringsAsFactors = FALSE) %>% as_tibble()
+
+# 1931 genes found it / 2010 total nº genes
+
+e_invitro <- read.table('/home/cbl02/Storage/data/essential_gene_lists/invitro', header = FALSE,
+                    stringsAsFactors = FALSE) %>% as_tibble()
+
+e_intersect <- e_mgi %>% filter(V1 %in% e_invitro$V1)
+
+
+
+# ------------------------------------------------------------------------------
+# Dataset: GDI score
+# Source: Paper: The human gene damage index as a gene-level approach to prioritizing exome variants
+# Explanation: High GDI values reflect highly damaged genes. 
+# ------------------------------------------------------------------------------
+
+gdi <- read.table('/home/cbl02/Storage/data/GDI_full_10282015.txt', skip = 1, stringsAsFactors = FALSE) %>% as_tibble()
+colnames(gdi) <- c('gene', 'gdi', 'gdi_phred', 'all_diseases', 'all_mendelian', 'mendelian_ad', 
+                   'mendelian_ar', 'all_pid', 'pid_ad', 'pid_ar', 'all_cancer', 'cancer_dominant',
+                   'cancer_recessive')
+
+gdi <- gdi %>% select(gene, gdi) %>% mutate(gdi = round(gdi, 2))
+
+# ------------------------------------------------------------------------------
+# Dataset: SNIPre
+# Source: antonio's email
+# ------------------------------------------------------------------------------
+
+snipre <- read.table('/home/cbl02/Storage/data/Sniprefallgenes.txt', header = TRUE, stringsAsFactors = FALSE) %>%
+  as_tibble()
+
+snipre <- snipre %>% select(Gene, SnIPRE.f) %>% 
+  rename(gene = Gene, snipre = SnIPRE.f) %>% 
+  mutate(snipre = str_replace(snipre, ',', '.')) %>%
+  mutate(snipre = as.numeric(snipre)) %>%
+  mutate(snipre = round(snipre, 2))
+
+
+# ------------------------------------------------------------------------------
+# Dataset: Paralogous genes
+# Source: http://ogee.medgenius.info/downloads/
+# ------------------------------------------------------------------------------
+
+para_genes <- read_tsv('/home/cbl02/Storage/data/dup_genes/dupgenes_ogee.txt')
+
+# ------------------------------------------------------------------------------
+# Dataset: Phenotype terms associated with OMIM diseases
+# Source: https://hpo.jax.org/app/download/annotation
+# Explanation: phenotype_annotation_hpoteam.tab: contains annotations made explicitly 
+# and manually by the HPO-team (mostly referring to OMIM entries)
+# Annotation: https://hpo.jax.org/app/help/annotations
+# ------------------------------------------------------------------------------
+
+hpo_omim <- read_tsv('/home/cbl02/Storage/data/phenotype_annotation_hpoteam.tab', col_names = FALSE)
+
+hpo_omim <- hpo_omim %>% 
+  filter(X1 == 'OMIM') %>%
+  # select(-X2) %>%
+  select(-X1, -X2, -X10, -X12, -X13, -X14) %>% # remove x1 because all values are omim - change if we include orphanet/omim - the other file
+  rename(desc = X3, 
+         pace = X4, 
+         hpo = X5, 
+         term = X6, 
+         evidence = X7, 
+         onset = X8, 
+         frequency = X9, 
+         clinical_modifier = X11) %>%
+  mutate(desc = str_remove(desc, '[0-9]{6}'),
+         desc = str_remove(desc, '#'))
+
+
+# ------------------------------------------------------------------------------
+# Dataset: Gene panel
+# Source: hhttps://panelapp.genomicsengland.co.uk
+# header:  web - subhead: Downloading Gene Panels
+# We got 306 (5 less than expected) because these panels were empty:
+# "gene_panel_218" "gene_panel_520" "gene_panel_530" "gene_panel_561" "gene_panel_82" 
+# ------------------------------------------------------------------------------
+
+library(rvest)
+website <- "https://panelapp.genomicsengland.co.uk/panels/"
+page <- read_html(website)
+
+c_ref <- page %>%
+  html_nodes("a") %>%       # find all links
+  html_attr("href")
+
+df_ref <- tibble(ref = c_ref, id = NA) %>%
+  filter(str_detect(ref, 'download')) %>%
+  mutate(ref = str_remove(ref, '/panels/')) %>% 
+  mutate(id = ref) %>%
+  mutate(id = str_remove(id, '/download/01234/'))
+  
+setwd('/home/cbl02/Storage/data/gene_panel')
+
+walk2(df_ref$ref, df_ref$id, function(a, b) 
+  download.file(url = paste0(website, a), destfile = paste0('gene_panel_', b))
+  )
+files_panel <- list.files()
+panel_total <- tibble()
+
+for (i in 1:length(files_panel)) {
+  print(i)
+  df_tmp <- read_tsv(paste0('/home/cbl02/Storage/data/gene_panel/', files_panel[i]))
+  df_tmp <- df_tmp %>% mutate(source = files_panel[i])
+  panel_total <- rbind(panel_total, df_tmp)
+}
+
+# we filtered out those genes not containing a "review ranking" ( 3,259 out 45488)
+# Filtering out genes with a evidence level (red - amber)
+panel_total <- panel_total %>%
+  rename(entity_name = `Entity Name`, 
+         entity_type = `Entity type`, 
+         gene = `Gene Symbol`,
+         sources = `Sources(; separated)`) %>%
+  filter(entity_type == 'gene') %>%  # optional - we can include regions in our analysis
+  filter(str_detect(sources, 'Expert Review')) %>%
+  separate_rows(sources, sep = ';') %>%
+  filter(str_detect(sources, 'Expert Review Green')) %>%
+  select(gene, Level4, -sources, source) 
+  
+
+setwd('/home/cbl02/Storage/cnvxplore')
+
+
+
+
+# ------------------------------------------------------------------------------
+# Source: /home/cbl02/Storage/data/curated_gene_disease_associations.tsv
+# http://www.disgenet.org/static/disgenet_ap1/files/downloads/readme.txt
+# ------------------------------------------------------------------------------
+
+disgenet <- read_tsv('/home/cbl02/Storage/data/curated_gene_disease_associations.tsv')
+
+disgenet %>% count(diseaseName) %>% arrange(desc(n)) %>% slice(11:21)
 # ------------------------------------------------------------------------------
 # Dataset: Imprinting genes
 # Source: http://www.geneimprint.com/site/genes-by-species
 # ------------------------------------------------------------------------------
 
-
+imp_genes <- read_tsv('/home/cbl02/Storage/data/imprinted_genes')
 
   

@@ -130,30 +130,38 @@ get_perc_overlap <- function(df, start_cnv, end_cnv) {
 
 get_upset <- function(df) {
   
-  df_tmp <- df %>% select(gene, term) %>% mutate(id_row = row_number())
+
+  df_tmp <- df %>% 
+    select(term) %>%
+    distinct() %>%
+    mutate(id_row = row_number())
   
-  vector_hpo <- df_tmp %>% select(term) %>% distinct() %>% pull()
+  
+  vector_hpo <- df %>% select(term) %>% distinct() %>% pull()
+  
   
   validate(
     need(length(vector_hpo) > 1, "Please, select more than one phenotype term.")
   )
-  vector_genes <- df_tmp %>% select(gene) %>% distinct() %>% pull()
+  
+  vector_genes <- df %>% select(gene) %>% distinct() %>% pull()
   
   list_result <- replicate(length(vector_hpo), NA, simplify = FALSE)
   
   
   for (i in 1:length(vector_hpo)) {
     
-    list_result[[i]] <- df_tmp %>% filter(term== !!vector_hpo[i]) %>% pull(id_row)
+    list_result[[i]] <- df %>% filter(term == !!vector_hpo[i]) %>% pull(gene) %in% vector_genes %>% which()
     names(list_result)[i] <- vector_hpo[i]
     
   }
-
+  
   upset(fromList(list_result), empty.intersections = "on", order.by = "freq",
-        point.size = 3.5, line.size = 2, number.angles = 30,
+        point.size = 3.5, line.size = 2, number.angles = 0,
         mainbar.y.label = "Phenotype Terms Intersections", sets.x.label = "Genes Associated Per Phenotype Term",
-        text.scale = c(1.3, 1.3, 1, 1, 2, 0.75))
-
+        text.scale = c(1.3, 1.3, 1, 1, 2, 2))
+  
+  
 }
 
 # ------------------------------------------------------------------------------
@@ -162,39 +170,38 @@ get_upset <- function(df) {
 # Input: dataframe (bed format)
 # Output: input + output_name
 # ------------------------------------------------------------------------------
-
+# 
 phastcons100 <- getGScores("phastCons100way.UCSC.hg19")
-phylop100 <- getGScores("phyloP100way.UCSC.hg19")
-phastcons46pla <- getGScores("phastCons46wayPlacental.UCSC.hg19")
-phastcons46primates <- getGScores("phastCons46wayPrimates.UCSC.hg19")
-cadd_1_3 <- getGScores("cadd.v1.3.hg19")
-
-get_score <- function(df, model_conserv, output_name) {
-  
-  df <- df_enhancers[1:10,]
-  model_conserv <- phastcons46pla
-  output_name <- 'caca'
-  
-  df <- df %>% mutate(remove_later = NA)
-  n_df <- nrow(df)
-  for (i in 1:n_df){
-    print(paste0(i, '/', n_df))
+# phylop100 <- getGScores("phyloP100way.UCSC.hg19")
+# phastcons46pla <- getGScores("phastCons46wayPlacental.UCSC.hg19")
+# phastcons46primates <- getGScores("phastCons46wayPrimates.UCSC.hg19")
+# cadd_1_3 <- getGScores("cadd.v1.3.hg19")
+# 
+# get_score <- function(df, model_conserv, output_name) {
+#   
+#   df <- df_enhancers[1:10,]
+#   model_conserv <- phastcons46pla
+#   output_name <- 'caca'
+#   
+#   df <- df %>% mutate(remove_later = NA)
+#   n_df <- nrow(df)
+#   for (i in 1:n_df){
+#     print(paste0(i, '/', n_df))
     tmp_gr <- GRanges(
-      seqnames = paste0('chr',df$chrom[i]),
-      ranges = IRanges(df$start[i]:df$end[i], width=1))
-    a <- gscores(model_conserv, tmp_gr)
-    
-    df$remove_later[i] <- mean(a$default)
-    
-  }
-  
-  df <- df %>%
-    rename(!!quo_name(output_name) := remove_later) 
-  
-  
-  return(df)
-}
+      seqnames = paste0('chr',1),
+      ranges = IRanges(1100000:1100010, width=1))
+    a <- gscores(phastcons100, tmp_gr)
+#     
+#     df$remove_later[i] <- mean(a$default)
+#     
+#   }
+#   
+#   df <- df %>%
+#     rename(!!quo_name(output_name) := remove_later) 
+#   
+#   
+#   return(df)
+# }
+# 
 
-
-test1 <- get_score(df_enhancers[1:10,], phastcons46primates, 'phast46pri' )
 

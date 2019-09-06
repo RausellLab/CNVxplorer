@@ -1,4 +1,160 @@
 
+#### CHI-SQUARED TEST
+
+list_panel_names <- panel_total %>% select(Level4) %>% distinct() %>% pull()
+input_genes <- test2019 %>% select(gene) %>% pull()
+
+fisher_result <- tibble()
+for (i in 1:length(list_panel_names)) {
+print(i)
+input_test <- matrix(rep(NA, 4), ncol = 2, dimnames = list(c('in_panel', 'no_panel'), c('col1', 'col2') ))
+
+input_test[1,][2] <- panel_total %>% filter(Level4 == !!list_panel_names[i]) %>% pull(gene) %in% input_genes %>% sum()
+input_test[1,][1] <- panel_total %>% filter(Level4 == !!list_panel_names[i]) %>% nrow() - input_test[1,][2] 
+input_test[2,][2] <- length(input_genes) - input_test[1,][2] 
+input_test[2,][1] <- 19146 - input_test[2,][2] - input_test[1,][1] - input_test[1,][2]
+
+tmp_tibble <- tibble(name_panel = list_panel_names[i], 
+                     p_value = fisher.test(input_test, 'greater')$p.value,
+                     gene_ratio = paste(as.character(input_test[1,][2]), '/',
+                                        as.character(input_test[1,][2] + input_test[1,][1]))
+)
+
+fisher_result <- rbind(fisher_result, tmp_tibble)
+}
+
+#### POISSON DISTRIBUTION
+
+tmp1 <- test1492 %>% filter(source == 'decipher') %>% as_tibble()
+
+
+
+median_sliding_w <- tmp1 %>% filter(source == 'decipher') %>%
+  pull(length_cnv) %>%
+  median()
+
+total_length_query = 36278623 - 34813719 + 1
+n_windows = round(total_length_query / median_sliding_w, 0)
+34813719
+
+
+36278623
+
+
+df_result <- tibble(id = 1, from = 34813719, to = 34813719 + median_sliding_w)
+
+for (i in 2:n_windows) {
+  print(i)
+  
+  from_tmp <- df_result[,3][i-1,] %>% pull()
+  to_tmp <- df_result[,3][i-1,] %>% pull() + median_sliding_w
+  
+  tmp_tibble <- tibble(id = i, 
+                       from =  from_tmp,
+                       to = to_tmp)
+  
+  df_result <- rbind(df_result, tmp_tibble)
+  
+}
+  
+
+gr_input <- GRanges(
+  seqnames= test2019$chrom,
+  ranges= IRanges(start= test2019$start_position, end = test2019$end_position)
+)
+
+gr_cnvs <- GRanges(
+  seqnames= test821321313$chrom,
+  ranges= IRanges(start= test821321313$start_position, end = test821321313$end_position)
+)
+
+gr_intersect <- intersect(gr_input, gr_cnvs)
+
+
+plot(dpois(1:19, nrow(tmp1)/n_windows))
+
+
+test711
+
+data_raw <- hgcn_genes %>% filter(chrom == 1)
+
+jajaa <- data_raw  %>% mutate(keep = NA) %>%
+  rowwise() %>%
+  mutate(keep = c(start_position, end_position) %overlaps% c(test711$start, test711$end)) %>%
+  filter(keep == TRUE) %>% 
+  select(-keep) %>%
+  ungroup()
+
+jajaa <- jajaa %>% mutate(pos = round((end_position + start_position)/2), 0) %>%
+  mutate(id = rep('gene', n())) %>%
+  select(id, pos)
+
+test711 <- test711 %>%
+  mutate(id = as.factor(seq(1:n()))) %>%
+  select(id, start, end) %>%
+  gather('rm', 'pos', -id) %>%
+  select(-rm) %>%
+  rbind(jajaa) %>%
+  mutate(id_color = if_else(id == 'gene(s)', 'steelblue', 'red'))
+
+
+  ggplot() +
+  geom_point(data = test711, aes(pos, id), color = 'black', shape = 21) + 
+  geom_path(data =test711 %>% filter(id != 'gene'), aes(pos, id, group = id)) + 
+  coord_cartesian(xlim = c(34813719, 36278623 )) + 
+  theme_fancy()
+
+######
+
+df <- test771
+
+
+
+
+
+df_tmp <- df %>% 
+  select(term) %>%
+  distinct() %>%
+  mutate(id_row = row_number())
+  
+
+vector_hpo <- df %>% select(term) %>% distinct() %>% pull()
+
+
+validate(
+  need(length(vector_hpo) > 1, "Please, select more than one phenotype term.")
+)
+
+vector_genes <- df %>% select(gene) %>% distinct() %>% pull()
+
+list_result <- replicate(length(vector_hpo), NA, simplify = FALSE)
+
+
+for (i in 1:length(vector_hpo)) {
+  
+  list_result[[i]] <- df %>% filter(term == !!vector_hpo[i]) %>% pull(gene) %in% vector_genes %>% which()
+  names(list_result)[i] <- vector_hpo[i]
+  
+}
+
+upset(fromList(list_result), empty.intersections = "on", order.by = "freq",
+      point.size = 3.5, line.size = 2, number.angles = 0,
+      mainbar.y.label = "Phenotype Terms Intersections", sets.x.label = "Genes Associated Per Phenotype Term",
+      text.scale = c(1.3, 1.3, 1, 1, 2, 2))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 start_p <- 34813719
 end_p <- 36278623
@@ -36,6 +192,26 @@ df_test %>% ggplot(aes(pos, n_times)) +
 
 
 
+
+hp_chosen <- test322
+genes_chosen <- test2019 %>% select(entrez_id) %>% pull()
+
+
+df_tmp <- hpo_genes %>%
+  filter(hp %in% hp_chosen) %>%
+  filter(entrez_id %in% genes_chosen)
+
+df_tmp2 <- df_tmp %>%
+  select(hp) %>%
+  distinct() %>%
+  mutate(description = ifelse(is_null(map_chr(hp, function(x) termDesc(term(go, x)))), '', 
+                              map_chr(hp, function(x) termDesc(term(go, x)))
+                              ))
+
+df_tmp <- df_tmp %>% 
+  left_join(df_tmp2, by = 'hp')
+
+df_tmp
 
 
 

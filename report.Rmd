@@ -1,6 +1,6 @@
 ---
 title: "CNVxplorer report"
-author: "Vignette Author"
+# author: "Vignette Author"
 date: "`r Sys.Date()`"
 output:
   prettydoc::html_pretty:
@@ -72,7 +72,7 @@ knitr::kable(df_tmp)
 
 ```{r echo= FALSE, comment = NA, message=FALSE, fig.width=12}
 
-if (exists('running_go()')) {
+# if (exists('running_go()')) {
   
   if (nrow(running_go()) > 0) {
 
@@ -99,7 +99,7 @@ if (exists('running_go()')) {
               axis.title=element_text(size=14,face="bold"))
     
   }
-}
+# }
 ```
 
 
@@ -108,7 +108,7 @@ if (exists('running_go()')) {
 
 ```{r echo= FALSE, comment = NA, message=FALSE, fig.width=12}
 
-if (exists('running_enrich_go()')) {
+# if (exists('running_enrich_go()')) {
   
   if (nrow(running_enrich_go()) > 0) {
     
@@ -133,15 +133,17 @@ if (exists('running_enrich_go()')) {
                 axis.title=element_text(size=14,face="bold"))
         
   }
-}
+# }
 ```
+
+
 
 
 ### 3.3 Pathway analysis (optional)
 
 ```{r echo= FALSE, comment = NA, message=FALSE, fig.width=12}
 
-if (exists('running_path()')) {
+# if (base::exists('running_path()')) {
   
   if (nrow(running_path()) > 0) {
       
@@ -165,9 +167,8 @@ if (exists('running_path()')) {
               axis.title=element_text(size=14,face="bold"))
         
   }  
-}
+# }
 ```
-
 
 
 ### 3.4 Gene-disease association (optional)
@@ -175,49 +176,18 @@ if (exists('running_path()')) {
 ```{r echo= FALSE, comment = NA, message=FALSE, fig.width=12}
 
 
-if (exists('running_do()')) {
+# if (exists('running_do()')) {
   
-  if (nrow(running_do()) > 0) {
+  if (nrow(running_do() %>% as_tibble()) > 0) {
     
     cnetplot(running_do(), foldChange= hgcn_genes$entrez_id, readable = TRUE)
 
         
   }     
-}
+# }
 ```
 
 
-
-### 3.3 Pathway analysis (optional)
-
-```{r echo= FALSE, comment = NA, message=FALSE, fig.width=12}
-
-if (exists('running_path()')) {
-  
-  if (nrow(running_path()) > 0) {
-      
-        running_path() %>%
-        mutate(p.adjust = -log10(p.adjust)) %>%
-        ggplot(aes(reorder(Description, p.adjust), p.adjust)) +
-        geom_col(aes(fill = Description), color = 'black', show.legend = FALSE) +
-        scale_fill_viridis_d() +
-        coord_flip() +
-        xlab('') +
-        ylab('-log10(p-adjusted)') +
-        ggtitle('Enriched pathways') +
-        geom_hline(yintercept =-log10(as.numeric(input$sign_vline_path)), color = 'red', alpha = 0.6, linetype = 'dashed', size = 2) +
-        geom_text(
-          aes(label = GeneRatio, y = p.adjust + 0.05),
-          position = position_stack(vjust = 0.5),
-          vjust = 0
-        ) +
-        theme_minimal() +
-        theme(axis.text=element_text(size=12),
-              axis.title=element_text(size=14,face="bold"))
-        
-  }  
-}
-```
 
 
 
@@ -234,10 +204,6 @@ datatable(running_pubmed(),
           options =
             list(pageLength = 5))
 ```
-
-
-## Comparison size
-
 
 
 <!-- ## 2. Gene content -->
