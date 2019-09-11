@@ -25,6 +25,8 @@ library(rentrez)
 library(reactable)
 library(ggridges)
 library(UpSetR)
+library(randomForest) # delete in case of using an alternative model
+
 
 # Files needed to run the app
 
@@ -105,6 +107,12 @@ shiny::shinyApp(
           icon = "book",
           "Biomedical literature"
         ),
+        
+        # tablerNavMenuItem(
+        #   tabName = "cnv_ngs",
+        #   icon = "book",
+        #   "CNVs NGS"
+        # ),
         tablerNavMenuItem(
           tabName = "down_report",
           icon = "download",
@@ -281,11 +289,20 @@ shiny::shinyApp(
                 
             )
             ),
-            
             tablerCard(
-              title = "Clinical panels",
+              title = "Comparison scores",
+              collapsible = FALSE,
+              closable = FALSE,
+              
+              plotlyOutput("dot_comparison"),
+              width = 12,
+              overflow = TRUE
+            ),
+            column(6,
+            tablerCard(
+              title = "Clinical panels (Genomics England PanelApp)",
               DTOutput("df_fisher"),
-              width = 6,
+              width = 12,
               collapsible = FALSE,
               closable = FALSE,
               overflow = TRUE,
@@ -299,53 +316,45 @@ shiny::shinyApp(
               )
             ),
             
-            column(width = 3,
+
+            
+            tablerCard(
+              title = "Gene(s) selected",
+              # DTOutput("df_fisher_selected"),
+              textOutput("df_fisher_selected"),
+              width = 12,
+              collapsible = FALSE,
+              closable = FALSE,
+              overflow = TRUE
+
+              
+            )),
+            
+            tablerCard(
+              title = "Gene-level databases",
+              DTOutput("df_fisher_two"),
+              width = 6,
+              collapsible = FALSE,
+              closable = FALSE,
+              overflow = TRUE,
+              options = tagList(
+              )
+            ),
+            
+            column(width = 6,
                    
                    uiOutput('n_cnv_patho'),
                    uiOutput('n_cnv_nopatho'),
                    uiOutput('n_clinvar'),
-                   uiOutput('n_gwas'),
-                   uiOutput('n_hi')),
-            column(width = 3,
+                   uiOutput('n_gwas')),
+            column(width = 6,
                    
                    uiOutput('n_dev'),
                    uiOutput('n_omim'),
                    # uiOutput('n_pubmed'),
-                   uiOutput('n_pli')),
-            column(width = 6,
-                   tablerCard(
-                     title = "Comparison scores",
-                     collapsible = FALSE,
-                     closable = FALSE,
-                     
-                     plotlyOutput("dot_comparison"),
-                     width = 12,
-                     overflow = TRUE
-                     # options = tagList(
-                     #   br(),
-                     #   pickerInput(
-                     #     inputId = "x_axis_score",
-                     #     label = " ",
-                     #     width = 'auto',
-                     #     choices = list(
-                     #       'Genic intolerance' = c("pli", "rvis", 'ccr'),
-                     #       'Conservation inter-species' = c("ncgerp")
-                     #     )
-                     #   ),
-                     #   pickerInput(
-                     #     inputId = "y_axis_score",
-                     #     label = " ",
-                     #     width = 'auto',
-                     #     choices = list(
-                     #       'Genic intolerance' = c("pli", "rvis", 'ccr'),
-                     #       'Conservation inter-species' = c("ncgerp")
-                     #     )
-                     #   )
-                     #   
-                     #   
-                     #   
-                     # )
-                   ))
+                   uiOutput('n_pli'),
+                   uiOutput('n_hi'))
+            
             
           ),
           fluidRow(
@@ -406,7 +415,7 @@ shiny::shinyApp(
             tablerCard(
               title = "Intersection - CNV and CNV pathogenics",
               DTOutput('df_intersection'),
-              width = 6,
+              width = 3,
               collapsible = FALSE,
               closable = FALSE,            
               overflow = TRUE
@@ -418,7 +427,7 @@ shiny::shinyApp(
             tablerCard(
               title = "Plot intersection",
               plotOutput('plot_intersection'),
-              width = 6,
+              width = 9,
               collapsible = FALSE,
               closable = FALSE,            
               overflow = TRUE
@@ -734,6 +743,73 @@ shiny::shinyApp(
         ),
         
         tablerTabItem(
+          tabName = "cnv_ngs",
+          fluidRow(
+            # column(3,
+            # uiOutput('n_upload_cnv'),
+            # uiOutput('n_upload_filter_cnv')),
+            column(4,
+            tablerCard(title = 'Input file',
+                       width = 12,
+                       collapsible = FALSE,
+                       closable = FALSE,
+            fileInput("upload_bed_file", label = h5(strong("CNVs regions (.bed file)")), 
+                      accept = c(".bed"))),
+            tablerCard(title = 'Filter by size',
+                       width = 12,
+                       collapsible = FALSE,
+                       closable = FALSE,
+                       sliderTextInput(
+                         inputId = "filter_length",
+                         label = "",
+                         choices = c(1, 10, 100, 500, 1000, 10000),
+                         grid = TRUE
+                       )),
+            tablerCard(title = 'Filter by pathogenicity score',
+                       width = 12,
+                       collapsible = FALSE,
+                       closable = FALSE,
+                       sliderTextInput(
+                         inputId = "filters_length",
+                         label = "",
+                         choices = c(1, 10, 100, 500, 1000, 10000),
+                         grid = TRUE
+                       )),
+            
+            tablerCard(title = 'Exclude benign CNVs',
+                       width = 12,
+                       collapsible = FALSE,
+                       closable = FALSE,
+                       sliderTextInput(
+                         inputId = "filters_laength",
+                         label = "",
+                         choices = c(1, 10, 100, 500, 1000, 10000),
+                         grid = TRUE
+                       )),
+            tablerCard(title = 'Filter by number of genes ',
+                       width = 12,
+                       collapsible = FALSE,
+                       closable = FALSE,
+                       sliderTextInput(
+                         inputId = "filters_leangth",
+                         label = "",
+                         choices = c(1, 10, 100, 500, 1000, 10000),
+                         grid = TRUE
+                       ))
+
+            ),
+
+            tablerCard(title = 'List of CNVs',
+                       collapsible = FALSE,
+                       closable = FALSE,
+                       dataTableOutput('df_upload'),
+                       width = 8
+                       ))
+
+          
+        ),
+        
+        tablerTabItem(
           tabName = "gene",
           fluidRow(
             tablerCard(title = '19,281 protein-coding genes ',
@@ -790,7 +866,7 @@ shiny::shinyApp(
             tablerCard(title = 'Pubmed articles associated with the region',
                        collapsible = FALSE,
                        closable = FALSE,
-                       DTOutput('disease_pubmed'),
+                       DTOutput('disease2_pubmed'),
                        width = 12,
                        options = tagList(
                          downloadButton("download_pubmed", "Download table")
@@ -808,6 +884,36 @@ shiny::shinyApp(
             tablerCard(title = 'Genes associated with phenotypes in mouse (MGI)',
                        DTOutput('model_genes'),
                        width = 12))
+          
+        ),
+        tablerTabItem(
+          tabName = "pubmed",
+          fluidRow(
+            tablerCard(
+              title = "Pubmed articles associated with the region",
+              
+              collapsible = FALSE,
+              closable = FALSE,
+              DTOutput('disease_pubmed'),
+              overflow = TRUE,
+              width = 12
+            ),
+            tablerCard(
+              title = "Abstract",
+              
+              DTOutput("abstract_pubmed"),
+              width = 12,
+              overflow = TRUE
+            )
+            # tablerCard(title = 'Download report (.html)',
+            #            downloadButton('button55_download', label = "Download"),                       
+            #            width = 6),
+            
+            # tablerCard(title = '',
+            #            DTOutput('mode2l55_genes'),
+            #            width = 6)
+            
+            )
           
         ),
         tablerTabItem(
@@ -843,7 +949,7 @@ shiny::shinyApp(
                             # width = '700px', 
                             heigh = '250px'))),
               overflow = TRUE,
-              width = 12
+              width = 7
             ),
             tablerCard(
               title = "Funnel overview",
@@ -854,11 +960,9 @@ shiny::shinyApp(
             ),
             tablerCard(title = 'Download report (.html)',
                        downloadButton('button_download', label = "Download"),                       
-                       width = 7),
+                       width = 7)
            
-            tablerCard(title = '',
-                       DTOutput('mode2l_genes'),
-                       width = 9))
+          )
           
         )
         
@@ -1169,10 +1273,13 @@ shiny::shinyApp(
       last_author <- unname(map_chr(query_tmp, function(x) x[["lastauthor"]]))
       date_release <- unname(map_chr(query_tmp, function(x) x[["pubdate"]]))
       pmid_id <- unname(map_chr(query_tmp, function(x) x[["uid"]]))
+      journal_id <- unname(map_chr(query_tmp, function(x) x[["fulljournalname"]]))
       
       
       df_output <- tibble(title = title, first_author = first_author, last_author = last_author, 
-                          n_cites = n_cites, date_release = date_release, pmid = pmid_id)
+                          n_cites = n_cites, journal = journal_id, date_release = date_release, 
+                          pmid = pmid_id)
+      
       df_output <- df_output %>% mutate(n_cites = as.integer(ifelse(n_cites == '', 0, n_cites)))
       df_output
       
@@ -1182,13 +1289,39 @@ shiny::shinyApp(
     output$disease_pubmed <- renderDataTable({
       
       
-      datatable(running_pubmed(), rownames = FALSE, filter = 'top', 
-                colnames = c('Title','First author', 'Last author', 'N°cites', 'Published date', 'PMID' ),
+      datatable(running_pubmed(), rownames = FALSE, filter = 'top', selection = 'single',
+
+                colnames = c('Title','First author', 'Last author', 'N°cites','Journal', 'Published date', 'PMID' ),
                 options = list(
                   pageLength = 5, autoWidth = TRUE, style = 'bootstrap', list(searchHighlight = TRUE),
                   selection = 'single'
                   # columnDefs = list(list(className = 'dt-center', targets = '_all'))
                 ))
+      
+    })
+    
+    
+    output$abstract_pubmed <- renderDataTable({
+      
+      validate(
+        need(input$disease_pubmed_rows_selected != '', "Please, select an article from the datatable.")
+      )
+      
+      test931 <<- input$disease_pubmed_rows_selected
+      paper_selected <- running_pubmed() %>% slice(input$disease_pubmed_rows_selected)
+      
+      test45 <<- paper_selected
+      
+      fetch.pubmed <- entrez_fetch(db = "pubmed", id = test45 %>% pull(pmid), rettype = "xml", parsed = T)
+      # Extract the Abstracts for the respective IDS.  
+      abstracts = xpathApply(fetch.pubmed, '//PubmedArticle//Article', function(x)
+        xmlValue(xmlChildren(x)$Abstract))
+      
+      tmp_df <- tibble(title = paper_selected$title, abstract = abstracts[[1]]) %>% gather('Category', 'Info')
+      tmp888 <<- tmp_df
+      
+      datatable(tmp_df, rownames = FALSE,
+                options = list(dom = 't'))
       
     })
     
@@ -1602,6 +1735,7 @@ shiny::shinyApp(
       input_genes <- data_selected() %>% select(gene) %>% pull()
       
       fisher_result <- tibble()
+      
       for (i in 1:length(list_panel_names)) {
         print(i)
         input_test <- matrix(rep(NA, 4), ncol = 2, dimnames = list(c('in_panel', 'no_panel'), c('col1', 'col2') ))
@@ -1611,26 +1745,121 @@ shiny::shinyApp(
         input_test[2,][2] <- length(input_genes) - input_test[1,][2] 
         input_test[2,][1] <- 19146 - input_test[2,][2] - input_test[1,][1] - input_test[1,][2]
         
+        name_genes <- panel_total %>% filter(Level4 == !!list_panel_names[i]) %>% pull(gene)
+        name_genes <- name_genes[name_genes %in% input_genes]
+        if (length(name_genes) == 0) {
+          name_genes <- '-'
+        }
+        
         tmp_tibble <- tibble(name_panel = list_panel_names[i], 
-                             p_value = fisher.test(input_test, 'greater')$p.value,
+                             p_value = fisher.test(input_test, alternative = 'greater')$p.value,
+                             genes  = name_genes,
                              gene_ratio = paste(as.character(input_test[1,][2]), '/',
                                                 as.character(input_test[1,][2] + input_test[1,][1]))
         )
         fisher_result <- rbind(fisher_result, tmp_tibble)
       }
       
-      fisher_result %>% arrange(p_value)
+      fisher_result %>% arrange(p_value) %>% mutate(p_value = round(p_value, 4))
 
     })
     
+    
     output$df_fisher <- renderDataTable({
       
-      datatable(fisher_running())
+      
+      tmp_df <- fisher_running() %>% select(-genes)
+      datatable(tmp_df,
+                selection = 'single',
+                colnames = c('Panel name', 'p.value', 'Gene ratio'))
+      
+    })
+    
+    output$df_fisher_selected <- renderText({
+      
+      test88777 <<- input$df_fisher_rows_selected
+      test88888 <<- fisher_running()
+      validate(
+        need(input$df_fisher_rows_selected != '', "Please, select a clinical panel in the datatable.")
+      )
+      
+      name_panel_to_filter <- fisher_running() %>% slice(input$df_fisher_rows_selected) %>% pull(name_panel)
+      tmp_df <- fisher_running() %>% filter(name_panel == name_panel_to_filter) %>% select(genes) %>%
+        filter(!str_detect(genes, '-'))
+      
+      validate(
+        need(nrow(tmp_df) != 0, "Not genes found.")
+      )
+      
+      # datatable(tmp_df)
+      test000 <<- tmp_df
+      tmp_df %>% pull(genes) %>% paste(collapse = ', ')
+      
+    })
+    
+    fisher_running_two <- reactive({
+      
+      req(input$start_analysis > 0)
+      
+      
+      name_dbs <- c('omim', 'clinvar', 'haplo', 'triplo', 'dev', 'fda', 'gwas', 'essent')
+      input_genes <- data_selected() %>% select(gene) %>% pull()
+      # input_genes <- test2019 %>% select(gene) %>% pull()
+      fisher_result <- tibble()
+      
+      for (i in 1:length(name_dbs)) {
+        # i <- 8
+        print(i)
+        input_test <- matrix(rep(NA, 4), ncol = 2, dimnames = list(c('in_panel', 'no_panel'), c('col1', 'col2') ))
+        
+        input_test[1,][2] <- hgcn_genes %>% filter(get(name_dbs[i]) == 'Yes') %>% pull(gene) %in% input_genes %>% sum()
+        input_test[1,][1] <- hgcn_genes %>% filter(get(name_dbs[i]) == 'Yes') %>% nrow() - input_test[1,][2] 
+        input_test[2,][2] <- length(input_genes) - input_test[1,][2] 
+        input_test[2,][1] <- 19146 - input_test[2,][2] - input_test[1,][1] - input_test[1,][2]
+        test312321 <<- input_test
+        tmp_tibble <- tibble(name_panel = name_dbs[i], 
+                             p_value = fisher.test(input_test, alternative = 'greater')$p.value,
+                             gene_ratio = paste(as.character(input_test[1,][2]), '/',
+                                                as.character(input_test[1,][2] + input_test[1,][1]))
+        )
+        test44444 <<- tmp_tibble
+        fisher_result <- rbind(fisher_result, tmp_tibble)
+      }
+      
+      fisher_result %>% arrange(p_value) %>% mutate(p_value = round(p_value, 4))
+      
+    })
+    
+    output$df_fisher_two <- renderDataTable({
+      
+      datatable(fisher_running_two(), colnames = c('Database name', 'p.value', 'Gene ratio'))
+      
+    })
+    
 
+    
+    running_wilcoxon <- reactive({
+      
+      mtcars
+      
+      
+      
+      
+    })
+    
+    output$df_wilcoxon <- renderDataTable({
+      
+      
+      
+      
+      
+      
     })
     
     
     output$df_fisher_selected_genes <- renderDataTable({
+      
+      input$input$dgenes_rows_all 
       
       datatable(fisher_running())
       
@@ -1736,7 +1965,7 @@ shiny::shinyApp(
         # Variable: sum rvis score
         input_model$rvis[1]  <- tmp_df %>% pull(rvis) %>% sum(na.rm = TRUE)
         # Variable: nº genes included in OMIM
-        input_model$pli[1] <- tmp_df %>% count(omim) %>% filter(omim == 'Yes') %>% pull(n)
+        tmp_omim<- tmp_df %>% count(omim) %>% filter(omim == 'Yes') %>% pull(n)
         if (length(tmp_omim) == 0) {
           input_model$omim[1] <- 0
         } else {
@@ -1744,6 +1973,8 @@ shiny::shinyApp(
           
         }
       }
+      
+      test9866 <<- input_model
   
       score_predicted <- predict(model1, input_model, type = "prob") %>% 
         as_tibble() %>% pull(decipher) %>% as.numeric() * 100
@@ -2132,8 +2363,8 @@ shiny::shinyApp(
                              'Gene mapped in CNV'),
                 options = list(
                   pageLength = 5, 
-                  autoWidth = TRUE,
-                  style = 'bootstrap',
+                  # autoWidth = TRUE,
+                  # style = 'bootstrap',
                   list(searchHighlight = TRUE)
                   # selection = 'single'
                   # columnDefs = list(list(className = 'dt-center', targets = '_all'))
@@ -2152,9 +2383,17 @@ shiny::shinyApp(
       
       
       n_tads <- check_tads(chrom_coordinates, start_coordinates, end_coordinates )
+      n_tads <- nrow(n_tads)
       test931323 <<- n_tads
+      
+      if (is.null(n_tads)) {
+        n_tads <- 0
+      } else {
+        n_tads <- as.double(n_tads)
+      }
+      
       tablerStatCard(
-        value =  if_else(is.null(nrow(n_tads)), 0, nrow(n_tads)),
+        value =  n_tads,
         title = "Number of TADs disrupted",
         # trend = -10,
         width = 12
@@ -3013,7 +3252,8 @@ output$func_do  <- renderPlot({
       df_tmp <- intersection_running() %>%
         select(id, start, end)
 
-      datatable(df_tmp, rownames = FALSE)
+      datatable(df_tmp, rownames = FALSE,
+                options = list(dom = 't'))
 
     })
 
@@ -3093,6 +3333,86 @@ output$func_do  <- renderPlot({
                   columnDefs = list(list(className = 'dt-center',  targets = 0:6))),  rownames= FALSE)
     })
     
+    upload_raw <- reactive({
+      
+      req(input$upload_bed_file)
+      
+      x <- input$upload_bed_file
+      test231 <<-  input$filter_length
+      
+      tmp_path <-  x$datapath
+      tmp_df <- read_tsv(tmp_path, col_names = c('chrom', 'start', 'end'))
+      
+      
+    })
+    
+    
+    running_upload <- reactive({
+      
+      req(upload_raw())
+
+      test131311111 <<- upload_raw()
+      tmp_df <- upload_raw() %>% mutate(size = end - start + 1) %>%
+        filter(size >= input$filter_length)
+      
+      tmp_df
+
+    })
+    
+    
+    output$n_upload_cnv <- renderUI({
+      
+      req(running_upload())
+      
+      data_tmp <- upload_raw() %>% nrow()
+      
+      tablerStatCard(
+        value =  data_tmp,
+        title = "Number of uploaded CNVs",
+        # trend = -10,
+        width = 12
+      )
+      
+      
+    })
+    
+    output$n_upload_filter_cnv <- renderUI({
+      
+      req(upload_raw())
+      req(running_upload())
+      
+      n_raw <- upload_raw() %>% nrow()
+      n_filtered <- running_upload() %>% nrow()
+      
+      tablerStatCard(
+        value =  paste0(n_filtered, '/', n_raw),
+        title = "Number of filtered CNVs",
+        # trend = -10,
+        width = 12
+      )
+      
+      
+    })
+    
+    
+    
+    output$df_upload <- renderDataTable({
+      
+      req(running_upload())
+
+      tmp_df <- running_upload() %>%
+        mutate(score = pmap(list(chrom, start, end), function(a,b,c) get_model_score(a,b,c))) %>%
+        rowwise() %>%
+        mutate(n_genes = score[[2]],
+               score = score[[1]])
+      
+      test313313221 <<- tmp_df
+      
+      
+      datatable(tmp_df, colnames = c('Chromosome', 'Start', 'End', 'Size', 'Score', 'nº genes'), rownames = FALSE)
+      
+      
+    })
     
     
     output$download_dgenes <- downloadHandler(

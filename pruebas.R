@@ -1,4 +1,128 @@
 
+
+
+
+
+get_model_score <- function(chrom, start_coord, end_coord) {
+  
+  # chrom_coord <- '1'
+  # start_coord <- 34813719
+  # end_coord <- 36278623
+  chrom_coord <- str_remove(chrom, 'chr')
+  start_coordinates <- start_coord
+  end_coordinates <- end_coord
+  length_input_cnv <- end_coordinates - start_coordinates + 1
+  tmp_df <- hgcn_genes %>%
+            filter(chrom == chrom_coord) %>%
+            mutate(keep = NA) %>%
+            rowwise() %>%
+            mutate(keep = c(start_position, end_position) %overlaps% c(start_coordinates, end_coordinates)) %>%
+            filter(keep == TRUE) %>% 
+            select(-keep) %>%
+            ungroup()
+  
+  input_model <- tibble(n_genes = NA, pli = NA, rvis = NA, omim = NA, 
+                        length_cnv =  length_input_cnv)
+  
+  if (nrow(tmp_df) == 0) {
+    
+    input_model$n_genes[1]  <- 0
+    input_model$pli[1]  <- 0
+    input_model$rvis[1]  <- 0
+    input_model$omim[1] <- 0
+    
+  } else {
+    
+    # Variable: number of genes disrupted
+    input_model$n_genes[1]  <- nrow(tmp_df)
+    # Variable: sum pLI score
+    input_model$pli[1]  <- tmp_df %>% pull(pLI) %>% sum(na.rm = TRUE)
+    # Variable: sum rvis score
+    input_model$rvis[1]  <- tmp_df %>% pull(rvis) %>% sum(na.rm = TRUE)
+    # Variable: nº genes included in OMIM
+    tmp_omim <- tmp_df %>% count(omim) %>% filter(omim == 'Yes') %>% pull(n)
+    if (length(tmp_omim) == 0) {
+      input_model$omim[1] <- 0
+    } else {
+      input_model$omim[1] <- tmp_omim
+      
+    }
+  }
+  
+
+  score_predicted <- predict(model1, input_model, type = "prob") %>% 
+    as_tibble() %>% pull(decipher) %>% as.numeric() * 100
+  list_result <- list(score_predicted, input_model$n_genes)
+  return(list_result)
+}
+
+
+
+a <- c("DOID:14095", "DOID:5844", "DOID:2044", "DOID:8432", "DOID:9146",
+       "DOID:10588", "DOID:3209", "DOID:848", "DOID:3341", "DOID:252")
+b <- c("DOID:9409", "DOID:2491", "DOID:4467", "DOID:3498", "DOID:11256")
+doSim(a, b, measure="Resnik")
+
+
+g1 <- c("84842", "2524", "10590", "3070", "91746")
+g2 <- c("84289", "6045", "56999", "9869")
+
+geneSim(g1, g2, measure="Resnik", combine="BMA")
+
+hpo_omim 
+
+library(HPOSim) 
+
+list_genes <- test2019 %>% pull(gene)
+list_hpo <- hpo_genes %>% filter(gene %in% list_genes) %>% pull(hp)
+# check omim terms with pmid
+list_omim_diseases <- hpo_omim %>% select(term) %>% filter(str_detect(term, 'OMIM')) %>% distinct() %>% pull() 
+
+result_sim <- tibble()
+
+for (i in 1:length(list_omim_diseases)) {
+  
+  print(i)
+  tmp_list <- hpo_omim %>% filter(term == !!list_omim_diseases[i]) %>% pull(hpo)
+  tmp_score <- getTermListSim(list_hpo, tmp_list, method = 'Resnik', combinemethod = 'funSimMax',  IC = IC)
+  
+  tmp_df <- tibble(omim_disease = list_omim_diseases[i], 
+                   score = tmp_score)
+  
+  result_sim <- rbind(result_sim, tmp_df)
+}
+
+a <- c('HP:0100807', 'HP:0001166')
+
+b <- c('HP:0011793', 'HP:0001166')
+
+d <- c('HP:0011792', 'HP:0002861')
+
+anno1<-c("HP:0011793", "HP:0011795")
+anno2<-c("HP:0011792", "HP:0011794")
+
+
+# HPOSim::calcTermSim('HP:0011793', 'HP:0001909', IC = IC, method = 'Resnik')
+
+  
+library(xml)
+
+
+your.ids <- c("26386083","26273372","26066373","25837167","25466451","25013473")
+# rentrez function to get the data from pubmed db
+fetch.pubmed <- entrez_fetch(db = "pubmed", id = your.ids,
+                             rettype = "xml", parsed = T)
+# Extract the Abstracts for the respective IDS.  
+abstracts = xpathApply(fetch.pubmed, '//PubmedArticle//Article', function(x)
+  xmlValue(xmlChildren(x)$Abstract))
+
+
+entrez_db_links()
+
+
+tmp <- entrez_link(dbfrom='pubmed', id= 25581431, db='gene')
+
+tmp$links
 #### CHI-SQUARED TEST
 
 list_panel_names <- panel_total %>% select(Level4) %>% distinct() %>% pull()
@@ -22,6 +146,34 @@ tmp_tibble <- tibble(name_panel = list_panel_names[i],
 
 fisher_result <- rbind(fisher_result, tmp_tibble)
 }
+
+tmp <- matrix(rep(NA, 4), ncol = 2)
+
+tmp2 <- matrix(rep(NA, 4), ncol = 2)
+
+
+tmp[1,][2] <-  2
+tmp[2,][2] <-  19 - tmp[1,][2]
+tmp[1,][1] <- 10 - tmp[1,][2]
+tmp[2,][1] <- 19146 - tmp[1,][1] - tmp[2,][2] - tmp[1,][2] 
+
+tmp[1,][2] <- 3 
+tmp[2,][2] <-  9
+tmp[1,][1] <- 13
+tmp[2,][1] <-  4
+
+
+fisher.test(tmp, alternative = 'greater')$p.value
+
+
+tmp2[1,][2] <- 9 
+tmp2[2,][2] <-  4
+tmp2[1,][1] <- 3
+tmp2[2,][1] <-  13
+
+fisher.test(tmp2, alternative = 'greater')$p.value
+
+
 
 #### POISSON DISTRIBUTION
 

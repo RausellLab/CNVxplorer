@@ -203,23 +203,31 @@ vg <- vg_raw %>% left_join(test, by = c('gene' = 'ENSEMBL')) %>% select(-gene) %
 # Dataset: Clingen
 # Source: ftp://ftp.ncbi.nlm.nih.gov/pub/dbVar/clingen/ClinGen_haploinsufficiency_gene_GRCh37.bed
 # Access: 06/06/19
+# Info score: https://www.ncbi.nlm.nih.gov/projects/dbvar/clingen/help.shtml#review
 # ------------------------------------------------------------------------------
 
-clingen_raw <- read.table('data/ClinGen_haploinsufficiency_gene_GRCh37.bed', col.names = c('chrom', 'start', 'end', 'gene', 'score'), stringsAsFactors = FALSE,
+clingen_raw <- read.table('/home/cbl02/Storage/data/ClinGen_haploinsufficiency_gene_GRCh37.bed', col.names = c('chrom', 'start', 'end', 'gene', 'score'), stringsAsFactors = FALSE,
                           skip = 1)
 
-clingen <- clingen_raw %>% as_tibble() %>% filter(score == 3) %>% select(gene) %>% pull(gene)
+clingen <- clingen_raw %>% 
+  as_tibble() %>% 
+  filter(score == 3) %>% 
+  select(gene) %>% 
+  pull(gene)
 
 # ------------------------------------------------------------------------------
 # Dataset: Clingen
 # Source: ftp://ftp.ncbi.nlm.nih.gov/pub/dbVar/clingen/ClinGen_triplosensitivity_gene.bed
 # Access: 06/06/19
+# Info scores: https://www.ncbi.nlm.nih.gov/projects/dbvar/clingen/help.shtml#review
 # ------------------------------------------------------------------------------
 
-triplo <- read.table('data/ClinGen_triplosensitivity_gene.bed', col.names = c('chrom', 'start', 'end', 'gene', 'score'), stringsAsFactors = FALSE,
+triplo <- read.table('/home/cbl02/Storage/data/ClinGen_triplosensitivity_gene.bed', col.names = c('chrom', 'start', 'end', 'gene', 'score'), stringsAsFactors = FALSE,
                      skip = 1, sep = '\t') %>%
   as_tibble() %>%
-  filter(score == 1) %>%
+  filter(score >= 1) %>%
+  filter(score != 40) %>% 
+  filter(!str_detect(score, 'Not yet evaluated')) %>%
   select(gene) %>%
   pull(gene)
 
@@ -474,6 +482,15 @@ mgi <- mouse_p %>%
 # Source: https://data.omim.org/downloads/cpJFEdlrQ5qqPk0TOzvVBA/morbidmap.txt
 # ------------------------------------------------------------------------------
 
+# 1 - The disorder is placed on the map based on its association with
+# a gene, but the underlying defect is not known.
+# 2 - The disorder has been placed on the map by linkage or other
+# statistical method; no mutation has been found.
+# 3 - The molecular basis for the disorder is known; a mutation has been
+# found in the gene.
+# 4 - A contiguous gene deletion or duplication syndrome, multiple genes
+# are deleted or duplicated causing the phenotype.
+#
 
 morbidmap <- read_xlsx('data/morbidmap.xlsx', skip = 3)
 
@@ -1009,7 +1026,13 @@ setwd('/home/cbl02/Storage/cnvxplore')
 
 disgenet <- read_tsv('/home/cbl02/Storage/data/curated_gene_disease_associations.tsv')
 
-disgenet %>% count(diseaseName) %>% arrange(desc(n)) %>% slice(11:21)
+# ------------------------------------------------------------------------------
+# Source: https://atlas.ctglab.nl/
+# Version: Release 2 v20190117
+# ------------------------------------------------------------------------------
+
+gwas_atlas <- read_tsv('/home/cbl02/Storage/data/gwasATLAS_v20190117.txt')
+
 # ------------------------------------------------------------------------------
 # Dataset: Imprinting genes
 # Source: http://www.geneimprint.com/site/genes-by-species
