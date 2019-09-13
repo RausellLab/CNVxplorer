@@ -1,10 +1,12 @@
 
 
 # Load packages
-library(tidyverse)
 library(readxl)
 library(biomaRt)
 library(data.table)
+library(tidyverse)
+select <- dplyr::select
+
 
 # TODO
 
@@ -176,7 +178,7 @@ hgcn_genes <- hgcn_genes %>%
 # Access:  06/06/19
 # ------------------------------------------------------------------------------
 
-pli <- read.table('data/gnomad.v2.1.1.lof_metrics.by_gene.txt', header = TRUE, sep = '\t', stringsAsFactors = FALSE) %>%
+pli <- read.table('/home/cbl02/Storage/data/gnomad.v2.1.1.lof_metrics.by_gene.txt', header = TRUE, sep = '\t', stringsAsFactors = FALSE) %>%
   as_tibble() %>%
   # filter(canonical == 'true') %>% 
   select(gene, pLI, transcript, oe_lof, oe_lof_lower, oe_lof_upper ) %>%
@@ -189,7 +191,7 @@ pli <- read.table('data/gnomad.v2.1.1.lof_metrics.by_gene.txt', header = TRUE, s
 # ------------------------------------------------------------------------------
 
 
-vg_raw <- read_excel('data/vg.xlsx', sheet = 3)
+vg_raw <- read_excel('/home/cbl02/Storage/data/vg.xlsx', sheet = 3)
 
 vg_raw <- vg_raw %>% rename(vg = Avg_VG) %>% filter(vg != 'NaN') %>% mutate(vg = as.numeric(vg)) %>%
   rename(gene = GeneID)
@@ -238,7 +240,7 @@ triplo <- read.table('/home/cbl02/Storage/data/ClinGen_triplosensitivity_gene.be
 # Access: 06/06/19
 # ------------------------------------------------------------------------------
 
-dev_genes <- read.table('data/DDG2P_6_6_2019.csv', 
+dev_genes <- read.table('/home/cbl02/Storage/data/DDG2P_6_6_2019.csv', 
                         header = TRUE, stringsAsFactors = FALSE,
                         sep = ',') %>%
   as_tibble() %>%
@@ -371,10 +373,10 @@ hi <- read.table('/home/cbl02/Storage/data/HI_Predictions_Version3.bed', sep = '
 # ------------------------------------------------------------------------------
 
 
-gwas_raw <- read.table('data/gwas_catalog_v1.0-associations_e96_r2019-05-03.tsv', header = TRUE, sep = '\t',
+gwas_raw <- read.table('/home/cbl02/Storage/data/gwas_catalog_v1.0-associations_e96_r2019-05-03.tsv', header = TRUE, sep = '\t',
                        fill = TRUE)
 
-gwas <- gwas_raw %>% as.tibble() %>% 
+gwas <- gwas_raw %>% as_tibble() %>% 
   select(CHR_ID, CHR_POS, INTERGENIC, REPORTED.GENE.S.) %>% 
   mutate(CHR_ID = as.character(CHR_ID),
          CHR_POS = as.character(CHR_POS),
@@ -412,7 +414,7 @@ ccr <- read.table('https://static-content.springer.com/esm/art%3A10.1038%2Fs4158
 # ------------------------------------------------------------------------------
 
 
-nc_raw <- read_excel('data/journal.pgen.1005492.s011.XLSX.xlsx', sheet = 1)
+nc_raw <- read_excel('/home/cbl02/Storage/data/journal.pgen.1005492.s011.XLSX.xlsx', sheet = 1)
 
 nc <- nc_raw %>%
   select( `CCDS release 9` ,`CCDS release 15`, ncRVIS, `ncGERP      [Average GERP++]` ) %>%
@@ -434,7 +436,7 @@ nc <- nc_raw %>%
 # gtex <- read.table('https://storage.googleapis.com/gtex_analysis_v7/annotations/GTEx_v7_Annotations_SampleAttributesDS.txt',
 #                    sep = '\t', header = TRUE)
 
-gtex <- read.table('data/GTEx_Analysis_2016-01-15_v7_RNASeQCv1.1.8_gene_median_tpm.gct',
+gtex <- read.table('/home/cbl02/Storage/data/GTEx_Analysis_2016-01-15_v7_RNASeQCv1.1.8_gene_median_tpm.gct',
                    sep = '\t', header = TRUE, skip = 2)
 
 gtex <- gtex %>% 
@@ -449,7 +451,7 @@ gtex <- gtex %>%
 # File name: 	GTEx_Analysis_2016-01-15_v7_RNASeQCv1.1.8_gene_tpm.gct.gz
 # ------------------------------------------------------------------------------
 
-hpa <- read.table('data/normal_tissue.tsv', header = TRUE, sep = '\t')
+hpa <- read.table('/home/cbl02/Storage/data/normal_tissue.tsv', header = TRUE, sep = '\t')
 
 hpa <- hpa %>%
   as_tibble() %>%
@@ -596,7 +598,7 @@ decipher_sv_raw <- read.table('/home/cbl02/Storage/data/population_cnv.txt', sep
 # Dataset: Aggregation of data from DECIPHER, gnomAD and DGV
 # ------------------------------------------------------------------------------
 
-  cnv_df <- decipher_sv_raw %>% rbind(gnomad_sv_raw) %>% rbind(dgv_df)
+cnv_df <- decipher_sv_raw %>% rbind(gnomad_sv_raw) %>% rbind(dgv_df)
 
 # ------------------------------------------------------------------------------
 # Dataset: Protein-Protein interaction network
@@ -696,7 +698,7 @@ glimpse(df_assoc_gene)
 
 #
 df_assoc_enh <- df %>% filter(score_enh > 1)
-df_assoc_gene <- df_assoc_gene %>% filter(score_gene > 1)
+df_assoc_gene <- df_assoc_gene %>% filter(score > 1)
 
 df_ge <- df_assoc_enh %>% left_join(df_assoc_gene, by = 'id')
 df_ge <- df_ge %>% select(gene, everything())
@@ -716,7 +718,7 @@ enhancer_raw <- read.table('/home/cbl02/Storage/data/hglft_genome_4c90f_a0b3d0.b
 df_enhancers <- enhancer_raw %>% as_tibble() %>% rename(chrom = V1, start = V2, end = V3, id = V4) %>% mutate(chrom = str_remove(chrom, 'chr')) %>%
   mutate(id = as.character(id))
 
-df_enhancers <- df_ge %>% select(gene, id, score_enh, score_gene) %>% left_join(df_enhancers, by = 'id')
+df_enhancers <- df_ge %>% select(gene, id, score_enh, score) %>% left_join(df_enhancers, by = 'id')
 
 write.table(enhancer_raw %>% filter(!str_detect(V1, 'PATCH')) %>% distinct(),
             '/home/cbl02/Storage/data/enhancer_cnvxplorer', quote = FALSE, row.names = FALSE,
@@ -736,7 +738,7 @@ from_remot <- read.table('/home/cbl02/Storage/data/enhancer_cnvxplorer_3_result.
 
  
 
-df_enhancers <- df_enhancers %>% 
+from_python <- from_python %>% 
   mutate(phast100 = round(phast100, 3)) %>% 
   mutate(phast46pla = round(phast46pla, 3)) %>% 
   mutate(phast46pri = round(phast46pri, 3))

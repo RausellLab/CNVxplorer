@@ -3,7 +3,6 @@
 
 # Load libraries
 library(shiny)
-library(tidyverse)
 library(tablerDash)
 library(shinyEffects)
 library(echarts4r)
@@ -26,6 +25,16 @@ library(reactable)
 library(ggridges)
 library(UpSetR)
 library(randomForest) # delete in case of using an alternative model
+library(tidyverse)
+
+
+load('local_data.RData')
+source('functions.R')
+
+# file.remove('local_data.RData')
+# save(hgcn_genes, df_enhancers, lncrna_coord, lncrna, tad, gtex, hpa, hpo_genes, vector_hp, vector_term, cnv_df,
+#      select, cnv_df, model1, panel_total, file = "local_data.RData")
+
 
 
 # Files needed to run the app
@@ -60,6 +69,8 @@ hg_cytoBandIdeo <- chromPlot::hg_cytoBandIdeo
 
 # app
 shiny::shinyApp(
+  
+  
   
   ui = tablerDashPage(
     # enable_preloader = TRUE,

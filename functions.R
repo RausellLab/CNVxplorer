@@ -1,5 +1,6 @@
 
-library(GenomicScores)
+# library(GenomicScores)
+select <- dplyr::select
 
 # ------------------------------------------------------------------------------
 # Name function: check_tads
@@ -171,7 +172,7 @@ get_upset <- function(df) {
 # Output: input + output_name
 # ------------------------------------------------------------------------------
 # 
-phastcons100 <- getGScores("phastCons100way.UCSC.hg19")
+# phastcons100 <- getGScores("phastCons100way.UCSC.hg19")
 # phylop100 <- getGScores("phyloP100way.UCSC.hg19")
 # phastcons46pla <- getGScores("phastCons46wayPlacental.UCSC.hg19")
 # phastcons46primates <- getGScores("phastCons46wayPrimates.UCSC.hg19")
@@ -187,11 +188,11 @@ phastcons100 <- getGScores("phastCons100way.UCSC.hg19")
 #   n_df <- nrow(df)
 #   for (i in 1:n_df){
 #     print(paste0(i, '/', n_df))
-    tmp_gr <- GRanges(
-      seqnames = paste0('chr',1),
-      ranges = IRanges(1100000:1100010, width=1))
-    a <- gscores(phastcons100, tmp_gr)
-#     
+#     tmp_gr <- GRanges(
+#       seqnames = paste0('chr',1),
+#       ranges = IRanges(1100000:1100010, width=1))
+#     a <- gscores(phastcons100, tmp_gr)
+# #     
 #     df$remove_later[i] <- mean(a$default)
 #     
 #   }
