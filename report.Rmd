@@ -74,7 +74,7 @@ knitr::kable(df_tmp)
 
 # if (exists('running_go()')) {
   
-  if (nrow(running_go()) > 0) {
+  if (length(nrow(running_go())) > 0) {
 
       running_go() %>%
         as_tibble() %>%
@@ -110,7 +110,7 @@ knitr::kable(df_tmp)
 
 # if (exists('running_enrich_go()')) {
   
-  if (nrow(running_enrich_go()) > 0) {
+  if (length(nrow(running_enrich_go())) > 0) {
     
         running_enrich_go() %>%
           as_tibble() %>%
@@ -145,7 +145,7 @@ knitr::kable(df_tmp)
 
 # if (base::exists('running_path()')) {
   
-  if (nrow(running_path()) > 0) {
+  if (length(nrow(running_path()) > 0)) {
       
         running_path() %>%
         mutate(p.adjust = -log10(p.adjust)) %>%
@@ -178,7 +178,7 @@ knitr::kable(df_tmp)
 
 # if (exists('running_do()')) {
   
-  if (nrow(running_do() %>% as_tibble()) > 0) {
+  if (length(nrow(running_do() %>% as_tibble())) > 0) {
     
     cnetplot(running_do(), foldChange= hgcn_genes$entrez_id, readable = TRUE)
 

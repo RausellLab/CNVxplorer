@@ -9,7 +9,7 @@ select <- dplyr::select
 # ------------------------------------------------------------------------------
 
 
-check_tads <- function(chrom = NULL, start = NULL, end = NULL) {
+check_tads <- function(chrom = NULL, start = NULL, end = NULL, tad_object = NULL) {
   
   
   chrom_tmp <-  chrom
@@ -17,7 +17,7 @@ check_tads <- function(chrom = NULL, start = NULL, end = NULL) {
   end_tmp <-  end
   
   
-  tmp_df <- tad %>%
+  tmp_df <- tad_object %>%
     filter(chrom == !!chrom_tmp) %>%
     mutate(check_tad = if_else(start_tmp <= start & end_tmp >= start, 1, 0 )) %>%
     mutate(check_tad2 = if_else(start_tmp <= end & end_tmp >= end, 1, 0 )) %>%

@@ -2,7 +2,6 @@
 
 
 # Load libraries
-library(shiny)
 library(tablerDash)
 library(shinyEffects)
 library(echarts4r)
@@ -25,12 +24,18 @@ library(reactable)
 library(ggridges)
 library(UpSetR)
 library(randomForest) # delete in case of using an alternative model
+library(chromPlot)
+import::from(Gviz, "IdeogramTrack")
+import::from(Gviz, 'plotTracks')
 library(tidyverse)
+library(shiny)
 
 
 load('local_data.RData')
-source('functions.R')
 
+source('functions.R')
+# load('local_data.RData')
+# invisible(lapply(paste0('package:', names(sessionInfo()$otherPkgs)), detach, character.only=TRUE, unload=TRUE))
 # file.remove('local_data.RData')
 # save(hgcn_genes, df_enhancers, lncrna_coord, lncrna, tad, gtex, hpa, hpo_genes, vector_hp, vector_term, cnv_df,
 #      select, cnv_df, model1, panel_total, file = "local_data.RData")
@@ -991,6 +996,7 @@ shiny::shinyApp(
   ),
   server = function(input, output) {
     
+    
     gene_selected <- reactive({
       
       test4 <<- input$dgenes_rows_selected
@@ -1576,6 +1582,8 @@ shiny::shinyApp(
     
     output$tissue_gtex <- renderPlotly({
       
+      req(input$input_gene_tissue)
+      
       
       filtered_gene <- input$input_gene_tissue
       
@@ -1595,6 +1603,8 @@ shiny::shinyApp(
     })
     
     output$tissue_hpa <- renderDT({
+      
+      req(input$input_gene_tissue)
       
       filtered_gene <- input$input_gene_tissue
       
@@ -2393,7 +2403,7 @@ shiny::shinyApp(
       chrom_coordinates <- input$input_chrom
       
       
-      n_tads <- check_tads(chrom_coordinates, start_coordinates, end_coordinates )
+      n_tads <- check_tads(chrom_coordinates, start_coordinates, end_coordinates, tad )
       n_tads <- nrow(n_tads)
       test931323 <<- n_tads
       
@@ -2445,7 +2455,7 @@ output$n_filtered_enhancers <- renderUI({
       chrom_coordinates <- input$input_chrom
       
       
-      n_tads <- check_tads(chrom_coordinates, start_coordinates, end_coordinates )
+      n_tads <- check_tads(chrom_coordinates, start_coordinates, end_coordinates, tad )
       
       validate(
         need(!is.null(nrow(n_tads)), "0 TADs found.")
