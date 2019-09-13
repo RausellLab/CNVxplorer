@@ -1,2 +1,2 @@
-# CNVxplore: A webtool for the interpretation of CNVs
+# CNVxplorer: A webtool for the clinical interpretation of CNVs
 
