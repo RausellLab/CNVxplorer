@@ -3,6 +3,7 @@
 
 # Load libraries
 library(tablerDash)
+library(rols)
 library(shinyEffects)
 library(echarts4r)
 library(shinyWidgets)
@@ -1105,6 +1106,9 @@ shiny::shinyApp(
     check_hp_genes <- reactive({
       
       req(input$start_analysis > 0)
+      
+      go <- Ontology("hp")
+      
       
       
       if (is.null(input$dgenes_rows_all)) {
