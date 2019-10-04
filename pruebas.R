@@ -3,7 +3,17 @@
 
 
 
-get_model_score <- function(chrom, start_coord, end_coord) {
+
+    tmp_gr <- GRanges(
+      seqnames = paste0('chr',1),
+      ranges = IRanges(10272:10275, width=1))
+    a <- gscores(cadd_1_3, tmp_gr)
+
+
+
+
+
+get_model_score <- function(chrom, start_coord, end_coord, df_genes, model1) {
   
   # chrom_coord <- '1'
   # start_coord <- 34813719
@@ -12,7 +22,7 @@ get_model_score <- function(chrom, start_coord, end_coord) {
   start_coordinates <- start_coord
   end_coordinates <- end_coord
   length_input_cnv <- end_coordinates - start_coordinates + 1
-  tmp_df <- hgcn_genes %>%
+  tmp_df <- df_genes %>%
             filter(chrom == chrom_coord) %>%
             mutate(keep = NA) %>%
             rowwise() %>%

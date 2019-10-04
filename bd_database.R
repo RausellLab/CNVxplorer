@@ -1042,4 +1042,23 @@ gwas_atlas <- read_tsv('/home/cbl02/Storage/data/gwasATLAS_v20190117.txt')
 
 imp_genes <- read_tsv('/home/cbl02/Storage/data/imprinted_genes')
 
-  
+imp_genes <- imp_genes %>% 
+  separate(Aliases, into = LETTERS[1:25], sep = ',') %>%
+  gather('remove', 'gene', -Location, -Status, -`Expressed Allele`) %>%
+  select(-remove) %>%
+  rename(expressed_allele = `Expressed Allele` ) %>%
+  select(gene, everything()) %>%
+  distinct()
+
+# ------------------------------------------------------------------------------
+# Dataset: De novo variants (denovo-db)
+# Source: http://denovo-db.gs.washington.edu/denovo-db/Download.jsp
+# Version: 1.6.1
+# non-SSC Samples	
+# ------------------------------------------------------------------------------
+
+denovo <- read_tsv('/home/cbl02/Storage/data/denovo-db.non-ssc-samples.variants.v.1.6.1.tsv', skip = 1)
+
+denovo <- denovo %>% 
+  select(Chr, Position, PrimaryPhenotype, StudyName, PubmedID, FunctionClass) %>%
+  rename(chrom = Chr)

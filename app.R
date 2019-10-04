@@ -1,14 +1,15 @@
 
 
-
 # Load libraries
 library(tablerDash)
 library(rols)
 library(shinyEffects)
 library(echarts4r)
 library(shinyWidgets)
+library(shinyjs)
 library(karyoploteR)
 library(DT)
+library(XML)
 library(gghighlight)
 library(ReactomePA)
 library(shinycssloaders)
@@ -39,7 +40,7 @@ source('functions.R')
 # invisible(lapply(paste0('package:', names(sessionInfo()$otherPkgs)), detach, character.only=TRUE, unload=TRUE))
 # file.remove('local_data.RData')
 # save(hgcn_genes, df_enhancers, lncrna_coord, lncrna, tad, gtex, hpa, hpo_genes, vector_hp, vector_term, cnv_df,
-#      select, cnv_df, model1, panel_total, file = "local_data.RData")
+#      select, cnv_df, model1, panel_total, denovo, file = "local_data.RData")
 
 
 
@@ -125,11 +126,11 @@ shiny::shinyApp(
           "Biomedical literature"
         ),
         
-        # tablerNavMenuItem(
-        #   tabName = "cnv_ngs",
-        #   icon = "book",
-        #   "CNVs NGS"
-        # ),
+        tablerNavMenuItem(
+          tabName = "cnv_ngs",
+          icon = "book",
+          "CNVs NGS"
+        ),
         tablerNavMenuItem(
           tabName = "down_report",
           icon = "download",
@@ -388,6 +389,14 @@ shiny::shinyApp(
             #   overflow = TRUE
             # ),
             tablerCard(
+              title = "De novo variants (denovo-db)",
+              DTOutput('df_de_novo'),
+              width = 12,
+              collapsible = FALSE,
+              closable = FALSE,            
+              overflow = TRUE
+            ),
+            tablerCard(
               title = "Comparison CNV size with other CNVs databases (gnomAD, DGV and DECIPHER)",
               plotOutput('plot_size'),
               width = 12,
@@ -429,10 +438,11 @@ shiny::shinyApp(
                 
               )
             ),
+            column(3,
             tablerCard(
               title = "Intersection - CNV and CNV pathogenics",
               DTOutput('df_intersection'),
-              width = 3,
+              width = 12,
               collapsible = FALSE,
               closable = FALSE,            
               overflow = TRUE
@@ -440,6 +450,9 @@ shiny::shinyApp(
               #   downloadButton("download_df_overlap_cnvs_nonpatho", "Download table")
               #   
               # )
+            ),
+            uiOutput('ui_intersect'),
+            useShinyjs()
             ),
             tablerCard(
               title = "Plot intersection",
@@ -998,6 +1011,8 @@ shiny::shinyApp(
   server = function(input, output) {
     
     
+    
+    
     gene_selected <- reactive({
       
       test4 <<- input$dgenes_rows_selected
@@ -1005,12 +1020,27 @@ shiny::shinyApp(
       test_1993 <<- input$dgenes_state
       
       
-      test19999 <<- 'casademiprimalatuerta'
       print(test4)
     })
     
+    # observeEvent(input$start_analysis, {
+    # 
+    #   shinyjs::reset("start_analysis")
+    # 
+    # })
+    
+    # observe({
+    #   input$start_analysis
+    #   updateActionButton(session, 'start_analysis', value = 0)
+    #   
+    #   
+    # })
+    
+    
+    
     coord_user <- reactive({
       
+      req(input$start_analysis > 0)
       
       if (input$input_geno_karyo == 'Genomic coordinates') {
         
@@ -1031,9 +1061,33 @@ shiny::shinyApp(
         
       }
       
+      # if (!is.null(input$take_intersect)) {
+      #   if (input$take_intersect > 0) {
+      #     
+      
+      # if (exists('input$df_intersection_rows_selected')) {
+        if (base::exists("input$take_intersect")) {
+          if (!is.null(input$df_intersection_rows_selected)) {
+
+        test655 <<- input$take_intersect
+        test92313122131321 <<- input$df_intersection_rows_selected
+        
+        df_tmp <- intersection_running() %>%
+          select(id, start, end) %>%
+          slice(input$df_intersection_rows_selected)
+        
+
+        coord_start <- df_tmp %>% pull(start)
+        coord_end <-  df_tmp %>% pull(end)
+
+        }
+      }
+        
+      
       c_output <- c(coord_start, coord_end)
       
       
+      shinyjs::reset('start_analysis')
       
     })
     
@@ -1091,9 +1145,9 @@ shiny::shinyApp(
       
       df_output <- cnv_df %>%
         filter(chrom == input$input_chrom) %>%
+        rowwise() %>%
         # check this because i dont get why did i use two overlaps
         mutate(keep = c(start, end) %overlaps% c(start_coordinates, end_coordinates)) %>%
-        mutate(keep = map2_lgl(start, end, function(x, y) c(x, y) %overlaps% c(start_coordinates, end_coordinates))) %>%
         filter(keep == TRUE) %>%
         select(-keep)
       
@@ -1350,7 +1404,10 @@ shiny::shinyApp(
     
     data_selected_prev <- reactive({
       
-      req(input$start_analysis > 0)
+      # req(input$start_analysis > 0)
+      # req(input$start_analysis)
+      req(coord_user())
+      
       
       start_coordinates <- coord_user()[1]
       end_coordinates <- coord_user()[2]
@@ -1451,7 +1508,8 @@ shiny::shinyApp(
     data_selected <- reactive({
       
       
-      table_output <- data_selected_prev() %>% mutate(source = 'CNV') %>% 
+      table_output <- data_selected_prev() %>% 
+        mutate(source = 'CNV') %>% 
         bind_rows(data_selected_enhancers() %>% mutate(source = 'Enhancer')) %>%
         mutate(source = as.factor(source))
       
@@ -3277,7 +3335,7 @@ output$func_do  <- renderPlot({
       df_tmp <- intersection_running() %>%
         select(id, start, end)
 
-      datatable(df_tmp, rownames = FALSE,
+      datatable(df_tmp, rownames = FALSE, selection = 'single',
                 options = list(dom = 't'))
 
     })
@@ -3343,7 +3401,7 @@ output$func_do  <- renderPlot({
       
       tmp_df <- df_overlap_cnvs_running() %>% filter(source == 'decipher')
       datatable(tmp_df, colnames = c('ID', 'Chrom', 'Start', 'End', 'Database', 'CNV size', 'Percentage Overlap (%)'),
-                
+                selection = 'single',
                 options = list(
                   columnDefs = list(list(className = 'dt-center',  targets = 0:6))),  rownames= FALSE)
     })
@@ -3353,7 +3411,7 @@ output$func_do  <- renderPlot({
       
       tmp_df <- df_overlap_cnvs_running() %>% filter(source != 'decipher')
       datatable(tmp_df, colnames = c('ID', 'Chrom', 'Start', 'End', 'Database', 'CNV size', 'Percentage Overlap (%)'),
-                
+                selection = 'single',
                 options = list(
                   columnDefs = list(list(className = 'dt-center',  targets = 0:6))),  rownames= FALSE)
     })
@@ -3426,7 +3484,7 @@ output$func_do  <- renderPlot({
       req(running_upload())
 
       tmp_df <- running_upload() %>%
-        mutate(score = pmap(list(chrom, start, end), function(a,b,c) get_model_score(a,b,c))) %>%
+        mutate(score = pmap(list(chrom, start, end), function(a,b,c) get_model_score(a,b,c, hgcn_genes, model1))) %>%
         rowwise() %>%
         mutate(n_genes = score[[2]],
                score = score[[1]])
@@ -3439,6 +3497,52 @@ output$func_do  <- renderPlot({
       
     })
     
+    
+    output$df_de_novo <- renderDataTable({
+      
+      req(input$start_analysis > 0)
+      
+      start_coordinates <- coord_user()[1]
+      end_coordinates <- coord_user()[2]
+      chrom_coordinates <- input$input_chrom
+      
+      # start_coordinates <- 34813719
+      # end_coordinates <- 36288627
+      # chrom_coordinates <- '1'
+
+      tmp_df <- denovo %>%
+        filter(chrom == chrom_coordinates) %>%
+        rowwise() %>%
+        mutate(keep = Position %overlaps% c(start_coordinates, end_coordinates)) %>%
+        ungroup() %>%
+        filter(keep == TRUE) %>%
+        select(-keep)
+      
+      datatable(tmp_df, colnames = c('Chromosome', 'Position', 'Phenotype', 'Study name', 'PubmedID', 'Function Class'), rownames = FALSE)
+      
+      
+    })
+    
+    
+    output$ui_intersect <- renderUI({
+
+
+      req(input$df_intersection_rows_selected)
+
+      actionBttn(
+        inputId = "take_intersect",
+        label = "Start!",
+        color = "success",
+        style = "material-flat",
+        size = 'sm',
+        block = TRUE
+      )
+
+
+
+
+    })
+
     
     output$download_dgenes <- downloadHandler(
       filename = function() {
