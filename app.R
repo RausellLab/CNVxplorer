@@ -394,7 +394,11 @@ shiny::shinyApp(
               width = 12,
               collapsible = FALSE,
               closable = FALSE,            
-              overflow = TRUE
+              overflow = TRUE,
+              options = tagList(
+                downloadButton("download_de_novos", "Download table")
+                
+              )
             ),
             tablerCard(
               title = "Comparison CNV size with other CNVs databases (gnomAD, DGV and DECIPHER)",
@@ -438,33 +442,27 @@ shiny::shinyApp(
                 
               )
             ),
-            column(3,
+            # column(9,
             tablerCard(
               title = "Intersection - CNV and CNV pathogenics",
               DTOutput('df_intersection'),
-              width = 12,
+              width = 5,
               collapsible = FALSE,
               closable = FALSE,            
-              overflow = TRUE
-              # options = tagList(
-              #   downloadButton("download_df_overlap_cnvs_nonpatho", "Download table")
-              #   
-              # )
+              overflow = TRUE,
+              options = tagList(
+                uiOutput('ui_intersect')
+              )
             ),
-            uiOutput('ui_intersect'),
-            useShinyjs()
-            ),
+            # useShinyjs()
+            # ),
             tablerCard(
               title = "Plot intersection",
               plotOutput('plot_intersection'),
-              width = 9,
+              width = 7,
               collapsible = FALSE,
               closable = FALSE,            
               overflow = TRUE
-              # options = tagList(
-              #   downloadButton("download_df_overlap_cnvs_nonpatho", "Download table")
-              #   
-              # )
             )
             # tablerCard(
             #   title = "Comparison CNV size with other CNVs (gnomAD, DGV and DECIPHER)",
@@ -1008,7 +1006,7 @@ shiny::shinyApp(
       
     )
   ),
-  server = function(input, output) {
+  server = function(input, output, session) {
     
     
     
@@ -1037,28 +1035,54 @@ shiny::shinyApp(
     # })
     
     
+
     
-    coord_user <- reactive({
+    observeEvent(input$take_intersect, {
       
-      req(input$start_analysis > 0)
+      
+        df_tmp <- intersection_running() %>%
+          select(id, start, end) %>%
+          slice(input$df_intersection_rows_selected)
+        
+        test32134124122121421412 <<- df_tmp
+        
+        new_start <- df_tmp %>% pull(start)
+        new_end <- df_tmp %>% pull(end)
+      
+      
+      updateNumericInput(session, "int_start", value = new_start)
+      updateNumericInput(session, "int_end", value = new_end)
+
+    })
+    
+    
+    coord_user <- eventReactive(input$start_analysis, {
+      
+      # req(input$start_analysis > 0)
       
       if (input$input_geno_karyo == 'Genomic coordinates') {
         
         coord_start <- input$int_start
         coord_end <-  input$int_end
-
+        coord_chrom <- input$input_chrom
+        
+        coord_start <- as.numeric(coord_start)
+        coord_end <- as.numeric(coord_end)
+        
         
       } else {
         
         df_tmp <- chromPlot::hg_cytoBandIdeo %>%
-          filter(Chrom == input$input_chrom) %>%
+          filter(Chrom == coord_user()[3]) %>%
           filter(Name == input$input_karyotype)
         
         coord_start <- df_tmp %>% select(Start) %>% pull()
         coord_end <-  df_tmp %>% select(End) %>% pull()
+        coord_chrom <- input$input_chrom
         
-
-        
+        coord_start <- as.numeric(coord_start)
+        coord_end <- as.numeric(coord_end)
+    
       }
       
       # if (!is.null(input$take_intersect)) {
@@ -1066,28 +1090,31 @@ shiny::shinyApp(
       #     
       
       # if (exists('input$df_intersection_rows_selected')) {
-        if (base::exists("input$take_intersect")) {
-          if (!is.null(input$df_intersection_rows_selected)) {
-
-        test655 <<- input$take_intersect
-        test92313122131321 <<- input$df_intersection_rows_selected
+      #   if (base::exists("input$take_intersect")) {
+      #     if (!is.null(input$df_intersection_rows_selected)) {
+      # 
+      #   test655 <<- input$take_intersect
+      #   test92313122131321 <<- input$df_intersection_rows_selected
+      #   
+      #   df_tmp <- intersection_running() %>%
+      #     select(id, start, end) %>%
+      #     slice(input$df_intersection_rows_selected)
+      #   
+      # 
+      #   coord_start <- df_tmp %>% pull(start)
+      #   coord_end <-  df_tmp %>% pull(end)
+      #   coord_chrom <- input$input_chrom
+      # 
+      #   }
+      # }
         
-        df_tmp <- intersection_running() %>%
-          select(id, start, end) %>%
-          slice(input$df_intersection_rows_selected)
-        
+      coord_start <- as.numeric(coord_start)
+      coord_end <- as.numeric(coord_end)
+      
+      c_output <- c(coord_start, coord_end, coord_chrom)
+      
 
-        coord_start <- df_tmp %>% pull(start)
-        coord_end <-  df_tmp %>% pull(end)
-
-        }
-      }
-        
-      
-      c_output <- c(coord_start, coord_end)
-      
-      
-      shinyjs::reset('start_analysis')
+      # shinyjs::reset('start_analysis')
       
     })
     
@@ -1141,10 +1168,10 @@ shiny::shinyApp(
       
       start_coordinates <- coord_user()[1]
       end_coordinates <- coord_user()[2]
-      chrom_coordinates <- input$input_chrom
+      chrom_coordinates <- coord_user()[3]
       
       df_output <- cnv_df %>%
-        filter(chrom == input$input_chrom) %>%
+        filter(chrom == chrom_coordinates) %>%
         rowwise() %>%
         # check this because i dont get why did i use two overlaps
         mutate(keep = c(start, end) %overlaps% c(start_coordinates, end_coordinates)) %>%
@@ -1294,7 +1321,7 @@ shiny::shinyApp(
         
         start_coordinates <- coord_user()[1]
         end_coordinates <- coord_user()[2]
-        chrom_coordinates <- input$input_chrom
+        chrom_coordinates <- coord_user()[3]
         
         query_region <-  chromPlot::hg_cytoBandIdeo %>%
           filter(Chrom %in% chrom_coordinates) %>%
@@ -1306,7 +1333,7 @@ shiny::shinyApp(
           paste0(collapse = ' OR ')
         
       } else {
-        query_region <- paste0(input$input_chrom, input$input_karyotype)
+        query_region <- paste0(chrom_coordinates, input$input_karyotype)
         
       }
       
@@ -1411,7 +1438,10 @@ shiny::shinyApp(
       
       start_coordinates <- coord_user()[1]
       end_coordinates <- coord_user()[2]
-      chrom_coordinates <- input$input_chrom
+      chrom_coordinates <- coord_user()[3]
+      
+      test999 <<- coord_user()[1]
+      test1000 <<- coord_user()[2]
       
       
       
@@ -1462,12 +1492,14 @@ shiny::shinyApp(
         mutate(coordinates = paste0(chrom,':', start_position,'-', end_position)) %>% 
         mutate(oe = paste0(oe_lof, ' (', oe_lof_lower, '-',oe_lof_upper, ')')) %>%
         select(-transcript, -oe_lof, -oe_lof_lower, -oe_lof_upper, -vg, -ensembl_gene_id)
+      
+      test1521 <<- data_raw
 
-      data_raw <- get_perc_overlap(data_raw, start_coordinates, end_coordinates)
+      data_raw <- get_perc_overlap(data_raw, coord_user()[1], coord_user()[2])
       
       data_raw <- data_raw %>% distinct()
       
-      test007 <- data_raw
+      test007 <<- data_raw
       
       data_raw
 
@@ -1600,10 +1632,13 @@ shiny::shinyApp(
     
     output$plot_size <- renderPlot({
       
-      req(input$start_analysis > 0)
+      req(coord_user())
       
       start_coordinates <- coord_user()[1]
       end_coordinates <- coord_user()[2]
+      
+      start_coordinates <- as.numeric(start_coordinates)
+      end_coordinates <- as.numeric(end_coordinates)
       
       size_cnv_query = end_coordinates - start_coordinates + 1
       
@@ -1782,12 +1817,20 @@ shiny::shinyApp(
     plot_chrom_react <- reactive({
       
       
-      req(input$start_analysis > 0)
+      # req(input$start_analysis > 0)
+      req(coord_user())
+      
       
       start_coordinates <- coord_user()[1]
       end_coordinates <- coord_user()[2]
+      chrom_coordinates <- paste0('chr', coord_user()[3])
       
-      input_chr <- paste0('chr', input$input_chrom)
+      start_coordinates <- as.numeric(start_coordinates)
+      end_coordinates <- as.numeric(end_coordinates)
+      
+      # test1916 <<-  coord_user()[1]
+      # test1917 <<- coord_user()[2]
+      # test1918 <-  paste0('chr', coord_user()[3])
       
       # data_input <- data_selected()
       # plotKaryotype()
@@ -1796,8 +1839,8 @@ shiny::shinyApp(
       # plotTracks(ideoTrack, from= input$int_start , to= input$int_end, showBandId=TRUE,
       #            cex.bands=0.5)
       # 
-      ideoTrack <- IdeogramTrack(genome="hg19", chromosome= input_chr)
-      plotTracks(ideoTrack, from= start_coordinates , to= end_coordinates, showBandId=TRUE,
+      ideoTrack <- IdeogramTrack(genome="hg19", chromosome= chrom_coordinates)
+      plotTracks(ideoTrack, from= start_coordinates , to = end_coordinates, showBandId=TRUE,
                  cex.bands=0.5)
       
       # plotKaryotype(chromosomes = input_chr, plot.type = 2) %>%
@@ -1820,7 +1863,7 @@ shiny::shinyApp(
       fisher_result <- tibble()
       
       for (i in 1:length(list_panel_names)) {
-        print(i)
+        # print(i)
         input_test <- matrix(rep(NA, 4), ncol = 2, dimnames = list(c('in_panel', 'no_panel'), c('col1', 'col2') ))
         
         input_test[1,][2] <- panel_total %>% filter(Level4 == !!list_panel_names[i]) %>% pull(gene) %in% input_genes %>% sum()
@@ -1972,7 +2015,7 @@ shiny::shinyApp(
         
       } else {
         
-        karyotype_filtered <- as.list(chromPlot::hg_cytoBandIdeo %>% filter(Chrom == input$input_chrom) %>% select(Name))
+        karyotype_filtered <- as.list(chromPlot::hg_cytoBandIdeo %>% filter(Chrom == coord_user()[3]) %>% select(Name))
         
         # selectizeInput(inputId = 'input_karyotype', label = 'Karyotype', choices = karyotype_filtered,
         #                selected = NULL, multiple = FALSE,
@@ -1996,10 +2039,10 @@ shiny::shinyApp(
       
       if (input$input_geno_karyo == 'Genomic coordinates') {
         
-        name_region <- paste0('chr',input$input_chrom, ':', input$int_start, '-', input$int_end)
+        name_region <- paste0('chr',coord_user()[3], ':', input$int_start, '-', input$int_end)
         
       } else {
-        name_region <- paste0(input$input_chrom, input$input_karyotype)
+        name_region <- paste0(coord_user()[3], input$input_karyotype)
         
       }
 
@@ -2026,6 +2069,10 @@ shiny::shinyApp(
       
       start_coordinates <- coord_user()[1]
       end_coordinates <- coord_user()[2]
+      
+      start_coordinates <- as.numeric(start_coordinates)
+      end_coordinates <- as.numeric(end_coordinates)
+      
       length_input_cnv <- end_coordinates - start_coordinates + 1
       tmp_df <- data_selected()
       
@@ -2064,7 +2111,7 @@ shiny::shinyApp(
       
       tablerStatCard(
         value = score_predicted,
-        title = 'Score pathogenicty (0-100)',
+        title = 'Score pathogenicty (0-100) (JUST AN EXAMPLE)',
         # trend = 19192,
         width = 12
       )
@@ -2093,10 +2140,10 @@ shiny::shinyApp(
       
       if (input$input_geno_karyo == 'Genomic coordinates') {
         
-        name_region <- paste0('chr',input$input_chrom, ':', input$int_start, '-', input$int_end)
+        name_region <- paste0('chr',coord_user()[3], ':', input$int_start, '-', input$int_end)
         
       } else {
-        name_region <- paste0(input$input_chrom, input$input_karyotype)
+        name_region <- paste0(coord_user()[3], input$input_karyotype)
         
       }
       
@@ -2118,10 +2165,10 @@ shiny::shinyApp(
       
       if (input$input_geno_karyo == 'Genomic coordinates') {
         
-        name_region <- paste0('chr',input$input_chrom, ':', input$int_start, '-', input$int_end)
+        name_region <- paste0('chr',coord_user()[3], ':', input$int_start, '-', input$int_end)
         
       } else {
-        name_region <- paste0(input$input_chrom, input$input_karyotype)
+        name_region <- paste0(coord_user()[3], input$input_karyotype)
         
       }
       
@@ -2168,10 +2215,10 @@ shiny::shinyApp(
       
       if (input$input_geno_karyo == 'Genomic coordinates') {
         
-        name_region <- paste0('chr', input$input_chrom, ':', input$int_start, '-', input$int_end)
+        name_region <- paste0('chr', coord_user()[3], ':', input$int_start, '-', input$int_end)
         
       } else {
-        name_region <- paste0(input$input_chrom, input$input_karyotype)
+        name_region <- paste0(coord_user()[3], input$input_karyotype)
         
       }
       
@@ -2188,7 +2235,7 @@ shiny::shinyApp(
     
     output$ref_user_length <- renderUI({
       
-       req(input$start_analysis > 0)
+       req(coord_user())
       # 
       # 
       # if (input$input_geno_karyo == 'Genomic coordinates') {
@@ -2213,7 +2260,15 @@ shiny::shinyApp(
       
       start_coordinates <- coord_user()[1]
       end_coordinates <- coord_user()[2]
-      chrom_coordinates <- input$input_chrom
+      chrom_coordinates <- coord_user()[3]
+      
+      start_coordinates <- as.numeric(start_coordinates)
+      end_coordinates <- as.numeric(end_coordinates)
+      
+      
+      test3133 <<- coord_user()[1]
+      test3134 <<- coord_user()[2]
+      
       
       length_region <- end_coordinates - start_coordinates + 1
       length_region <- round(length_region / 1e6, 2)
@@ -2256,7 +2311,7 @@ shiny::shinyApp(
       
       start_coordinates <- coord_user()[1]
       end_coordinates <- coord_user()[2]
-      chrom_coordinates <- input$input_chrom
+      chrom_coordinates <- coord_user()[3]
       
       data_tmp <- lncrna_coord %>% filter(chrom == chrom_coordinates) %>%
         mutate(keep = 0)
@@ -2303,7 +2358,7 @@ shiny::shinyApp(
       
       start_coordinates <- coord_user()[1]
       end_coordinates <- coord_user()[2]
-      chrom_coordinates <- input$input_chrom
+      chrom_coordinates <- coord_user()[3]
       
       data_tmp <- df_enhancers %>% filter(chrom == chrom_coordinates) %>%
         mutate(keep = 0)
@@ -2462,7 +2517,7 @@ shiny::shinyApp(
       
       start_coordinates <- coord_user()[1]
       end_coordinates <- coord_user()[2]
-      chrom_coordinates <- input$input_chrom
+      chrom_coordinates <- coord_user()[3]
       
       
       n_tads <- check_tads(chrom_coordinates, start_coordinates, end_coordinates, tad )
@@ -2514,7 +2569,7 @@ output$n_filtered_enhancers <- renderUI({
       
       start_coordinates <- coord_user()[1]
       end_coordinates <- coord_user()[2]
-      chrom_coordinates <- input$input_chrom
+      chrom_coordinates <- coord_user()[3]
       
       
       n_tads <- check_tads(chrom_coordinates, start_coordinates, end_coordinates, tad )
@@ -3304,7 +3359,10 @@ output$func_do  <- renderPlot({
 
       start_coordinates <- coord_user()[1]
       end_coordinates <- coord_user()[2]
-      chrom_coordinates <- input$input_chrom
+      chrom_coordinates <- coord_user()[3]
+      
+      start_coordinates <- as.numeric(start_coordinates)
+      end_coordinates <- as.numeric(end_coordinates)
 
       df_pathogenic <- df_overlap_cnvs_running() %>% filter(source == 'decipher')
 
@@ -3344,6 +3402,9 @@ output$func_do  <- renderPlot({
 
       start_coordinates <- coord_user()[1]
       end_coordinates <- coord_user()[2]
+      
+      start_coordinates <- as.numeric(start_coordinates)
+      end_coordinates <- as.numeric(end_coordinates)
 
       
       df_tmp <-intersection_running()
@@ -3372,7 +3433,7 @@ output$func_do  <- renderPlot({
         geom_path(data =df_total %>% filter(id != 'gene(s)'), aes(pos, id, group = id, color = id_color)) +
         coord_cartesian(xlim = c(start_coordinates, end_coordinates )) +
         ylab('Id intersections') +
-        xlab(paste0('chr', input$input_chrom, ':', start_coordinates, '-', end_coordinates)) +
+        xlab(paste0('chr', coord_user()[3], ':', coord_user()[1], '-', coord_user()[2])) +
         theme_fancy()
 
     })
@@ -3498,18 +3559,17 @@ output$func_do  <- renderPlot({
     })
     
     
-    output$df_de_novo <- renderDataTable({
+    
+    running_de_novo <- reactive({
       
       req(input$start_analysis > 0)
       
       start_coordinates <- coord_user()[1]
       end_coordinates <- coord_user()[2]
-      chrom_coordinates <- input$input_chrom
+      chrom_coordinates <- coord_user()[3]
       
-      # start_coordinates <- 34813719
-      # end_coordinates <- 36288627
-      # chrom_coordinates <- '1'
 
+      
       tmp_df <- denovo %>%
         filter(chrom == chrom_coordinates) %>%
         rowwise() %>%
@@ -3518,7 +3578,17 @@ output$func_do  <- renderPlot({
         filter(keep == TRUE) %>%
         select(-keep)
       
-      datatable(tmp_df, colnames = c('Chromosome', 'Position', 'Phenotype', 'Study name', 'PubmedID', 'Function Class'), rownames = FALSE)
+      tmp_df
+
+    })
+    
+    
+    
+    output$df_de_novo <- renderDataTable({
+      
+    
+      
+      datatable(running_de_novo(), colnames = c('Chromosome', 'Position', 'Phenotype', 'Study name', 'PubmedID', 'Function Class'), rownames = FALSE)
       
       
     })
@@ -3531,8 +3601,8 @@ output$func_do  <- renderPlot({
 
       actionBttn(
         inputId = "take_intersect",
-        label = "Start!",
-        color = "success",
+        label = "Run this region!",
+        color = "warning",
         style = "material-flat",
         size = 'sm',
         block = TRUE
@@ -3559,6 +3629,15 @@ output$func_do  <- renderPlot({
       },
       content = function(file) {
         write.table(running_pubmed(), file, row.names = FALSE, sep = '\t')
+      }
+    )
+    
+    output$download_de_novos <- downloadHandler(
+      filename = function() {
+        paste0('denovo_variants', '_', Sys.Date(), ".tab")
+      },
+      content = function(file) {
+        write.table(running_de_novo(), file, row.names = FALSE, sep = '\t')
       }
     )
     

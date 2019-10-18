@@ -101,6 +101,9 @@ get_perc_overlap <- function(df, start_cnv, end_cnv) {
   # 
   # df <- test1
   
+  start_cnv <- as.numeric(start_cnv)
+  end_cnv <- as.numeric(end_cnv)
+  
   df <- df %>%
     rename(start_gene = start_position, end_gene = end_position) %>%
     mutate(type_overlap = case_when(

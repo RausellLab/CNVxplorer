@@ -877,13 +877,12 @@ blacklist_encode <- read.table('/home/cbl02/Storage/data/hg19-blacklist.bed', se
 # Source: http://dgv.tcag.ca/dgv/docs/GRCh37_hg19_variants_2016-05-15.txt
 # ------------------------------------------------------------------------------
 
-dgv_df <- read.table('/home/cbl02/Storage/data/GRCh37_hg19_variants_2016-05-15.txt', sep = '\t', stringsAsFactors = FALSE,
-                     header = TRUE) %>%
+dgv_df <- read_tsv('/home/cbl02/Storage/data/GRCh37_hg19_variants_2016-05-15.txt') %>%
   as_tibble() %>%
   filter(varianttype == 'CNV') %>%
   filter(variantsubtype %in% c('deletion', 'duplication')) %>%
   rename(id = variantaccession, chrom = chr) %>%
-  select(id, chrom, start, end) %>%
+  #select(id, chrom, start, end) %>%
   mutate(source = 'dgv')
 
 # ------------------------------------------------------------------------------

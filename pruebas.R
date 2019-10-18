@@ -1,8 +1,61 @@
 
+df_windows <- read_tsv('/home/cbl02/Storage/remot/test_chunks/chrom_20_window') %>%
+  na.omit() %>%
+  mutate(id = row_number()) %>%
+  arrange(start) %>%
+  mutate(is_gene = NA)
 
 
+refGR <- makeGRangesFromDataFrame(df_windows)
+testGR <- makeGRangesFromDataFrame(hgcn_genes %>% filter(chrom == '20') %>%
+                                     rename(start = start_position,
+                                            end = end_position))
 
 
+hits <- findOverlaps(refGR, testGR) %>% as_tibble() %>% rename(id = queryHits)
+
+hits <- hits %>% count(id) %>% arrange(desc(n)) %>% rename(n_hits = n) %>% right_join(df_windows)
+
+hits  %>% mutate(n_hits = ifelse(isNA(n_hits), FALSE, TRUE)) %>%
+  mutate(n_hits = as.factor(n_hits)) %>%
+  ggplot(aes(n_hits, ratio)) +
+  geom_boxplot(aes(fill = n_hits)) +
+  coord_cartesian(ylim = c(0, 10^7))
+
+vector_start_genes <- hgcn_genes %>% filter(chrom == '20') %>% pull(start_position)
+vector_end_genes <- hgcn_genes %>% filter(chrom == '20') %>% pull(end_position)
+
+
+for (i in 1:nrow(df_windows)) {
+  print(i)
+  i <- 3000
+  tmp_start = df_windows$start[i]
+  tmp_end =  df_windows$end[i]
+  df_windows$is_gene[i] <- c(tmp_start, tmp_end) %overlaps% c(vector_start_genes, vector_end_genes)
+
+}
+  print(i)
+
+  df_windows %>% ggplot(aes(is_gene, ratio)) +
+    geom_boxplot() +
+    coord_cartesian(ylim = c(0,10^7))
+  
+  df_windows %>% ggplot(aes(ratio)) +
+    geom_density(aes(fill = is_gene), alpha = 0.3) + 
+    coord_cartesian(xlim = c(0,10^8))
+  
+  
+t.test(df_windows %>% filter(is_gene == TRUE) %>% pull(ratio),
+       df_windows %>% filter(is_gene == FALSE) %>% pull(ratio))
+
+test <- df_windows %>% 
+
+  rowwise() %>%
+  mutate(is_gene = c(start, end) %overlaps% c(hgcn_genes %>% filter(chrom == '20') %>% pull(start_position), 
+                                              hgcn_genes %>% filter(chrom == '20') %>% pull(end_position))) %>%
+  ungroup()
+
+test %>% count(is_gene)
 
     tmp_gr <- GRanges(
       seqnames = paste0('chr',1),
