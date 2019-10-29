@@ -442,6 +442,14 @@ shiny::shinyApp(
                 
               )
             ),
+            tablerCard(
+              title = "Barplot ",
+              plotOutput('plot_cnv_bar'),
+              width = 12,
+              collapsible = FALSE,
+              closable = FALSE,            
+              overflow = TRUE
+            ),
             # column(9,
             tablerCard(
               title = "Intersection - CNV and CNV pathogenics",
@@ -459,7 +467,7 @@ shiny::shinyApp(
             tablerCard(
               title = "Plot intersection",
               plotOutput('plot_intersection'),
-              width = 7,
+              width = 12,
               collapsible = FALSE,
               closable = FALSE,            
               overflow = TRUE
@@ -3453,6 +3461,63 @@ output$func_do  <- renderPlot({
       tmp_df <-  df_overlap_cnvs_running() %>% filter(source != 'decipher')
       
       tmp_df
+    })
+    
+    output$plot_cnv_bar <- renderPlot({
+      
+      
+      start_pos <- as.numeric(coord_user()[1])
+      end_pos <- as.numeric(coord_user()[2])  
+      
+
+      
+      df_nonpathogenic <- df_overlap_cnvs_running() %>% filter(source != 'decipher')
+      df_pathogenic <- df_overlap_cnvs_running() %>% filter(source == 'decipher')
+      
+      test8231 <<- start_pos
+      test8999 <<- end_pos
+      test88881 <<- df_nonpathogenic
+      test88882 <<- df_pathogenic
+      
+      # start_pos <- test8231
+      # end_pos <- test8999
+      # df_nonpathogenic <- test88881
+      # df_pathogenic <- test88882
+      
+      
+      interval_values <- seq(from = start_pos, to = end_pos, length.out = 200)
+      
+      df_interval <- matrix(interval_values, ncol = 2, byrow = TRUE)
+      colnames(df_interval) <- c('start', 'end')
+      df_interval <- as_tibble(df_interval)
+      
+      query <- IRanges(df_interval$start, df_interval$end)
+      
+      # Evaluate pathogenic CNVs
+      subject_patho <- IRanges(df_pathogenic$start_position, df_pathogenic$end_position)
+      hits_intervals_patho <- countOverlaps(query, subject_patho)
+      
+      # Evaluate pathogenic CNVs
+      subject_nonpatho<- IRanges(df_nonpathogenic$start_position, df_nonpathogenic$end_position)
+      hits_intervals_nonpatho <- countOverlaps(query, subject_nonpatho)
+      
+      
+      df_interval <- df_interval %>% mutate(n_patho = hits_intervals_patho, 
+                                            n_nonpatho = hits_intervals_nonpatho) %>%
+        mutate(id = row_number()) %>%
+        gather('category', 'n_overlap', -start, -end, -id)
+      
+      
+      df_interval %>%
+        mutate(category = if_else(category == 'n_patho', 'Pathogenic CNVs', 'Non-pathogenic CNVs')) %>%
+        ggplot(aes(id, n_overlap)) +
+        geom_col(aes(fill = category), color = 'black', show.legend = FALSE) + 
+        #geom_point() +
+        # geom_smooth(aes(color = category, group = category))
+        #geom_line(aes(color = category, group = category)) + 
+        theme_minimal() + 
+        facet_wrap(~category, nrow = 2)
+
     })
     
 

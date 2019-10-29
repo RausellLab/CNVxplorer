@@ -5,6 +5,7 @@ library(readxl)
 library(biomaRt)
 library(data.table)
 library(tidyverse)
+library(clusterProfiler)
 select <- dplyr::select
 
 
@@ -148,28 +149,6 @@ hgcn_genes %>% filter(is.na(start_position)) %>% select(ensembl_gene_id) %>% pul
 
 # There are 398 genes with no coordinates
 
-hgcn_genes <- hgcn_genes %>%
-  left_join(pli) %>% # pli score
-  left_join(vg) %>% # variance gene expression
-  mutate(haplo = as.factor(if_else(gene %in% clingen, 'Yes', 'No'))) %>% # haploinsufficiency genes
-  mutate(triplo = as.factor(if_else(gene %in% triplo, 'Yes', 'No'))) %>% # triploinsufficiency genes 
-  mutate(dev = as.factor(if_else(gene %in% dev_genes, 'Yes', 'No'))) %>% # developmental disorder genes - it can be extended with mode, consecuence and disease
-  mutate(fda = as.factor(if_else(gene %in% fda, 'Yes', 'No'))) %>% #  Mechanistic targets of FDA-approved drugs 
-  mutate(clinvar = as.factor(if_else(gene %in% clinvar, 'Yes', 'No'))) %>% # List of genes with likely pathogenic and pathogenic variants
-  mutate(gwas = as.factor(if_else(gene %in% gwas, 'Yes', 'No'))) %>% # GWAS genes
-  mutate(omim = as.factor(if_else(gene %in% omim, 'Yes', 'No'))) %>% # GWAS genes
-  mutate(essent = as.factor(if_else(ensembl_gene_id %in% e_intersect$V1 , 'Yes', 'No'))) %>% # essential genes (intersection mgi_invitro)
-  left_join(ccr) %>% # Genes with CCRs in the 99th percentile or higher 
-  left_join(nc) %>% # non-coding scores RVIS and ncGERP - 5UTR + 3UTR + 250bp upstream
-  left_join(rvis) %>% # RVIS score based
-  left_join(hi) %>% # Haploinsufficiency Score (HI index)
-  left_join(snipre) %>% # SNIPre score
-  left_join(gdi) # GDI score (High GDI values reflect highly damaged genes. )
-
-hgcn_genes <- hgcn_genes %>% 
-  rename(chrom = chromosome_name) %>%
-  mutate(ccr = ifelse(is.na(ccr), 0, ccr)) %>%
-  rename(band = location)
 
 
 # ------------------------------------------------------------------------------
@@ -196,7 +175,7 @@ vg_raw <- read_excel('/home/cbl02/Storage/data/vg.xlsx', sheet = 3)
 vg_raw <- vg_raw %>% rename(vg = Avg_VG) %>% filter(vg != 'NaN') %>% mutate(vg = as.numeric(vg)) %>%
   rename(gene = GeneID)
 
-test <- bitr(vg_raw$gene, fromType = 'ENSEMBL', toType = "ENTREZID", OrgDb="org.Hs.eg.db")
+test <- clusterProfiler::bitr(vg_raw$gene, fromType = 'ENSEMBL', toType = "ENTREZID", OrgDb="org.Hs.eg.db")
 
 vg <- vg_raw %>% left_join(test, by = c('gene' = 'ENSEMBL')) %>% select(-gene) %>% select(ENTREZID, vg) %>%
   mutate(ENTREZID = as.numeric(ENTREZID)) %>% rename(entrez_id = ENTREZID)
@@ -283,11 +262,13 @@ omim$phenotype <-map_chr(omim$phenotype, function(x) str_replace(x, '\\d{6}', ''
 omim$phenotype <-map_chr(omim$phenotype, function(x) str_replace(x, '\\d{6}', ''))
 omim$phenotype <-map_chr(omim$phenotype, function(x) gsub( '*\\(.*?\\) *', '', x)) 
 omim$phenotype <-map_chr(omim$phenotype, function(x) str_remove( x, ',  ')) 
+
+
 omim  <- omim %>% 
   filter(map_key %in% c(1:4)) %>%
   pull(gene)
 
-omim %>% count(map_key)
+# omim %>% count(map_key)
 # A tibble: 4 x 2
 # map_key       n
 #   1          68
@@ -334,7 +315,7 @@ clinvar_raw <- read.table('/home/cbl02/Storage/data/clinvar_20190527.vcf', skip 
 
 clinvar <- clinvar_raw %>% 
   as_tibble() %>%
-  filter(!str_detect(V8, 'CLNSIG=Pathogenic') | str_detect(V8, 'CLNSIG=likely_pathogenic')) %>%
+  filter(!str_detect(V8, 'CLNSIG=Pathogenic')) %>%
   select(V8) %>%
   mutate(gene = str_extract(V8, pattern =  'GENEINFO[^;]*')) %>%
   select(-V8) %>%
@@ -471,7 +452,7 @@ hpa <- hpa %>%
 
 mgi <- read.table('http://www.informatics.jax.org/downloads/reports/HMD_HumanPhenotype.rpt', sep = '\t')
 
-mgi <- mouse_p %>%
+mgi <- mgi %>%
   as_tibble() %>%
   select(-V8, -V3) %>%
   rename(gene = V1, entrez_id = V2, gene_mouse = V5, pheno = V7, mgi = V6) %>%
@@ -494,7 +475,7 @@ mgi <- mouse_p %>%
 # are deleted or duplicated causing the phenotype.
 #
 
-morbidmap <- read_xlsx('data/morbidmap.xlsx', skip = 3)
+morbidmap <- read_xlsx('/home/cbl02/Storage/data/morbidmap.xlsx', skip = 3)
 
 morbidmap <- morbidmap %>% 
   as_tibble() %>%
@@ -593,7 +574,20 @@ decipher_sv_raw <- read.table('/home/cbl02/Storage/data/population_cnv.txt', sep
   mutate(id = as.character(id)) %>%
   select(id, chrom, start, end, source)
   
-  
+# ------------------------------------------------------------------------------
+# Dataset: DGV
+# Source: http://dgv.tcag.ca/dgv/docs/GRCh37_hg19_variants_2016-05-15.txt
+# ------------------------------------------------------------------------------
+
+dgv_df <- read_tsv('/home/cbl02/Storage/data/GRCh37_hg19_variants_2016-05-15.txt') %>%
+  as_tibble() %>%
+  filter(varianttype == 'CNV') %>%
+  filter(variantsubtype %in% c('deletion', 'duplication')) %>%
+  rename(id = variantaccession, chrom = chr) %>%
+  #select(id, chrom, start, end) %>%
+  mutate(source = 'dgv')  
+
+
 # ------------------------------------------------------------------------------
 # Dataset: Aggregation of data from DECIPHER, gnomAD and DGV
 # ------------------------------------------------------------------------------
@@ -653,10 +647,10 @@ tad <- tad %>%
 # Genome reference: hg19
 # ------------------------------------------------------------------------------
 
-genehancer <- read.table('/home/cbl02/Storage/data/genehancer_V4_11.gff', header = FALSE, sep = '\t', 
+genehancer <- read.table('/home/cbl02/Storage/data/genehancer_V4_11.gff', header = FALSE, sep = '\t',
                   stringsAsFactors = FALSE)
 
-df <- genehancer %>% 
+df <- genehancer %>%
   as.tibble() %>%
   filter(V3 == 'Enhancer') %>%
   select(-V2, -V3, -V7, -V8) %>%
@@ -704,9 +698,9 @@ df_ge <- df_assoc_enh %>% left_join(df_assoc_gene, by = 'id')
 df_ge <- df_ge %>% select(gene, everything())
 df_ge <- df_ge %>% na.omit()
 df_ge <- df_ge %>% filter(chrom != 'chrY')
-
-write.table(df_ge %>% select(chrom, start, end, id) %>% distinct(), 'enhancer_cnvxplore', quote = FALSE, row.names = FALSE,
-            col.names = FALSE, sep = '\t', append = TRUE)
+# 
+# write.table(df_ge %>% select(chrom, start, end, id) %>% distinct(), 'enhancer_cnvxplore', quote = FALSE, row.names = FALSE,
+#             col.names = FALSE, sep = '\t', append = TRUE)
 
 # Used liftOver (https://genome.ucsc.edu/cgi-bin/hgLiftOver). Default parameters
 # from Grch38 to Grch37
@@ -720,9 +714,9 @@ df_enhancers <- enhancer_raw %>% as_tibble() %>% rename(chrom = V1, start = V2, 
 
 df_enhancers <- df_ge %>% select(gene, id, score_enh, score) %>% left_join(df_enhancers, by = 'id')
 
-write.table(enhancer_raw %>% filter(!str_detect(V1, 'PATCH')) %>% distinct(),
-            '/home/cbl02/Storage/data/enhancer_cnvxplorer', quote = FALSE, row.names = FALSE,
-            col.names = FALSE, sep = '\t', append = TRUE)
+# write.table(enhancer_raw %>% filter(!str_detect(V1, 'PATCH')) %>% distinct(),
+#             '/home/cbl02/Storage/data/enhancer_cnvxplorer', quote = FALSE, row.names = FALSE,
+#             col.names = FALSE, sep = '\t', append = TRUE)
 
 
 from_python <- read.table('/home/cbl02/Storage/data/enhancer_cnvxplorer_cons', header = TRUE, 
@@ -832,34 +826,34 @@ lncrna_expression <- lncrna_expression_raw %>%
 # Comment: the score 90 is obtained from Quinlab (A map of constraint regions in coding part)
 # ------------------------------------------------------------------------------
 
-seg_dup <- read.table('http://humanparalogy.gs.washington.edu/build37/data/GRCh37GenomicSuperDup.tab', header = TRUE) %>% 
-  as_tibble()
-
-seg_dup1 <- seg_dup %>% select(chrom, chromStart, chromEnd) %>% 
-  rename(start = chromStart, end = chromEnd)
-seg_dup2 <- seg_dup %>% select(otherChrom, otherStart, otherEnd) %>%
-  rename(chrom = otherChrom, start = otherStart, end = otherEnd)
-seg_dup <- seg_dup1 %>% bind_rows(seg_dup2) %>% distinct()  %>% mutate(chrom = str_remove(chrom, 'chr')) %>%
-  makeGRangesFromDataFrame()
-
-# Self-chain coordinates
-
-self_chain <- read.table('data/chainSelf.txt', header = FALSE) %>% as_tibble()
-colnames(self_chain) <- c('bin', 'score', 'tName', 'tSize', 'tStart', 'tEnd', 'qName', 'qSize', 'qStrand',
-                          'qStart', 'qEnd', 'id', 'normScore')
-
-# NormScore = score / length bases. This score threshold is based on the paper: 
-self_chain <- self_chain %>% filter(normScore >= 90)
-
-# Clean dataframe and convert it to a GRanges object
-
-self_chain1 <- self_chain %>% select(tName, tStart, tEnd) %>% 
-  rename(chrom = tName, start = tStart, end = tEnd)
-self_chain2 <- self_chain %>% select(qName, qStart, qEnd) %>%
-  rename(chrom = qName, start = qStart, end = qEnd)
-self_chain <- self_chain1 %>% bind_rows(self_chain2) %>% distinct()  %>% mutate(chrom = str_remove(chrom, 'chr')) %>%
-  makeGRangesFromDataFrame()
-
+# seg_dup <- read.table('http://humanparalogy.gs.washington.edu/build37/data/GRCh37GenomicSuperDup.tab', header = TRUE) %>% 
+#   as_tibble()
+# 
+# seg_dup1 <- seg_dup %>% select(chrom, chromStart, chromEnd) %>% 
+#   rename(start = chromStart, end = chromEnd)
+# seg_dup2 <- seg_dup %>% select(otherChrom, otherStart, otherEnd) %>%
+#   rename(chrom = otherChrom, start = otherStart, end = otherEnd)
+# seg_dup <- seg_dup1 %>% bind_rows(seg_dup2) %>% distinct()  %>% mutate(chrom = str_remove(chrom, 'chr')) %>%
+#   makeGRangesFromDataFrame()
+# 
+# # Self-chain coordinates
+# 
+# self_chain <- read.table('data/chainSelf.txt', header = FALSE) %>% as_tibble()
+# colnames(self_chain) <- c('bin', 'score', 'tName', 'tSize', 'tStart', 'tEnd', 'qName', 'qSize', 'qStrand',
+#                           'qStart', 'qEnd', 'id', 'normScore')
+# 
+# # NormScore = score / length bases. This score threshold is based on the paper: 
+# self_chain <- self_chain %>% filter(normScore >= 90)
+# 
+# # Clean dataframe and convert it to a GRanges object
+# 
+# self_chain1 <- self_chain %>% select(tName, tStart, tEnd) %>% 
+#   rename(chrom = tName, start = tStart, end = tEnd)
+# self_chain2 <- self_chain %>% select(qName, qStart, qEnd) %>%
+#   rename(chrom = qName, start = qStart, end = qEnd)
+# self_chain <- self_chain1 %>% bind_rows(self_chain2) %>% distinct()  %>% mutate(chrom = str_remove(chrom, 'chr')) %>%
+#   makeGRangesFromDataFrame()
+# 
 
 # ------------------------------------------------------------------------------
 # Dataset: blacklist.v2.bed
@@ -872,18 +866,7 @@ blacklist_encode <- read.table('/home/cbl02/Storage/data/hg19-blacklist.bed', se
   select(-V5, -V6) %>%
   mutate(chrom = str_remove(chrom, 'chr'))
   
-# ------------------------------------------------------------------------------
-# Dataset: DGV
-# Source: http://dgv.tcag.ca/dgv/docs/GRCh37_hg19_variants_2016-05-15.txt
-# ------------------------------------------------------------------------------
 
-dgv_df <- read_tsv('/home/cbl02/Storage/data/GRCh37_hg19_variants_2016-05-15.txt') %>%
-  as_tibble() %>%
-  filter(varianttype == 'CNV') %>%
-  filter(variantsubtype %in% c('deletion', 'duplication')) %>%
-  rename(id = variantaccession, chrom = chr) %>%
-  #select(id, chrom, start, end) %>%
-  mutate(source = 'dgv')
 
 # ------------------------------------------------------------------------------
 # Dataset: Essential genes (intersection mgi + invitro (paper: ))
@@ -1059,5 +1042,36 @@ imp_genes <- imp_genes %>%
 denovo <- read_tsv('/home/cbl02/Storage/data/denovo-db.non-ssc-samples.variants.v.1.6.1.tsv', skip = 1)
 
 denovo <- denovo %>% 
-  select(Chr, Position, PrimaryPhenotype, StudyName, PubmedID, FunctionClass) %>%
+  select(Chr, Position, Gene, PrimaryPhenotype, StudyName, PubmedID, FunctionClass) %>%
   rename(chrom = Chr)
+
+
+
+
+
+# ------------------------------------------------------------------------------
+# AGGREGATE ALL THE INFORMATION
+# ------------------------------------------------------------------------------
+
+hgcn_genes <- hgcn_genes %>%
+  left_join(pli) %>% # pli score
+  left_join(vg) %>% # variance gene expression
+  mutate(haplo = as.factor(if_else(gene %in% clingen, 'Yes', 'No'))) %>% # haploinsufficiency genes
+  mutate(triplo = as.factor(if_else(gene %in% triplo, 'Yes', 'No'))) %>% # triploinsufficiency genes 
+  mutate(dev = as.factor(if_else(gene %in% dev_genes, 'Yes', 'No'))) %>% # developmental disorder genes - it can be extended with mode, consecuence and disease
+  mutate(fda = as.factor(if_else(gene %in% fda, 'Yes', 'No'))) %>% #  Mechanistic targets of FDA-approved drugs 
+  mutate(clinvar = as.factor(if_else(gene %in% clinvar, 'Yes', 'No'))) %>% # List of genes with likely pathogenic and pathogenic variants
+  mutate(gwas = as.factor(if_else(gene %in% gwas, 'Yes', 'No'))) %>% # GWAS genes
+  mutate(omim = as.factor(if_else(gene %in% omim, 'Yes', 'No'))) %>% # GWAS genes
+  mutate(essent = as.factor(if_else(ensembl_gene_id %in% e_intersect$V1 , 'Yes', 'No'))) %>% # essential genes (intersection mgi_invitro)
+  left_join(ccr) %>% # Genes with CCRs in the 99th percentile or higher 
+  left_join(nc) %>% # non-coding scores RVIS and ncGERP - 5UTR + 3UTR + 250bp upstream
+  left_join(rvis) %>% # RVIS score based
+  left_join(hi) %>% # Haploinsufficiency Score (HI index)
+  left_join(snipre) %>% # SNIPre score
+  left_join(gdi) # GDI score (High GDI values reflect highly damaged genes. )
+
+hgcn_genes <- hgcn_genes %>% 
+  rename(chrom = chromosome_name) %>%
+  mutate(ccr = ifelse(is.na(ccr), 0, ccr)) %>%
+  rename(band = location)

@@ -1,10 +1,40 @@
 
-df_windows <- read_tsv('/home/cbl02/Storage/remot/test_chunks/chrom_20_window') %>%
-  na.omit() %>%
-  mutate(id = row_number()) %>%
-  arrange(start) %>%
-  mutate(is_gene = NA)
 
+###
+
+
+library(tidyverse)
+library(readxl)
+
+df_paper <- read_xlsx('/home/cbl02/Desktop/test_paper_antonio.xlsx', sheet = 1, skip = 2)
+
+df_paper <- df_paper %>% 
+  filter(Consequence_severity == 'High probability LoF') %>%
+  filter(Manual.annotation == 'LoF') %>%
+  filter(!str_detect(GeneName, '^OR')) %>%
+  pull(GeneName)
+  
+test_df <- hgcn_genes %>%
+  filter(gene %in% df_paper)
+
+
+
+
+
+###
+
+
+
+
+
+
+df_windows <- read_tsv('/home/cbl02/Storage/remot/test_chunks/chr20_window')
+  #na.omit() %>%
+  #mutate(id = row_number()) %>%
+  #arrange(start) %>%
+  #mutate(is_gene = NA)
+df_windows %>% filter(obs == 2) %>% slice(1) %>% pull(exp)
+df_windows %>% filter(start == 65901)  %>% pull(exp)
 
 refGR <- makeGRangesFromDataFrame(df_windows)
 testGR <- makeGRangesFromDataFrame(hgcn_genes %>% filter(chrom == '20') %>%
@@ -24,6 +54,11 @@ hits  %>% mutate(n_hits = ifelse(isNA(n_hits), FALSE, TRUE)) %>%
 
 vector_start_genes <- hgcn_genes %>% filter(chrom == '20') %>% pull(start_position)
 vector_end_genes <- hgcn_genes %>% filter(chrom == '20') %>% pull(end_position)
+
+df_windows %>%
+  time_decompose(ratio, method = 'stl') %>%
+  #anomalize(remainder, method = 'ged', alpha = 0.05, max_anoms = 0.2) %>%
+  plot_anomaly_decomposition()
 
 
 for (i in 1:nrow(df_windows)) {
@@ -63,6 +98,56 @@ test %>% count(is_gene)
     a <- gscores(cadd_1_3, tmp_gr)
 
 
+test1931 <- test312
+    
+cnv_patho <- test1931 %>% filter(source == 'decipher')
+cnv_nonpatho <- test1931 %>% filter(source == 'dgv')
+
+
+    
+start_pos <- 34813719
+end_pos <- 36278623  
+
+
+interval_values <- seq(from = start_pos, to = end_pos, length.out = 200)
+
+df_interval <- matrix(interval_values, ncol = 2, byrow = TRUE)
+colnames(df_interval) <- c('start', 'end')
+df_interval <- as_tibble(df_interval)
+
+query <- IRanges(df_interval$start, df_interval$end)
+subject_patho <- IRanges(cnv_patho$start, cnv_patho$end)
+hits_intervals_patho <- countOverlaps(query, subject_patho)
+
+subject_nonpatho<- IRanges(cnv_nonpatho$start, cnv_nonpatho$end)
+hits_intervals_nonpatho <- countOverlaps(query, subject_nonpatho)
+
+
+df_interval <- df_interval %>% mutate(n_patho = hits_intervals_patho, 
+                                      n_nonpatho = hits_intervals_nonpatho) %>%
+  mutate(id = row_number()) %>%
+  gather('category', 'n_overlap', -start, -end, -id)
+
+
+df_interval %>%
+  mutate(category = if_else(category == 'n_patho', 'Pathogenic CNVs', 'Non-pathogenic CNVs')) %>%
+  ggplot(aes(id, n_overlap)) +
+  geom_col(aes(fill = category), color = 'black', show.legend = FALSE) + 
+  #geom_point() +
+ # geom_smooth(aes(color = category, group = category))
+  #geom_line(aes(color = category, group = category)) + 
+  theme_minimal() + 
+  facet_wrap(~category, nrow = 2)
+
+df_interval %>%
+  mutate(category = if_else(category == 'n_patho', 'Pathogenic CNVs', 'Non-pathogenic CNVs')) %>%
+  ggplot(aes(id, n_overlap)) +
+  geom_density(aes(fill = category), color = 'black', show.legend = FALSE) + 
+  #geom_point() +
+  # geom_smooth(aes(color = category, group = category))
+  #geom_line(aes(color = category, group = category)) + 
+  theme_minimal() + 
+  facet_wrap(~category, nrow = 2)
 
 
 
