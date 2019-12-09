@@ -1,7 +1,67 @@
 
 
+
+
+
+
+test231312321$ID
+
+bp_go <- godata('org.Hs.eg.db', ont="BP")
+mf_go <- godata('org.Hs.eg.db', ont="MF")
+cc_go <- godata('org.Hs.eg.db', ont="CC")
+
+goSim("GO:0004022", "GO:0005515", semData=hsGO, measure="Jiang")
+
+a <- GOSemSim::termSim(test231312321$ID, test231312321$ID, semData = hsGO, method = 'Resnik')
 ###
 
+
+
+
+b <- GOSemSim::mgeneSim(tes912$entrez_id, mf_go, measure = 'Resnik')
+c <- GOSemSim::mgeneSim(tes912$entrez_id, mf_go, measure = 'Resnik', combine = 'avg')
+
+b == c
+
+
+go1 = c("GO:0004022","GO:0004024","GO:0004174")
+go2 = c("GO:0009055","GO:0005515")
+mgoSim(go1, go2, semData=hsGO, measure="Wang", combine= 'BMA')
+
+
+
+dgv_df
+
+
+######
+# Given a genomic interval chrom:start-end, identify genes that are overlapping
+
+
+final_result <- tibble()
+
+
+for (i in 1:nrow(dgv_df)) {
+
+print(i)
+tmp_cnv_id <-  dgv_df$id[i]
+tmp_cnv_start <- dgv_df$start[i]
+tmp_cnv_end <- dgv_df$end[i]
+tmp_cnv_chrom <- dgv_df$chrom[i]
+
+
+
+tmp_result <- hgcn_genes %>%
+  filter(chrom == tmp_cnv_chrom) %>%
+  rowwise() %>%
+  mutate(overlap = c(start_position, end_position) %overlaps% c(tmp_cnv_start, tmp_cnv_end)) %>%
+  ungroup() %>%
+  filter(isTRUE(overlap)) %>%
+  select(entrez_id) %>%
+  mutate(id_cnv = tmp_cnv_id)
+
+final_result <- final_result %>% bind_rows(tmp_result)
+
+}
 
 library(tidyverse)
 library(readxl)

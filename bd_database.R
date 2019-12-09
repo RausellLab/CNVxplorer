@@ -6,6 +6,7 @@ library(biomaRt)
 library(data.table)
 library(tidyverse)
 library(clusterProfiler)
+library(data.table)
 select <- dplyr::select
 
 
@@ -218,6 +219,11 @@ triplo <- read.table('/home/cbl02/Storage/data/ClinGen_triplosensitivity_gene.be
 # note: Filtering by: category == 'confirmed'
 # Access: 06/06/19
 # ------------------------------------------------------------------------------
+
+### IMPORTANT
+
+# THERE ARE RELEVANT FEATURES SUCH AS MODE, CONSEQUENCE, DISEASE THAT MAY BE RELEVANT
+# FOR THE APP
 
 dev_genes <- read.table('/home/cbl02/Storage/data/DDG2P_6_6_2019.csv', 
                         header = TRUE, stringsAsFactors = FALSE,
@@ -644,7 +650,7 @@ tad <- tad %>%
 # Dataset: Genehancer
 # Version: 4.11
 # Name file: Email from Marilyn (genenhancer team)
-# Genome reference: hg19
+# Genome reference: hg38
 # ------------------------------------------------------------------------------
 
 genehancer <- read.table('/home/cbl02/Storage/data/genehancer_V4_11.gff', header = FALSE, sep = '\t',
@@ -860,10 +866,10 @@ lncrna_expression <- lncrna_expression_raw %>%
 # Source: https://github.com/Boyle-Lab/Blacklist/blob/master/lists/hg19-blacklist.v2.bed.gz
 # ------------------------------------------------------------------------------
 
-blacklist_encode <- read.table('/home/cbl02/Storage/data/hg19-blacklist.bed', sep = '\t', stringsAsFactors = FALSE) %>%
+blacklist_encode <- read_tsv('/home/cbl02/Storage/data/hg19-blacklist.v2.bed', col_names = FALSE) %>%
   as_tibble() %>%
-  rename(chrom = V1, start = V2, end = V3, class = V4) %>%
-  select(-V5, -V6) %>%
+  rename(chrom = X1, start = X2, end = X3, class = X4) %>%
+  # select(-X5) %>%
   mutate(chrom = str_remove(chrom, 'chr'))
   
 
@@ -1046,8 +1052,50 @@ denovo <- denovo %>%
   rename(chrom = Chr)
 
 
+# ------------------------------------------------------------------------------
+# Dataset: .vcf file
+# Source: https://github.com/HudsonAlpha/UDN_SV_export/blob/master/data/UDN_dump_20190320.vcf.gz
+# Genome_assembly: hg19
+# ------------------------------------------------------------------------------
+
+# https://github.com/HudsonAlpha/UDN_SV_export/blob/master/data/UDN_dump_20190320.vcf.gz
 
 
+
+
+# ------------------------------------------------------------------------------
+# Dataset: Structural Variants (dbVar)
+# Source: ftp://ftp.ncbi.nlm.nih.gov/pub/dbVar/sandbox/sv_datasets/nonredundant/deletions/
+# Guide: https://github.com/ncbi/dbvar/blob/master/Structural_Variant_Sets/Nonredundant_Structural_Variants/ToolGuide.md
+# Genome reference: hg38
+# Sources: 1000 Genomes Consortium + gnomAD + Sudmant2015 + Genome_in_a_Bottle
+# ------------------------------------------------------------------------------
+
+dbvar_deletion_patho <- fread('ftp://ftp.ncbi.nlm.nih.gov/pub/dbVar/sandbox/sv_datasets/nonredundant/deletions/GRCh38.nr_deletions.pathogenic.tsv.gz',
+                                 skip = 1) %>% as_tibble()
+dbvar_deletion_common <- fread('ftp://ftp.ncbi.nlm.nih.gov/pub/dbVar/sandbox/sv_datasets/nonredundant/deletions/GRCh38.nr_deletions.common.tsv.gz', 
+                                   skip = 1) %>% as_tibble()
+dbvar_duplication_patho <- fread('ftp://ftp.ncbi.nlm.nih.gov/pub/dbVar/sandbox/sv_datasets/nonredundant/duplications/GRCh38.nr_duplications.pathogenic.tsv.gz',
+                                 skip = 1) %>% as_tibble()
+dbvar_duplication_common <- fread('ftp://ftp.ncbi.nlm.nih.gov/pub/dbVar/sandbox/sv_datasets/nonredundant/duplications/GRCh38.nr_duplications.common.tsv.gz', 
+                                  skip = 1) %>% as_tibble()
+
+dbvar <- dbvar_deletion_patho %>%
+  rbind(dbvar_deletion_common, dbvar_duplication_patho, dbvar_duplication_common)
+
+dbvar <- dbvar %>%
+  rename(chrom = `#chr`, start = outermost_start, end = outermost_stop) %>%
+  filter(clinical_assertion %in% c('Pathogenic', NA)) %>%
+  filter(!str_detect(study, ';')) %>%
+  filter(variant_type != 'copy_number_variation') %>%
+  mutate(clinical_assertion = if_else(is.na(clinical_assertion), 'control', 'pathogenic')) %>%
+  mutate(category_variant = case_when(
+    str_detect(variant_type, 'deletion') ~ 'deletion',
+    str_detect(variant_type, 'gain') ~ 'duplication',
+    str_detect(variant_type, 'duplication') ~ 'duplication',
+    str_detect(variant_type, 'loss') ~ 'deletion'
+  )) %>%
+  select(chrom, start, end, clinical_assertion, category_variant)
 
 # ------------------------------------------------------------------------------
 # AGGREGATE ALL THE INFORMATION

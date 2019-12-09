@@ -168,6 +168,63 @@ get_upset <- function(df) {
   
 }
 
+
+# ------------------------------------------------------------------------------
+# GENE SIMILARITY BASED ON GENE ONTOLOGY
+# THINGS TO PAY ATTENTION:
+# GENES > 1 ONTOLOGY TERMS
+# GENES == 0 ONTOLOGY TERMS
+# ------------------------------------------------------------------------------
+
+
+mgeneSim_mod <- function (genes, semData, measure = "Wang", drop = "IEA", combine = "BMA", 
+                          verbose = TRUE) 
+{
+  
+  
+  # genes <- tmp_genes
+  # measure = 'Resnik'
+  # drop = NULL
+  # semData = mf_go
+  
+  genes <- unique(as.character(genes))
+  n <- length(genes)
+  scores <- matrix(NA, nrow = n, ncol = n)
+  rownames(scores) <- genes
+  colnames(scores) <- genes
+  gos <- lapply(genes, gene2GO, godata = semData, dropCodes = NULL)
+  uniqueGO <- unique(unlist(gos))
+  
+  
+  if (length(uniqueGO) == 0) {
+    return(NA)
+  }
+  
+  
+  go_matrix <- mgoSim(uniqueGO, uniqueGO, semData, measure = measure, 
+                      combine = NULL)
+  if (verbose) {
+    cnt <- 1
+    pb <- txtProgressBar(min = 0, max = sum(1:n), style = 3)
+  }
+  for (i in seq_along(genes)) {
+    for (j in seq_len(i)) {
+      if (verbose) {
+        setTxtProgressBar(pb, cnt)
+        cnt <- cnt + 1
+      }
+      scores[i, j] <- combineScores(go_matrix[gos[[i]], 
+                                              gos[[j]]], combine = combine)
+      scores[j, i] <- scores[i, j]
+    }
+  }
+  if (verbose) 
+    close(pb)
+  removeRowNA <- apply(!is.na(scores), 1, sum) > 0
+  removeColNA <- apply(!is.na(scores), 2, sum) > 0
+  return(scores[removeRowNA, removeColNA, drop = FALSE])
+}
+
 # ------------------------------------------------------------------------------
 # Name: get_score
 # Description: Conservation score given a model

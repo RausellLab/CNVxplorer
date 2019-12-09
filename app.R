@@ -24,6 +24,7 @@ library(enrichplot)
 library(rentrez)
 library(reactable)
 library(ggridges)
+library(shinymanager)
 library(UpSetR)
 library(randomForest) # delete in case of using an alternative model
 library(chromPlot)
@@ -42,6 +43,12 @@ source('functions.R')
 # save(hgcn_genes, df_enhancers, lncrna_coord, lncrna, tad, gtex, hpa, hpo_genes, vector_hp, vector_term, cnv_df,
 #      select, cnv_df, model1, panel_total, denovo, file = "local_data.RData")
 
+
+credentials <- data.frame(
+  user = c("arausell"),
+  password = c("argamenon"),
+  stringsAsFactors = FALSE
+)
 
 
 # Files needed to run the app
@@ -79,12 +86,12 @@ shiny::shinyApp(
   
   
   
-  ui = tablerDashPage(
+  ui = secure_app(tablerDashPage(
+ #   verbatimTextOutput("auth_output"),
     # enable_preloader = TRUE,
     # loading_duration = 4,
     
 
-    
     
     navbar = tablerDashNav(
       
@@ -194,6 +201,7 @@ shiny::shinyApp(
           tabName = "overview",
           
           use_waiter(),
+          
           setZoom(class = "card"),
           chooseSliderSkin("Nice"),
           
@@ -893,20 +901,21 @@ shiny::shinyApp(
                        width = 12),
             tablerCard(title = 'Intersection of phenotype terms',
                        plotOutput('plot_upset'),
-                       width = 12),
+                       width = 12)
             # width = 6
             # ),
             # tablerCard(title = 'Select a gene:',
             #            uiOutput('n_pub2med'),
             #            width = 3),
-            tablerCard(title = 'Pubmed articles associated with the region',
-                       collapsible = FALSE,
-                       closable = FALSE,
-                       DTOutput('disease2_pubmed'),
-                       width = 12,
-                       options = tagList(
-                         downloadButton("download_pubmed", "Download table")
-                       )))
+            # tablerCard(title = 'Pubmed articles associated with the region',
+            #            collapsible = FALSE,
+            #            closable = FALSE,
+            #            DTOutput('disease2_pubmed'),
+            #            width = 12,
+            #            options = tagList(
+            #              downloadButton("download_pubmed", "Download table")
+            #            ))
+            )
         ),
         tablerTabItem(
           tabName = "model",
@@ -1013,9 +1022,28 @@ shiny::shinyApp(
       )
       
     )
-  ),
+  )),
   server = function(input, output, session) {
     
+    res_auth <- secure_server(
+      check_credentials = check_credentials(credentials)
+    )
+    
+    output$auth_output <- renderPrint({
+      reactiveValuesToList(res_auth)
+    })
+    
+    #azteca
+    # waitress <- waitress$new(theme = "overlay-percent") # call the waitress
+    # 
+    # observeEvent(input$start_analysis, {
+    #     waitress$
+    #       start()$
+    #       auto(percent = 5, ms = 150) # increase by 5 percent every 150 milliseconds
+    #     Sys.sleep(3.5)
+    #     waitress$hide()
+    #   })
+    # 
     
     
     
@@ -1584,6 +1612,7 @@ shiny::shinyApp(
     output$dgenes <- renderDataTable({
       
       
+      tes912 <<- data_selected()
       
       server <- TRUE
       data_input <- data_selected() %>% select(-start_position, -end_position, -chrom)
@@ -2867,6 +2896,8 @@ output$n_filtered_enhancers <- renderUI({
         
 
         go_analysis <- go_analysis %>% as_tibble()
+        test231312321 <<- go_analysis
+        
       
         validate(
           need(nrow(go_analysis) != 0, "0 enriched terms found.")
@@ -3078,6 +3109,7 @@ output$n_filtered_enhancers <- renderUI({
                                           universe = hgcn_genes %>% select(entrez_id) %>% pull() %>% as.character(),
                                           readable= TRUE)  %>% 
           as_tibble()
+        
       } else {
         pathway_analysis <- clusterProfiler::enrichKEGG(gene= filtered_genes ,
                                                         pvalueCutoff= as.numeric(input$sign_vline_path),
@@ -3653,7 +3685,7 @@ output$func_do  <- renderPlot({
       
     
       
-      datatable(running_de_novo(), colnames = c('Chromosome', 'Position', 'Phenotype', 'Study name', 'PubmedID', 'Function Class'), rownames = FALSE)
+      datatable(running_de_novo(), colnames = c('Chromosome', 'Position','Gene', 'Phenotype', 'Study name', 'PubmedID', 'Function Class'), rownames = FALSE)
       
       
     })
