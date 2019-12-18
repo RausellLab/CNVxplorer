@@ -199,6 +199,24 @@ clingen <- clingen_raw %>%
 
 # ------------------------------------------------------------------------------
 # Dataset: Clingen
+# Source: ftp://ftp.ncbi.nlm.nih.gov/pub/dbVar/clingen/ClinGen_recurrent_CNV_V1.0-hg19.bed
+
+# ------------------------------------------------------------------------------
+
+cnv_syndrome_clingen <- read_tsv('ftp://ftp.ncbi.nlm.nih.gov/pub/dbVar/clingen/ClinGen_recurrent_CNV_V1.0-hg19.bed',
+                                 skip = 1, col_names = FALSE)
+
+cnv_syndrome_clingen <- cnv_syndrome_clingen %>%
+  select(X1, X2, X3) %>%
+  rename(chrom = X1,
+         start = X2,
+         end = X3) %>%
+  mutate(start = 1 + start) # .bed format 0-based
+
+
+
+# ------------------------------------------------------------------------------
+# Dataset: Clingen
 # Source: ftp://ftp.ncbi.nlm.nih.gov/pub/dbVar/clingen/ClinGen_triplosensitivity_gene.bed
 # Access: 06/06/19
 # Info scores: https://www.ncbi.nlm.nih.gov/projects/dbvar/clingen/help.shtml#review
@@ -212,6 +230,14 @@ triplo <- read.table('/home/cbl02/Storage/data/ClinGen_triplosensitivity_gene.be
   filter(!str_detect(score, 'Not yet evaluated')) %>%
   select(gene) %>%
   pull(gene)
+
+# ------------------------------------------------------------------------------
+# Dataset: CNV syndromes
+# Source: Decipher
+# ------------------------------------------------------------------------------
+
+cnv_syndrome_decipher <- read_tsv('/home/cbl02/Storage/data/decipher_cnv_syndromes_13_12_19', col_names = TRUE)
+
 
 # ------------------------------------------------------------------------------
 # Dataset: DEVELOPMENTAL DISORDER GENES
@@ -284,7 +310,7 @@ omim  <- omim %>%
 
 # ------------------------------------------------------------------------------
 # Dataset: FDA 
-# Source: https://decipher.sanger.ac.uk/ddd#ddgenes
+# Source: MacArthur lab github
 # Access: ####
 # ------------------------------------------------------------------------------
 

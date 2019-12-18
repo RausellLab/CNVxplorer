@@ -1,7 +1,22 @@
 
 
 
+df <- read_csv('/home/cbl02/Storage/remot/test_to_r')
 
+df2 <- hgcn_genes %>% filter(chrom == 20)
+
+df %>%
+  select(id_chunk, start, end, rank) %>%
+  na.omit() %>%
+  rowwise() %>%
+  mutate(is_gene =  c(start, end) %overlaps% c(df2$start_position, df2$end_position)) %>%
+  ungroup() %>%
+  # count(is_gene)
+  ggplot(aes(id_chunk, rank)) + 
+  geom_point()
+  ggplot(aes(is_gene, rank)) + 
+  geom_boxplot()
+  
 
 
 test231312321$ID

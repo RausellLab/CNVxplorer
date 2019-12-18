@@ -84,9 +84,10 @@ hg_cytoBandIdeo <- chromPlot::hg_cytoBandIdeo
 # app
 shiny::shinyApp(
   
+  # ui = secure_app(
   
-  
-  ui = secure_app(tablerDashPage(
+  ui = 
+    tablerDashPage(
  #   verbatimTextOutput("auth_output"),
     # enable_preloader = TRUE,
     # loading_duration = 4,
@@ -295,6 +296,36 @@ shiny::shinyApp(
             #     )
             #   )
             # ),
+            column(width = 3,
+                   
+                   uiOutput('n_cnv_patho'),
+                   uiOutput('n_cnv_nopatho')
+                   ),
+            column(width = 3,
+                   
+                   uiOutput('n_clinvar'),
+                   uiOutput('hpo_unique'),
+                   uiOutput('n_gwas') 
+                   ),
+            column(width = 3,
+                   # tags$em("This text is emphasized."),
+                   # tags$hr(),
+                   
+                   uiOutput('n_dev'),
+                   uiOutput('n_omim')
+            ),
+            column(width = 3,
+                   
+
+                   # uiOutput('n_pubmed'),
+                   uiOutput('n_pli'),
+                   uiOutput('n_hi')),
+            column(width = 12,
+                   tags$b(tags$em("This text is emphasized.")),
+                   tags$hr(),
+                   # uiOutput('n_pubmed'),
+                   # uiOutput('n_pli'),
+                   uiOutput('n_pubmed')),
             
             tablerCard(
               title = "Gene panel",
@@ -365,21 +396,21 @@ shiny::shinyApp(
               overflow = TRUE,
               options = tagList(
               )
-            ),
+            )
             
-            column(width = 6,
-                   
-                   uiOutput('n_cnv_patho'),
-                   uiOutput('n_cnv_nopatho'),
-                   uiOutput('n_clinvar'),
-                   uiOutput('n_gwas')),
-            column(width = 6,
-                   
-                   uiOutput('n_dev'),
-                   uiOutput('n_omim'),
-                   # uiOutput('n_pubmed'),
-                   uiOutput('n_pli'),
-                   uiOutput('n_hi'))
+            # column(width = 6,
+            #        
+            #        uiOutput('n_cnv_patho'),
+            #        uiOutput('n_cnv_nopatho'),
+            #        uiOutput('n_clinvar'),
+            #        uiOutput('n_gwas')),
+            # column(width = 6,
+            #        
+            #        uiOutput('n_dev'),
+            #        uiOutput('n_omim'),
+            #        # uiOutput('n_pubmed'),
+            #        uiOutput('n_pli'),
+            #        uiOutput('n_hi'))
             
             
           ),
@@ -893,6 +924,13 @@ shiny::shinyApp(
               choiceValues = vector_hp
               
             )),
+            tablerCard(title = 'Genes with phenotype terms',
+                       DTOutput('hpo_filter_genes'),
+                       width = 3),
+            tablerCard(title = 'Phenotype terms associated with genes',
+                       DTOutput('hpo_assoc_genes'),
+                       width = 6),
+            
             column(width = 3,
             uiOutput('n_hp_chosen'),
             uiOutput('check_genes_hp')),
@@ -1022,16 +1060,16 @@ shiny::shinyApp(
       )
       
     )
-  )),
+  ),
   server = function(input, output, session) {
     
-    res_auth <- secure_server(
-      check_credentials = check_credentials(credentials)
-    )
-    
-    output$auth_output <- renderPrint({
-      reactiveValuesToList(res_auth)
-    })
+    # res_auth <- secure_server(
+    #   check_credentials = check_credentials(credentials)
+    # )
+    # 
+    # output$auth_output <- renderPrint({
+    #   reactiveValuesToList(res_auth)
+    # })
     
     #azteca
     # waitress <- waitress$new(theme = "overlay-percent") # call the waitress
@@ -1219,7 +1257,26 @@ shiny::shinyApp(
       
     })
     
-    
+    # n_hpo_unique <- reactive({
+    #   
+    #   req(input$start_analysis > 0)
+    #   
+    # 
+    #   # if (is.null(input$dgenes_rows_all)) {
+    #   #   df_genes <- data_selected()
+    #   # } else {
+    #   #   df_genes <- data_selected()[input$dgenes_rows_all,]
+    #   # }
+    #   
+    #   
+    #  symbol_genes <-  data_selected_prev() %>% select(gene) %>% pull()
+    #   hpo_genes_filter <- hpo_genes %>% 
+    #     filter(gene %in% symbol_genes)
+    #   
+    #   test9999999 <<- hpo_genes_filter
+    # 
+    # })
+    # 
     check_hp_genes <- reactive({
       
       req(input$start_analysis > 0)
@@ -1261,6 +1318,8 @@ shiny::shinyApp(
         left_join(df_tmp2, by = 'hp')
       
       df_tmp
+      test19 <<- df_tmp
+      
       
     })
     
@@ -2658,6 +2717,85 @@ output$n_filtered_enhancers <- renderUI({
         # trend = -10,
         width = 12
       )
+    })
+    
+    output$hpo_unique <- renderUI({
+      
+      
+
+      hpo_yes <-  data_selected() %>% select(gene) %>% pull()
+      hpo_genes_filter <- hpo_genes %>% 
+        filter(gene %in% hpo_yes) %>%
+        select(term) %>%
+        distinct()
+      
+      tablerStatCard(
+        value =  nrow(hpo_genes_filter),
+        title =  'Unique HPO terms found',
+        # trend = -10,
+        width = 12
+      )
+      
+      # tablerInfoCard(
+      #   width = 12,
+      #   value =  nrow(hpo_genes_filter),
+      #   status = "primary",
+      #   icon = "database",
+      #   description =  'Length of the genomic region'
+      #   
+      # )
+      
+    })
+    
+    
+    hpo_filter <- reactive({
+      
+      
+      hpo_yes <-  data_selected() %>% select(gene) %>% pull()
+      hpo_genes_filter <- hpo_genes %>% 
+        filter(gene %in% hpo_yes)
+      
+      
+      
+    })
+    
+    output$hpo_filter_genes <- renderDataTable({
+      
+      
+     
+
+      datatable( hpo_filter() %>% count(gene))
+      
+    })
+      
+      
+      
+    output$hpo_assoc_genes <- renderDataTable({
+      
+      # hpo_filter_genes
+      
+      validate(
+        need(input$hpo_filter_genes_rows_selected != '', "Please, select a gene.")
+      )
+      
+      test77777 <<- input$hpo_filter_genes_rows_selected
+      test55555 <<- hpo_filter()
+      
+      tmp_df <- hpo_filter() %>%
+        count(gene) %>%
+        slice(input$hpo_filter_genes_rows_selected) %>%
+        select(gene) %>%
+        pull(gene)
+      
+
+      tmp_df2 <- hpo_filter()
+      tmp_df2 <- tmp_df2 %>% filter(gene %in% tmp_df )
+
+      datatable(tmp_df2)
+      
+      
+      
+      
     })
     
     
