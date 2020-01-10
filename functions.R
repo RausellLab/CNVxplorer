@@ -170,6 +170,82 @@ get_upset <- function(df) {
 
 
 # ------------------------------------------------------------------------------
+# Calculate distance between set of genes and patient's HPO terms
+# ------------------------------------------------------------------------------
+
+get_sim_score <- function(genes_vector, patient_terms) {
+  
+  # genes_vector <- c('KIAA0319L', 'GJB3', 'GJB4')
+  # patient_terms <- replicate(simplify=FALSE, n=1, expr=minimal_set(hpo_down, sample(hpo_down$id, size=10)))
+  
+  tmp_df <- hpo_genes %>% 
+    filter(gene %in% genes_vector) %>%
+    select(gene, hp)
+  
+  to_p_value <- tmp_df %>% count(gene, name = 'n_freq')
+  
+  genes_sample <- base::split(tmp_df$hp, tmp_df$gene)
+  
+  hpo_patient <- patient_terms
+  
+  names(hpo_patient) <- c('patient')  
+  total_set <- c(genes_sample, hpo_patient)
+  
+  
+  
+  mat_test <- get_sim_grid(ontology = hpo_down, 
+                           term_sets = total_set,
+                           # term_sets2 = hpo_patient,
+                           # combine = 'average',
+                           term_sim_method = 'resnik',
+                           combine = 'average') %>%
+    as_tibble(rownames = 'gene') %>%
+    filter(gene != 'patient') %>%
+    select(gene, patient) %>%
+    mutate(p_value = NA) %>%
+    left_join(to_p_value)
+  
+  mat_test$p_value <-  c(apply(mat_test, 1, get_p))
+  
+  return(mat_test)
+  
+  # get_sim_p(mat_test, group = ncol(mat_test))
+}
+
+
+# ------------------------------------------------------------------------------
+# Calculate distance between set of genes and patient's HPO terms
+# ------------------------------------------------------------------------------
+
+
+
+get_p <- function(.patient_terms, .real_value, .n_hpo_gene) {
+  
+
+  fake_gene <- replicate(simplify=FALSE, n= 100, expr=minimal_set(hpo_down, sample(hpo_down$id, size= n_hpo_gene)))
+  
+  
+  total_set <- c(fake_gene, hpo_patient)
+  
+  mat_test <- get_sim_grid(ontology = hpo_down, 
+                           term_sets = total_set,
+                           term_sim_method = 'resnik',
+                           combine = 'average')
+  
+  p_value <- mat_test %>% 
+    as_tibble() %>%
+    select(patient) %>%
+    filter(patient >= real_value) %>%
+    nrow()
+  
+  p_value <- p_value / 100
+  
+  return(p_value)
+  
+}
+
+
+# ------------------------------------------------------------------------------
 # GENE SIMILARITY BASED ON GENE ONTOLOGY
 # THINGS TO PAY ATTENTION:
 # GENES > 1 ONTOLOGY TERMS

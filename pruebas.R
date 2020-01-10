@@ -1,6 +1,26 @@
 
 
 
+
+test9211 <<- filtered_genes_cnv
+filtered_tissue <- 'Adipose...Subcutaneous'
+
+gtex %>%
+  filter(tissue == !!filtered_tissue) %>%
+  filter(gene %in% !!test9211) %>%
+  ggplot(aes(reorder(gene, -value), value)) +
+  geom_col(aes(fill = tissue), color = 'black', show.legend = FALSE) +
+  # theme_fancy() +
+  xlab('Tissue') +
+  ylab(paste('Median TPM')) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme(legend.position='none') +
+  ggtitle(paste('Gene expression:', filtered_tissue))
+
+
+
+
+
 df <- read_csv('/home/cbl02/Storage/remot/test_to_r')
 
 df2 <- hgcn_genes %>% filter(chrom == 20)

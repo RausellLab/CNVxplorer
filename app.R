@@ -256,12 +256,13 @@ shiny::shinyApp(
               # uiOutput('n_snv'),
               
               uiOutput('n_genes'),
-              uiOutput('score_rf'),
+              uiOutput('score_rf')
               
-              uiOutput("info")
+              # uiOutput("info")
             )
           ),
-          fluidRow(
+          
+          # fluidRow(
             # column(
             #   width = 6,
             #   tablerCard(
@@ -296,36 +297,74 @@ shiny::shinyApp(
             #     )
             #   )
             # ),
-            column(width = 3,
-                   
-                   uiOutput('n_cnv_patho'),
-                   uiOutput('n_cnv_nopatho')
-                   ),
-            column(width = 3,
-                   
-                   uiOutput('n_clinvar'),
-                   uiOutput('hpo_unique'),
-                   uiOutput('n_gwas') 
-                   ),
-            column(width = 3,
-                   # tags$em("This text is emphasized."),
-                   # tags$hr(),
-                   
-                   uiOutput('n_dev'),
-                   uiOutput('n_omim')
-            ),
-            column(width = 3,
-                   
+          
+          column(width = 12,
+                 tags$b(tags$em("Evidence bibliography")),
+                 tags$hr(),
+                 fluidRow(
+                   column(width = 6,
+                 uiOutput('n_pubmed_dup')),
+                 column(width = 6,
+                 uiOutput('n_pubmed_del')))
+          ),
 
-                   # uiOutput('n_pubmed'),
-                   uiOutput('n_pli'),
-                   uiOutput('n_hi')),
+          
+          
+          fluidRow(
+            tags$b(tags$em("CNV databases")),
+            tags$hr(),
             column(width = 12,
-                   tags$b(tags$em("This text is emphasized.")),
-                   tags$hr(),
-                   # uiOutput('n_pubmed'),
-                   # uiOutput('n_pli'),
-                   uiOutput('n_pubmed')),
+                   fluidRow(
+                     column(width = 6,
+                            uiOutput('n_cnv_patho')),
+                     column(width = 6,
+                            uiOutput('n_cnv_nopatho')
+                     ))
+            )),
+          
+          fluidRow(
+            tags$b(tags$em("Phenotype terms associated with disrupted genes")),
+            tags$hr(),
+            column(width = 12,
+                   fluidRow(
+                    column(width = 6,
+                   uiOutput('hpo_unique')),
+                   column(width = 6,
+                   uiOutput('hpo_unique_genes')
+                   ))
+            )),
+          
+          
+          fluidRow(
+            tags$b(tags$em("Gene content")),
+            tags$hr(),
+            
+            
+            column(width = 12,
+                   fluidRow(
+                   column(width = 6,
+                   uiOutput('n_clinvar'),
+                   uiOutput('n_dev'),
+                   uiOutput('n_pli')),
+                   column(width = 6,
+                   uiOutput('n_hi'),
+                   uiOutput('n_omim'),
+                   uiOutput('n_gwas'))
+                   ) )
+                   ),
+          fluidRow(
+            tags$b(tags$em("Regulatory regions disrupted")),
+            tags$hr(),
+            column(width = 12,
+                   fluidRow(
+                     column(width = 6,
+                            uiOutput('n_enhancer'),
+                            uiOutput('n_tads')),
+                     column(width = 6,
+                            uiOutput('n_lncrna')
+                     ))
+            )),
+
             
             tablerCard(
               title = "Gene panel",
@@ -396,7 +435,7 @@ shiny::shinyApp(
               overflow = TRUE,
               options = tagList(
               )
-            )
+            ),
             
             # column(width = 6,
             #        
@@ -413,7 +452,7 @@ shiny::shinyApp(
             #        uiOutput('n_hi'))
             
             
-          ),
+          # ),
           fluidRow(
             # tablerCard(
             #   title = "Heatmap - Genome-wide percentile",
@@ -771,13 +810,13 @@ shiny::shinyApp(
             # tablerCard(title = 'Select a region:',
             #            uiOutput('gen2e_2tissue'),
             #            width = 3),
-            uiOutput('n_enhancer_total'),
-            uiOutput('n_tads'),
-            uiOutput('n_lncrna'),
-            
-            # uiOutput('n_enhancer_inside'),
-            uiOutput('n_enhancer'),
-            
+            # uiOutput('n_enhancer_total'),
+            # uiOutput('n_tads'),
+            # uiOutput('n_lncrna'),
+            # 
+            # # uiOutput('n_enhancer_inside'),
+            # uiOutput('n_enhancer'),
+            # 
             # uiOutput('redund_n_enhancer'),
             # tablerCard(title = 'Include target-genes enhancers',
             #            uiOutput('switch_enhancers'),
@@ -899,15 +938,57 @@ shiny::shinyApp(
         tablerTabItem(
           tabName = "tissue",
           fluidRow(
-            tablerCard(title = 'Select a gene:',
-                       uiOutput('gene_tissue'),
-                       width = 3),
+            column(width = 3,
+            tablerCard(title = 'Filter options:',
+                       tags$b('Select a gene:'),
+                       selectInput(
+                         "gene_yes_no", "",
+                         c(No = "No",
+                           Yes = "Yes")),
+                       conditionalPanel(
+                         condition = "input.gene_yes_no == 'Yes'",
+                       uiOutput('gene_tissue')),
+                       tags$b('Select a tissue:'),
+                       selectInput(
+                         "tissue_yes_no", "",
+                         c(No = "No",
+                           Yes = "Yes")),
+                       conditionalPanel(
+                         condition = "input.tissue_yes_no == 'Yes'",
+                         uiOutput('select_tissue')),
+                       
+                       width = 12)
+            
+            ),
             tablerCard(title = 'Protein Expression (Human Protein Atlas)',
                        DTOutput('tissue_hpa'),
                        width = 9)),
+          
+          
+          
+          fluidRow(
+            column(width = 3,
+                   tablerCard(title = 'Filter options:',
+                              tags$b('Display by:'),
+                              selectInput(
+                                "gtex_gene_tissue", "",
+                                c(Gene = "Gene",
+                                  Tissue = "Tissue")),
+                              conditionalPanel(
+                                condition = "input.gtex_gene_tissue == 'Gene'",
+                                uiOutput('gtex_gene')),
+                              conditionalPanel(
+                                condition = "input.gtex_gene_tissue == 'Tissue'",
+                                uiOutput('gtex_tissue')),
+                              
+                              width = 12)
+          
+          
+        ),
+
           tablerCard(title = 'RNA Expression (GTEx)',
                      plotlyOutput('tissue_gtex'),
-                     width = 12)
+                     width = 9))
           
         ),
         tablerTabItem(
@@ -917,16 +998,16 @@ shiny::shinyApp(
             width = 9,
             multiInput(
               inputId = "chosen_hp",
-              label = "", 
+              label = "",
               choices = NULL,
               width = '100%',
               choiceNames = vector_term,
               choiceValues = vector_hp
-              
+
             )),
             tablerCard(title = 'Genes with phenotype terms',
                        DTOutput('hpo_filter_genes'),
-                       width = 3),
+                       width = 4),
             tablerCard(title = 'Phenotype terms associated with genes',
                        DTOutput('hpo_assoc_genes'),
                        width = 6),
@@ -935,7 +1016,7 @@ shiny::shinyApp(
             uiOutput('n_hp_chosen'),
             uiOutput('check_genes_hp')),
             tablerCard(title = 'Genes associated with the phenotype terms',
-                       DTOutput('df_check_hp_genes'),
+                       DTOutput('test_hpo'),
                        width = 12),
             tablerCard(title = 'Intersection of phenotype terms',
                        plotOutput('plot_upset'),
@@ -1194,6 +1275,55 @@ shiny::shinyApp(
     
     
     
+    output$gtex_gene <- renderUI({
+      
+      if (is.null(input$dgenes_rows_all)) {
+        df_genes <- data_selected()
+      } else {
+        df_genes <- data_selected()[input$dgenes_rows_all,]
+      }
+      
+      input_data <- df_genes %>% select(gene) %>% pull()
+      
+      pickerInput(
+        inputId = "input_gtex_gene",
+        # label = "Select gene:", 
+        choices = input_data,
+        options = list(
+          size = 5,
+          `live-search` = TRUE))
+      
+      
+      
+    })
+    
+    output$gtex_tissue <- renderUI({
+      
+      if (is.null(input$dgenes_rows_all)) {
+        df_genes <- data_selected()
+      } else {
+        df_genes <- data_selected()[input$dgenes_rows_all,]
+      }
+      
+      input_data <- df_genes %>% select(gene) %>% pull()
+      input_tissue <- gtex %>% 
+        filter(gene %in% input_data) %>% 
+        select(tissue) %>% 
+        distinct() %>% 
+        pull(tissue)
+      
+      pickerInput(
+        inputId = "input_gtex_tissue",
+        # label = "Select gene:", 
+        choices = input_tissue,
+        options = list(
+          size = 5,
+          `live-search` = TRUE))
+      
+      
+      
+    })
+    
     
     output$gene_tissue <- renderUI({
       
@@ -1209,6 +1339,24 @@ shiny::shinyApp(
         inputId = "input_gene_tissue",
         # label = "Select gene:", 
         choices = input_data,
+        options = list(
+          size = 5,
+          `live-search` = TRUE))
+      
+      
+      
+    })
+    
+    output$select_tissue <- renderUI({
+
+      # req(input$input_gene_tissue)
+      
+   choices_vector <- hpa %>% select(tissue) %>% distinct() %>% pull() %>% as.character()
+      
+      pickerInput(
+        inputId = "input_tissue",
+        # label = "Select gene:", 
+        choices = choices_vector,
         options = list(
           size = 5,
           `live-search` = TRUE))
@@ -1327,7 +1475,9 @@ shiny::shinyApp(
       
       req(input$start_analysis > 0)
       
-      test66 <<- check_hp_genes()
+      df_genes <- data_selected()
+      
+      
       
       tablerStatCard(
         value =  nrow(check_hp_genes()),
@@ -1336,6 +1486,30 @@ shiny::shinyApp(
         width = 12
       )
       
+    })
+    
+    
+    output$test_hpo <- renderDataTable({
+      
+      req(input$start_analysis > 0)
+      req(input$chosen_hp)
+      
+      genes_selected <- data_selected() %>% select(gene) %>% pull()
+      # test88766 <<- genes_selected
+      # hpo_selected <-  replicate(simplify=FALSE, n=1, expr=minimal_set(hpo_down, sample(hpo_down$id, size=10)))
+      # test2121 <<- hpo_selected
+      hpo_selected  <<- list(input$chosen_hp)
+      result <- get_sim_score(genes_selected, hpo_selected )
+      # result <- result %>%
+      #   round(3) %>%
+      #   # as_tibble(rownames = 'gene') %>%
+      #   # select(gene, patient) %>%
+      #   # filter(gene != 'patient')
+        # 
+
+      
+      
+      datatable(result)
     })
     
     output$df_check_hp_genes <- renderDataTable({
@@ -1406,7 +1580,7 @@ shiny::shinyApp(
     })
     
     
-    query_pubmed <- reactive({
+    query_pubmed_del <- reactive({
       
       req(input$start_analysis > 0)
       
@@ -1425,7 +1599,8 @@ shiny::shinyApp(
           select(Name) %>%
           pull() %>%
           map_chr(function(x) paste0(chrom_coordinates, x)) %>%
-          paste0(collapse = ' OR ')
+          paste0(collapse = ' OR ') %>%
+          paste('AND deletion', sep = ' ')
         
       } else {
         query_region <- paste0(chrom_coordinates, input$input_karyotype)
@@ -1440,11 +1615,56 @@ shiny::shinyApp(
       
     })
     
-    output$n_pubmed <- renderUI({
+    output$n_pubmed_del <- renderUI({
       
       tablerStatCard(
-        value =   length(query_pubmed()[['ids']]),
-        title = "Number of articles found in Pubmed",
+        value =   length(query_pubmed_del()[['ids']]),
+        title = "Number of articles found in Pubmed associated with deletions",
+        width = 12
+      )
+      
+    })
+    
+    query_pubmed_dup <- reactive({
+      
+      req(input$start_analysis > 0)
+      
+      
+      if (input$input_geno_karyo == 'Genomic coordinates') {
+        
+        
+        start_coordinates <- coord_user()[1]
+        end_coordinates <- coord_user()[2]
+        chrom_coordinates <- coord_user()[3]
+        
+        query_region <-  chromPlot::hg_cytoBandIdeo %>%
+          filter(Chrom %in% chrom_coordinates) %>%
+          mutate(keep = map2_chr(Start, End, function(x,y) c(start_coordinates, end_coordinates) %overlaps% c(x,y))) %>%
+          filter(keep == TRUE) %>%
+          select(Name) %>%
+          pull() %>%
+          map_chr(function(x) paste0(chrom_coordinates, x)) %>%
+          paste0(collapse = ' OR ') %>%
+          paste('AND duplication', sep = ' ')
+        
+      } else {
+        query_region <- paste0(chrom_coordinates, input$input_karyotype)
+        
+      }
+      
+      test68 <<- query_region
+      
+      query_pubmed <- entrez_search(db="pubmed", term= query_region, retmax = 200 )
+      
+      
+      
+    })
+    
+    output$n_pubmed_dup <- renderUI({
+      
+      tablerStatCard(
+        value =   length(query_pubmed_dup()[['ids']]),
+        title = "Number of articles found in Pubmed associated with duplications",
         width = 12
       )
       
@@ -1775,21 +1995,53 @@ shiny::shinyApp(
     
     output$tissue_gtex <- renderPlotly({
       
-      req(input$input_gene_tissue)
+      req(input$gtex_gene_tissue)
       
       
-      filtered_gene <- input$input_gene_tissue
+      if (input$gtex_gene_tissue == 'Gene' ) {
+        req(input$gtex_gene_tissue)
+        filtered_gene <- input$input_gtex_gene
+        p <- gtex %>%
+          filter(gene == !!filtered_gene) %>%
+          ggplot(aes(reorder(tissue, -value), value)) +
+          geom_col(aes(fill = tissue), color = 'black', show.legend = FALSE) +
+          theme_fancy() +
+          xlab('Tissue') +
+          ylab(paste('Median TPM')) +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+          theme(legend.position='none') +
+          ggtitle(paste('Gene expression: ', filtered_gene))
+
+      } else {
+        req(input$gtex_gene_tissue)
+        filtered_genes_cnv <- data_selected() %>% pull(gene)
+        test9211 <<- filtered_genes_cnv
+        filtered_tissue <- input$input_gtex_tissue
+        p <- gtex %>%
+          filter(tissue == !!filtered_tissue) %>%
+          filter(gene %in% !!filtered_genes_cnv) %>%
+          ggplot(aes(reorder(gene, -value), value)) +
+          geom_col(aes(fill = tissue), color = 'black', show.legend = FALSE) +
+          theme_fancy() +
+          xlab('Tissue') +
+          ylab(paste('Median TPM')) +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+          theme(legend.position='none') +
+          ggtitle(paste('Tissue: ', filtered_tissue))
+        
+      }
       
-      p <- gtex %>%
-        filter(gene == !!filtered_gene) %>%
-        ggplot(aes(reorder(tissue, -value), value)) +
-        geom_col(aes(fill = tissue), color = 'black', show.legend = FALSE) +
-        theme_fancy() +
-        xlab('Tissue') +
-        ylab(paste('Median TPM')) +
-        theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-        theme(legend.position='none') +
-        ggtitle(paste('Gene expression:', filtered_gene))
+      
+      # p <- gtex %>%
+      #   filter(gene == !!filtered_gene) %>%
+      #   ggplot(aes(reorder(tissue, -value), value)) +
+      #   geom_col(aes(fill = tissue), color = 'black', show.legend = FALSE) +
+      #   theme_fancy() +
+      #   xlab('Tissue') +
+      #   ylab(paste('Median TPM')) +
+      #   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+      #   theme(legend.position='none') +
+      #   ggtitle(paste('Gene expression:', filtered_gene))
       
       ggplotly(p)
       
@@ -1797,11 +2049,31 @@ shiny::shinyApp(
     
     output$tissue_hpa <- renderDT({
       
-      req(input$input_gene_tissue)
+   #   req(input$input_gene_tissue)
       
-      filtered_gene <- input$input_gene_tissue
+      vector_genes <- data_selected() %>% pull(gene)
+      tmp_df <- hpa %>% filter(gene %in% vector_genes)
       
-      datatable(hpa %>% filter(gene == !!filtered_gene),
+      if (input$gene_yes_no == 'Yes') {
+        req(input$input_gene_tissue)
+        filtered_gene <- input$input_gene_tissue
+        test99 <<- filtered_gene
+        tmp_df <- tmp_df %>% filter(gene == !!filtered_gene)
+      }
+
+      if (input$tissue_yes_no == 'Yes') {
+        req(input$input_tissue)
+        filtered_tissue <- input$input_tissue
+        tmp_df <- tmp_df %>% filter(tissue == !!filtered_tissue)
+      }
+      
+      # 
+      # observe({
+      #   if (input$choice == 'Hello') {
+      #     getStatus <- 'Hi there'
+      #   }
+      
+      datatable(tmp_df,
                 options = list(searchHighlight = TRUE), filter = 'top', style = 'bootstrap')
       
       
@@ -2724,6 +2996,7 @@ output$n_filtered_enhancers <- renderUI({
       
 
       hpo_yes <-  data_selected() %>% select(gene) %>% pull()
+      test2020 <<- hpo_yes
       hpo_genes_filter <- hpo_genes %>% 
         filter(gene %in% hpo_yes) %>%
         select(term) %>%
@@ -2735,16 +3008,24 @@ output$n_filtered_enhancers <- renderUI({
         # trend = -10,
         width = 12
       )
+    })
+    
+    output$hpo_unique_genes <- renderUI({
+
+      hpo_yes <-  data_selected() %>% select(gene) %>% pull()
       
-      # tablerInfoCard(
-      #   width = 12,
-      #   value =  nrow(hpo_genes_filter),
-      #   status = "primary",
-      #   icon = "database",
-      #   description =  'Length of the genomic region'
-      #   
-      # )
-      
+      n_genes <- hpo_genes %>% 
+        filter(gene %in% hpo_yes) %>% 
+        select(gene) %>% 
+        distinct() %>%
+        nrow()
+
+      tablerStatCard(
+        value =  n_genes,
+        title =  'Number of genes associated with at least one HPO term',
+        # trend = -10,
+        width = 12
+      )
     })
     
     
@@ -2752,6 +3033,7 @@ output$n_filtered_enhancers <- renderUI({
       
       
       hpo_yes <-  data_selected() %>% select(gene) %>% pull()
+      test21134 <<- hpo_yes
       hpo_genes_filter <- hpo_genes %>% 
         filter(gene %in% hpo_yes)
       
@@ -2760,11 +3042,8 @@ output$n_filtered_enhancers <- renderUI({
     })
     
     output$hpo_filter_genes <- renderDataTable({
-      
-      
-     
 
-      datatable( hpo_filter() %>% count(gene))
+      datatable( hpo_filter() %>% count(gene), colnames = c('Gene', 'Phenotypic term') )
       
     })
       

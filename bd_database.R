@@ -645,12 +645,11 @@ inbio_network <- inbio_network_raw %>%
 # Name file: phenotype_annotation.tab
 # ------------------------------------------------------------------------------
 
-# ERROR - LESS ROWS THAN  FILE!!
+# ERROR - 10 ROWS MISSING!!
 
-url <- 'http://compbio.charite.de/jenkins/job/hpo.annotations.monthly/lastSuccessfulBuild/artifact/annotation/ALL_SOURCES_ALL_FREQUENCIES_genes_to_phenotype.txt'
-hpo_raw <- read.table(url, sep = '\t', skip = 1, stringsAsFactors = FALSE)
+url <- 'http://compbio.charite.de/jenkins/job/hpo.annotations.monthly/lastSuccessfulBuild/artifact/annotation/ALL_SOURCES_FREQUENT_FEATURES_genes_to_phenotype.txt'
+hpo_genes <- read_tsv(url, col_names = c('entrez_id', 'gene', 'term', 'hp'), skip = 1)
 
-hpo_genes <- hpo_raw %>% as_tibble() %>% rename(entrez_id = V1, gene = V2, term = V3, hp = V4)
 
 vector_term <- hpo_genes %>% select(term, hp) %>% distinct() %>% pull(term)
 vector_hp <- hpo_genes %>% select(term, hp) %>% distinct() %>% pull(hp)
