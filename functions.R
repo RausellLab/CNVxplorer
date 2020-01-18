@@ -10,11 +10,16 @@ select <- dplyr::select
 
 
 check_tads <- function(chrom = NULL, start = NULL, end = NULL, tad_object = NULL) {
-  
-  
+  # 
+  # chrom_tmp <- test655
+  # start_tmp <- test555
+  # end_tmp <- test666
+  # 
   chrom_tmp <-  chrom
   start_tmp <-  start
   end_tmp <-  end
+  
+  
   
   
   tmp_df <- tad_object %>%
@@ -25,6 +30,8 @@ check_tads <- function(chrom = NULL, start = NULL, end = NULL, tad_object = NULL
     mutate(check_final_tad = if_else(check_tad  + check_tad2 + check_tad3 > 0, 1, 0 )) %>%
     filter(check_final_tad > 0) %>%
     select(-contains('check'))
+
+  
   
   if (nrow(tmp_df) > 0) {
     
@@ -177,6 +184,11 @@ get_sim_score <- function(genes_vector, patient_terms) {
   
   # genes_vector <- c('KIAA0319L', 'GJB3', 'GJB4')
   # patient_terms <- replicate(simplify=FALSE, n=1, expr=minimal_set(hpo_down, sample(hpo_down$id, size=10)))
+
+  hpo_patient <- patient_terms
+  names(hpo_patient) <- c('value_patient')  
+  
+  
   
   tmp_df <- hpo_genes %>% 
     filter(gene %in% genes_vector) %>%
@@ -186,62 +198,78 @@ get_sim_score <- function(genes_vector, patient_terms) {
   
   genes_sample <- base::split(tmp_df$hp, tmp_df$gene)
   
-  hpo_patient <- patient_terms
   
-  names(hpo_patient) <- c('patient')  
   total_set <- c(genes_sample, hpo_patient)
-  
-  
   
   mat_test <- get_sim_grid(ontology = hpo_down, 
                            term_sets = total_set,
-                           # term_sets2 = hpo_patient,
-                           # combine = 'average',
                            term_sim_method = 'resnik',
                            combine = 'average') %>%
     as_tibble(rownames = 'gene') %>%
-    filter(gene != 'patient') %>%
-    select(gene, patient) %>%
+    filter(gene != 'value_patient') %>%
+    select(gene, value_patient) %>%
     mutate(p_value = NA) %>%
-    left_join(to_p_value)
+    mutate(patient_terms = hpo_patient) %>%
+    left_join(to_p_value, by = "gene")
   
-  mat_test$p_value <-  c(apply(mat_test, 1, get_p))
-  
+
+  # for (i in 1:nrow(mat_test)) {
+  #   
+  #   mat_test$value_patient[i] 
+  #   mat_test$patient_terms[i] 
+  #   mat_test$n_freq[i] 
+  #   
+  #   mat_test$p_value[i] <- get_p(mat_test$patient_terms[i], 
+  #                                mat_test$value_patient[i],
+  #                                mat_test$n_freq[i] 
+  #                                )
+  #   
+  # }
+
   return(mat_test)
   
   # get_sim_p(mat_test, group = ncol(mat_test))
 }
 
 
+
 # ------------------------------------------------------------------------------
-# Calculate distance between set of genes and patient's HPO terms
+# Calculate p.value
 # ------------------------------------------------------------------------------
 
 
 
-get_p <- function(.patient_terms, .real_value, .n_hpo_gene) {
+get_p <- function(patient_terms, value_patient, n_freq) {
   
+  
+  # patient_terms <- mat_test$patient_terms[i]
+  # value_patient <- mat_test$value_patient[i]
+  # n_freq <- mat_test$n_freq[i] 
+  # 
+  
+  # print(n_freq)
 
-  fake_gene <- replicate(simplify=FALSE, n= 100, expr=minimal_set(hpo_down, sample(hpo_down$id, size= n_hpo_gene)))
-  
-  
+  fake_gene <- replicate(simplify=FALSE, n= 100, expr=minimal_set(hpo_down, sample(hpo_down$id, size= n_freq)))
+  hpo_patient <-  patient_terms
+  names(hpo_patient) <- 'patient'
+
   total_set <- c(fake_gene, hpo_patient)
-  
-  mat_test <- get_sim_grid(ontology = hpo_down, 
+
+  mat_test <- get_sim_grid(ontology = hpo_down,
                            term_sets = total_set,
                            term_sim_method = 'resnik',
                            combine = 'average')
-  
-  p_value <- mat_test %>% 
+
+  p_value <- mat_test %>%
     as_tibble() %>%
     select(patient) %>%
-    filter(patient >= real_value) %>%
+    filter(patient >= value_patient) %>%
     nrow()
-  
+
   p_value <- p_value / 100
-  
+
   return(p_value)
-  
+
 }
 
 

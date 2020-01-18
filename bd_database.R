@@ -406,6 +406,20 @@ gwas <- gwas_raw %>% as_tibble() %>%
   na.omit() %>%
   pull()
 
+
+gwas_variants <- gwas_raw %>% as_tibble() %>% 
+  select(CHR_ID, CHR_POS, INTERGENIC, REPORTED.GENE.S., DISEASE.TRAIT, LINK) %>% 
+  mutate(CHR_ID = as.character(CHR_ID),
+         CHR_POS = as.character(CHR_POS),
+         INTERGENIC = as.numeric(as.character(INTERGENIC)),
+         REPORTED.GENE.S. = as.character(REPORTED.GENE.S.)) %>%
+  
+  filter(CHR_ID %in% c(1:22,'X')) %>%
+  separate(REPORTED.GENE.S., into = as.character(1:150), sep = ',') %>% 
+  select(CHR_ID, CHR_POS, INTERGENIC, DISEASE.TRAIT,'1', LINK) %>% 
+  rename('gene' = '1') %>%
+  mutate(CHR_POS = as.numeric(CHR_POS))
+
 # ------------------------------------------------------------------------------
 # Dataset: CCR score - Nº of regions located in a gene that are above of P99
 # Source: https://www.nature.com/articles/s41588-018-0294-6#Sec28
@@ -772,6 +786,15 @@ from_python <- from_python %>%
 df_enhancers <- df_enhancers %>% 
   left_join(from_python %>% select(id, phast100, phast46pla, phast46pri), by = 'id') %>%
   left_join(from_remot, by = c('chrom', 'start', 'end'))
+
+plot_p100 <- df_enhancers %>% select(id, phast100) %>% distinct() %>% ggplot(aes(phast100)) + geom_density() +
+  xlab('Phast100way placental score')
+plot_p46pla <-  df_enhancers %>% 
+  select(id, phast46pla) %>% 
+  distinct() %>% 
+  ggplot(aes(phast46pla)) + 
+  geom_density() +
+  xlab('Phast46way (Placental) score')
   
 # 
 # enh_post <- mod_remot('from_remot/enhancer_apolo_crossmap_cleaned_7_result.txt', 'EUR', 7, TRUE)
@@ -1037,9 +1060,33 @@ setwd('/home/cbl02/Storage/cnvxplore')
 # ------------------------------------------------------------------------------
 # Source: /home/cbl02/Storage/data/curated_gene_disease_associations.tsv
 # http://www.disgenet.org/static/disgenet_ap1/files/downloads/readme.txt
+# Readme file: https://www.disgenet.org/static/disgenet_ap1/files/downloads/readme.txt
 # ------------------------------------------------------------------------------
 
+# geneId 		-> NCBI Entrez Gene Identifier
+# geneSymbol	-> Official Gene Symbol
+# DSI		-> The Disease Specificity Index for the gene
+# DPI		-> The Disease Pleiotropy Index for the gene
+# diseaseId 	-> UMLS concept unique identifier
+# diseaseName 	-> Name of the disease	
+# diseaseType  	-> The DisGeNET disease type: disease, phenotype and group
+# diseaseClass	-> The MeSH disease class(es)
+# diseaseSemanticType	-> The UMLS Semantic Type(s) of the disease
+# score		-> DisGENET score for the Gene-Disease association
+# EI		-> The Evidence Index for the Gene-Disease association
+# YearInitial	-> First time that the Gene-Disease association was reported
+# YearFinal	-> Last time that the Gene-Disease association was reported
+# NofPmids	-> Total number of publications reporting the Gene-Disease association
+# NofSnps		-> Total number of SNPs associated to the Gene-Disease association
+# source		-> Original source reporting the Gene-Disease association
+
+
 disgenet <- read_tsv('/home/cbl02/Storage/data/curated_gene_disease_associations.tsv')
+
+disgenet %>% ggplot(aes(score)) +
+  geom_histogram()
+
+genes_disgenet <- disgenet %>% select(geneSymbol) %>% distinct() %>% pull()
 
 # ------------------------------------------------------------------------------
 # Source: https://atlas.ctglab.nl/
@@ -1126,6 +1173,10 @@ dbvar <- dbvar %>%
 # AGGREGATE ALL THE INFORMATION
 # ------------------------------------------------------------------------------
 
+
+# CHECK DUPLICATED GENES ONCE EVERYTHING IS AGGREGATED!!
+# ZMYM6
+
 hgcn_genes <- hgcn_genes %>%
   left_join(pli) %>% # pli score
   left_join(vg) %>% # variance gene expression
@@ -1137,6 +1188,7 @@ hgcn_genes <- hgcn_genes %>%
   mutate(gwas = as.factor(if_else(gene %in% gwas, 'Yes', 'No'))) %>% # GWAS genes
   mutate(omim = as.factor(if_else(gene %in% omim, 'Yes', 'No'))) %>% # GWAS genes
   mutate(essent = as.factor(if_else(ensembl_gene_id %in% e_intersect$V1 , 'Yes', 'No'))) %>% # essential genes (intersection mgi_invitro)
+  mutate(disease = as.factor(if_else(gene %in% genes_disgenet , 'Yes', 'No'))) %>%
   left_join(ccr) %>% # Genes with CCRs in the 99th percentile or higher 
   left_join(nc) %>% # non-coding scores RVIS and ncGERP - 5UTR + 3UTR + 250bp upstream
   left_join(rvis) %>% # RVIS score based

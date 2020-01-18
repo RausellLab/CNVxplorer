@@ -1,5 +1,41 @@
 
+#3
 
+hgcn_genes
+
+
+test3111 %>%
+  rowwise() %>%
+  mutate(is_overlap = c(hgcn_genes$start_position[1:100], hgcn_genes$end_position[1:100]) %overlaps% c(start, end))
+
+
+hgcn_genes %>%
+  rowwise() %>%
+  mutate(is_overlap = c(start_position, end_position) %overlaps%  c(test3111$start[1], test3111$end[1])) %>%
+  filter(isTRUE(is_overlap)) %>%
+  nrow()
+
+
+for (i in 1:nrow(test3111)){
+  
+  
+  tmp_start <- test3111$start[1]
+  tmp_end <- test3111$end[1]
+  tmp_genes <- hgcn_genes %>%
+    rowwise() %>%
+    mutate(is_overlap = c(start_position, end_position) %overlaps%  c(tmp_start, tmp_end)) %>%
+    filter(isTRUE(is_overlap)) %>%
+    pull(gene)
+  
+  genes_not_cnv <- tmp_genes[!tmp_genes %in% (test2019 %>% pull(gene))]
+  
+  test3111$n_genes[i] <- tmp_n
+  test3111$n_genes_not_cnv[i] <- length(genes_not_cnv)
+  
+}
+
+
+##
 
 
 test9211 <<- filtered_genes_cnv
@@ -83,7 +119,7 @@ tmp_cnv_start <- dgv_df$start[i]
 tmp_cnv_end <- dgv_df$end[i]
 tmp_cnv_chrom <- dgv_df$chrom[i]
 
-
+hpo_down <- ontologyIndex::get_OBO('http://purl.obolibrary.org/obo/hp.obo')
 
 tmp_result <- hgcn_genes %>%
   filter(chrom == tmp_cnv_chrom) %>%
