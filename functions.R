@@ -103,10 +103,10 @@ check_regions <- function(chrom = NULL, start = NULL, end = NULL) {
 
 get_perc_overlap <- function(df, start_cnv, end_cnv) {
   
-  # start_cnv <- 1000
-  # end_cnv <- 100000
+  # start_cnv <- 34813719
+  # end_cnv <- 36278623
   # 
-  # df <- test1
+  # df <- test20 %>%  rename(start_position = start, end_position = end)
   
   start_cnv <- as.numeric(start_cnv)
   end_cnv <- as.numeric(end_cnv)
@@ -116,10 +116,12 @@ get_perc_overlap <- function(df, start_cnv, end_cnv) {
     mutate(type_overlap = case_when(
       start_gene <  start_cnv & end_gene < end_cnv ~ "left",
       start_gene > start_cnv & end_gene < end_cnv  ~ "center",
-      start_gene >  start_cnv & end_gene > end_cnv ~ "right"
+      start_gene >  start_cnv & end_gene > end_cnv ~ "right",
+      start_gene < start_cnv & end_gene > end_cnv ~ 'all'
     )) %>%
     mutate(p_overlap = case_when(
       type_overlap ==  'center' ~ 1,
+      type_overlap ==  'all' ~ 1,
       type_overlap ==  'right'  ~ (end_cnv - start_gene + 1) / (end_gene - start_gene + 1) ,
       type_overlap ==  'left'  ~ (end_gene - start_gene + 1) / (end_gene - start_gene + 1)
     )) %>%
@@ -180,8 +182,11 @@ get_upset <- function(df) {
 # Calculate distance between set of genes and patient's HPO terms
 # ------------------------------------------------------------------------------
 
-get_sim_score <- function(genes_vector, patient_terms) {
+get_sim_score <- function(genes_vector, patient_terms, hpo_list_genes, hpo_dbs) {
   
+  
+  # hpo_list_genes <- hpo_genes
+  # hpo_dbs <- hpo_down
   # genes_vector <- c('KIAA0319L', 'GJB3', 'GJB4')
   # patient_terms <- replicate(simplify=FALSE, n=1, expr=minimal_set(hpo_down, sample(hpo_down$id, size=10)))
 
@@ -190,7 +195,7 @@ get_sim_score <- function(genes_vector, patient_terms) {
   
   
   
-  tmp_df <- hpo_genes %>% 
+  tmp_df <- hpo_list_genes %>% 
     filter(gene %in% genes_vector) %>%
     select(gene, hp)
   
@@ -199,15 +204,10 @@ get_sim_score <- function(genes_vector, patient_terms) {
   genes_sample <- base::split(tmp_df$hp, tmp_df$gene)
   
   
-  total_set <- c(genes_sample, hpo_patient)
-  
-  mat_test <- get_sim_grid(ontology = hpo_down, 
-                           term_sets = total_set,
-                           term_sim_method = 'resnik',
-                           combine = 'average') %>%
+
+  mat_test <- get_profile_sims(ontology = hpo_down, profile = hpo_patient, term_sets = genes_sample,
+                   term_sim_method = 'resnik') %>%
     as_tibble(rownames = 'gene') %>%
-    filter(gene != 'value_patient') %>%
-    select(gene, value_patient) %>%
     mutate(p_value = NA) %>%
     mutate(patient_terms = hpo_patient) %>%
     left_join(to_p_value, by = "gene")

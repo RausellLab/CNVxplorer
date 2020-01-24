@@ -198,22 +198,41 @@ clingen <- clingen_raw %>%
   pull(gene)
 
 # ------------------------------------------------------------------------------
-# Dataset: Clingen
+# Dataset: CNV Syndromes - ClinGen
 # Source: ftp://ftp.ncbi.nlm.nih.gov/pub/dbVar/clingen/ClinGen_recurrent_CNV_V1.0-hg19.bed
 
 # ------------------------------------------------------------------------------
 
-cnv_syndrome_clingen <- read_tsv('ftp://ftp.ncbi.nlm.nih.gov/pub/dbVar/clingen/ClinGen_recurrent_CNV_V1.0-hg19.bed',
+cnv_syndromes_clingen <- read_tsv('ftp://ftp.ncbi.nlm.nih.gov/pub/dbVar/clingen/ClinGen_recurrent_CNV_V1.0-hg19.bed',
                                  skip = 1, col_names = FALSE)
 
-cnv_syndrome_clingen <- cnv_syndrome_clingen %>%
-  select(X1, X2, X3) %>%
+cnv_syndromes_clingen <- cnv_syndromes_clingen %>%
+  select(X1, X2, X3, X4) %>%
   rename(chrom = X1,
          start = X2,
-         end = X3) %>%
-  mutate(start = 1 + start) # .bed format 0-based
+         end = X3,
+         syndrome_name = X4
+         ) %>%
+  mutate(start = 1 + start)  %>% # .bed format 0-based
+  mutate(source = 'clingen')
+# ------------------------------------------------------------------------------
+# Dataset: CNV Syndromes - DECIPHER
+# Source: sftp user@sftpsrv.sanger.ac.uk/decipher-agreements/pub
+# ------------------------------------------------------------------------------
+
+cnv_syndromes_decipher <- read_tsv('/home/cbl02/Storage/data/daa_decipher/decipher-syndromes-grch37-2020-01-19.txt', skip = 1)
+
+cnv_syndromes_decipher <-cnv_syndromes_decipher %>%
+  rename(syndrome_name = `# syndrome_name`,
+         chrom = chr) %>%
+  mutate(phenotypes = str_replace_all(phenotypes, '\\|', ', ')) %>%
+  mutate(source = 'decipher') %>%
+  select(chrom, start, end, syndrome_name, variant_class, phenotypes, source)
 
 
+syndromes_total <- cnv_syndromes_clingen %>%
+  bind_rows(cnv_syndromes_decipher) %>%
+  mutate(chrom = str_remove(chrom, 'chr'))
 
 # ------------------------------------------------------------------------------
 # Dataset: Clingen
@@ -591,18 +610,20 @@ para_genes %>% as_tibble() %>%
 # PESR_GT_OVERDISPERSION this neither...
 
 
-gnomad_sv_raw <- read.table('/home/cbl02/Storage/data/gnomad_v2_sv.sites.bed', sep = '\t', header = TRUE)
+gnomad_sv_raw <- read_tsv('/home/cbl02/Storage/data/gnomad_v2.1_sv.sites.bed')
 
 
 gnomad_sv_raw <- gnomad_sv_raw %>%
   as_tibble() %>%
   filter(SVTYPE %in% c('DEL', 'DUP')) %>%
   filter(FILTER == 'PASS') %>%
-  select(CHROM, START, END, NAME) %>%
-  rename(id = NAME) %>%
-  mutate(id  = str_remove(id, 'gnomAD_v2_')) %>%
-  mutate(source = 'gnomad_v2') %>%
-  rename(chrom = CHROM, start = START, end = END)
+  select(`#chrom`, start, end, name) %>%
+  rename(id = name) %>%
+  mutate(id  = str_remove(id, 'gnomAD-SV_v2.1_')) %>%
+  mutate(source = 'gnomad_v2.1') %>%
+  rename(chrom = `#chrom`) %>%
+  mutate(chrom = as.character(chrom)) %>%
+  mutate(start = start + 1)
     
 
 
@@ -612,33 +633,63 @@ gnomad_sv_raw <- gnomad_sv_raw %>%
 # Population Copy-Number Variation Frequencies
 # Variables: duplicated - deletion - general // observations - frequency - se
 # ------------------------------------------------------------------------------
+# 
+# decipher_sv_raw <- read.table('/home/cbl02/Storage/data/population_cnv.txt', sep = '\t', header = TRUE) %>%
+#   as_tibble() %>%
+#   mutate(source = 'decipher') %>%
+#   rename(id = population_cnv_id, chrom = chr) %>%
+#   mutate(id = as.character(id)) %>%
+#   select(id, chrom, start, end, source)
 
-decipher_sv_raw <- read.table('/home/cbl02/Storage/data/population_cnv.txt', sep = '\t', header = TRUE) %>%
+# ------------------------------------------------------------------------------
+# Dataset: CNVs PATHOGENIC Decipher
+# Source: sftp user@sftpsrv.sanger.ac.uk/decipher-agreements/pub
+# ------------------------------------------------------------------------------
+
+
+
+decipher_sv_raw <- read_tsv('/home/cbl02/Storage/data/daa_decipher/decipher-cnvs-grch37-2020-01-19.txt', skip = 1) %>%
   as_tibble() %>%
   mutate(source = 'decipher') %>%
-  rename(id = population_cnv_id, chrom = chr) %>%
+  rename(id = `# patient_id`, chrom = chr) %>%
   mutate(id = as.character(id)) %>%
+  filter(pathogenicity == 'Pathogenic') %>%
   select(id, chrom, start, end, source)
+
+# decipher_sv_raw %>% bind_rows(decipher_sv_raw2) %>%
+#   mutate(length_cnv = end - start + 1) %>%
+#   ggplot(aes(length_cnv, y = source)) +
+#   stat_density_ridges(quantile_lines = TRUE, quantiles = 2, aes(fill = source), alpha = 0.6, show.legend = FALSE, size = 1.25) +
+#   # geom_vline(aes(xintercept = size_cnv_query), linetype = 2, color = 'red', size = 1.5) +
+#   scale_x_log10() +
+#   scale_y_discrete(expand = c(0.01, 0)) +
+#   scale_fill_viridis_d() +
+#   # scale_fill_manual(values = c('#CD5C5C','#32CD32', '#32CD32')) +
+#   xlab('log10(CNVs size)') +
+#   ylab('Database') +
+#   theme_ridges()
   
 # ------------------------------------------------------------------------------
 # Dataset: DGV
 # Source: http://dgv.tcag.ca/dgv/docs/GRCh37_hg19_variants_2016-05-15.txt
 # ------------------------------------------------------------------------------
-
+## CHECK POSSIBLE MISTAKE READING DATA
 dgv_df <- read_tsv('/home/cbl02/Storage/data/GRCh37_hg19_variants_2016-05-15.txt') %>%
   as_tibble() %>%
   filter(varianttype == 'CNV') %>%
   filter(variantsubtype %in% c('deletion', 'duplication')) %>%
   rename(id = variantaccession, chrom = chr) %>%
-  #select(id, chrom, start, end) %>%
-  mutate(source = 'dgv')  
+  select(id, chrom, start, end) %>%
+  mutate(source = 'dgv',
+         chrom = as.character(chrom))  
 
 
 # ------------------------------------------------------------------------------
 # Dataset: Aggregation of data from DECIPHER, gnomAD and DGV
 # ------------------------------------------------------------------------------
 
-cnv_df <- decipher_sv_raw %>% rbind(gnomad_sv_raw) %>% rbind(dgv_df)
+cnv_df <- decipher_sv_raw %>% bind_rows(gnomad_sv_raw) %>% bind_rows(dgv_df) %>%
+  mutate(length_cnv = end - start + 1)
 
 # ------------------------------------------------------------------------------
 # Dataset: Protein-Protein interaction network
@@ -1200,3 +1251,21 @@ hgcn_genes <- hgcn_genes %>%
   rename(chrom = chromosome_name) %>%
   mutate(ccr = ifelse(is.na(ccr), 0, ccr)) %>%
   rename(band = location)
+
+hgcn_genes <- hgcn_genes %>% 
+  mutate(pLI = ntile(pLI, 100)) %>% # pLI = 1 Likely Pathogenic
+  mutate(rvis = ntile(-(rvis), 100)) %>% # low rvis = Likely Pathogenic
+  mutate(ncrvis = ntile(-(ncrvis), 100)) %>% # low ncrvis = Likely Pathogenic
+  mutate(ncgerp = ntile(ncgerp, 100)) %>% # low ncgerp = Likely Pathogenic
+  mutate(gdi = ntile(-(gdi), 100)) %>% # low gdi = Likely Pathogenic
+  mutate(hi = ntile(-(hi), 100)) %>% # low hi = Likely Pathogenic
+  mutate(snipre = ntile(-(snipre), 100)) # low snipre = Likely Pathogenic
+  # ggplot(aes(pLI, snipre)) + # pLI = 1 Likely Pathogenic
+  # geom_point()
+hgcn_genes %>%
+  ggplot(aes(rvis, pLI)) +
+  geom_point()
+hgcn_genes %>%
+  slice(1:200) %>%
+  ggplot(aes(rvis, pLI)) +
+  geom_point()

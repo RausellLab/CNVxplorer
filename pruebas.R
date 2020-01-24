@@ -1,7 +1,62 @@
 
 #3
+library(formattable)
+data_input <- test2049
 
-hgcn_genes
+jaja <- formattable(data_input, list(
+  disease = color_tile("white", "orange")))
+#   grade = formatter("span", style = x ~ ifelse(x == "A", 
+#                                                style(color = "green", font.weight = "bold"), NA))
+ ))
+
+as.datatable(jaja)
+
+test2141231 <- colnames(test2049)
+
+sketch <- htmltools::withTags(table(
+  class = 'display',
+  thead(
+    tr(
+      th(rowspan = 1, 'Band'),
+      th(rowspan = 1, 'Gene'),
+      th(colspan = 7, 'Disease_genes'),
+      th(colspan = 7, 'Human-constraint'),
+      th(colspan = 1, 'Interspecies conservation'),
+      th(rowspan = 1, '')
+    ),
+    tr(
+      lapply(test2141231, th)
+    )
+  )
+))
+
+
+datatable(data_input, rownames = FALSE, filter = 'top', container = sketch,
+          selection = 'single',
+          # extensions = 'Responsive',
+          options = list(
+            pageLength = 5, 
+            # autoWidth = TRUE, 
+            style = 'bootstrap', 
+            list(searchHighlight = TRUE),
+            stateSave = FALSE
+            # colnames = c('Entrez id', 'Band', 'Gene', 'pLI', 'Database', 'CNV size', 'Percentage Overlap (%)')
+            # columnDefs = list(list(className = 'dt-center', targets = '_all'))
+          )) %>%
+  formatStyle(
+    'pLI',
+    background = styleColorBar(c(1,100), '#ca7171'),
+    backgroundSize = '100% 90%',
+    backgroundRepeat = 'no-repeat',
+    backgroundPosition = 'center'
+  ) %>%
+  formatStyle(
+    'rvis',
+    background = styleColorBar(c(1,100), '#ca7171'),
+    backgroundSize = '100% 90%',
+    backgroundRepeat = 'no-repeat',
+    backgroundPosition = 'center'
+  )
 
 
 test3111 %>%
