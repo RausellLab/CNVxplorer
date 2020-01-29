@@ -189,9 +189,17 @@ get_sim_score <- function(genes_vector, patient_terms, hpo_list_genes, hpo_dbs) 
   # hpo_dbs <- hpo_down
   # genes_vector <- c('KIAA0319L', 'GJB3', 'GJB4')
   # patient_terms <- replicate(simplify=FALSE, n=1, expr=minimal_set(hpo_down, sample(hpo_down$id, size=10)))
+  
+  # genes_vector <- test001
+  # patient_terms <- test002
+  # hpo_list_genes <- test003
+  # hpo_dbs <- test004
 
-  hpo_patient <- patient_terms
-  names(hpo_patient) <- c('value_patient')  
+  # patient_terms[[1]] <- c(patient_terms[[1]] , 'HP:0001166' )
+  
+  
+  hpo_patient <- patient_terms[[1]]
+  # names(hpo_patient) <- c('value_patient')  
   
   
   
@@ -209,7 +217,7 @@ get_sim_score <- function(genes_vector, patient_terms, hpo_list_genes, hpo_dbs) 
                    term_sim_method = 'resnik') %>%
     as_tibble(rownames = 'gene') %>%
     mutate(p_value = NA) %>%
-    mutate(patient_terms = hpo_patient) %>%
+    # mutate(patient_terms = hpo_patient) %>%
     left_join(to_p_value, by = "gene")
   
 

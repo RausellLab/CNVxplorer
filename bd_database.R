@@ -327,6 +327,24 @@ omim  <- omim %>%
 #   3        6444
 #   4         148
 
+
+# ------------------------------------------------------------------------------
+# Dataset: OMIM 
+# Source: Barthelemy script (data/OMIM/2019_06_10)
+# ------------------------------------------------------------------------------
+
+omim_filtered <- read_tsv('/home/cbl02/Storage/data/matched_genes_all_pheno.tsv')
+
+omim_filtered <- omim_filtered %>%
+  filter(quality == 3,
+         somatic == 0,
+         complexity == 0) %>%
+  rename(gene = Gene_symbols) %>%
+  select(gene) %>% 
+  separate_rows(gene, sep = ', ') %>%
+  distinct() %>%
+  pull()
+
 # ------------------------------------------------------------------------------
 # Dataset: FDA 
 # Source: MacArthur lab github
@@ -653,8 +671,8 @@ decipher_sv_raw <- read_tsv('/home/cbl02/Storage/data/daa_decipher/decipher-cnvs
   mutate(source = 'decipher') %>%
   rename(id = `# patient_id`, chrom = chr) %>%
   mutate(id = as.character(id)) %>%
-  filter(pathogenicity == 'Pathogenic') %>%
-  select(id, chrom, start, end, source)
+  # filter(pathogenicity == 'Pathogenic') %>%
+  select(id, chrom, start, end, source, pathogenicity, genotype, variant_class)
 
 # decipher_sv_raw %>% bind_rows(decipher_sv_raw2) %>%
 #   mutate(length_cnv = end - start + 1) %>%
@@ -668,6 +686,9 @@ decipher_sv_raw <- read_tsv('/home/cbl02/Storage/data/daa_decipher/decipher-cnvs
 #   xlab('log10(CNVs size)') +
 #   ylab('Database') +
 #   theme_ridges()
+
+
+
   
 # ------------------------------------------------------------------------------
 # Dataset: DGV
@@ -692,6 +713,22 @@ cnv_df <- decipher_sv_raw %>% bind_rows(gnomad_sv_raw) %>% bind_rows(dgv_df) %>%
   mutate(length_cnv = end - start + 1)
 
 # ------------------------------------------------------------------------------
+# Dataset: Ridges plot from HOME
+# ------------------------------------------------------------------------------
+
+ridges_home <- cnv_df %>%
+  ggplot(aes(length_cnv, y = source)) +
+  stat_density_ridges(quantile_lines = TRUE, quantiles = 2, aes(fill = source), alpha = 0.6, show.legend = FALSE, size = 1.25) +
+  # geom_vline(aes(xintercept = size_cnv_query), linetype = 2, color = 'red', size = 1.5) +
+  scale_x_log10() +
+  scale_y_discrete(expand = c(0.01, 0)) +
+  scale_fill_viridis_d() +
+  # scale_fill_manual(values = c('#CD5C5C','#32CD32', '#32CD32')) +
+  xlab('log10(CNVs size)') +
+  ylab('Database') +
+  theme_ridges()
+
+# ------------------------------------------------------------------------------
 # Dataset: Protein-Protein interaction network
 # Source: https://www.intomics.com/inbio/map.html#downloads
 # Name file: inBio_Map_core_2016_09_12.tar.gz
@@ -713,11 +750,14 @@ inbio_network <- inbio_network_raw %>%
 # ERROR - 10 ROWS MISSING!!
 
 url <- 'http://compbio.charite.de/jenkins/job/hpo.annotations.monthly/lastSuccessfulBuild/artifact/annotation/ALL_SOURCES_FREQUENT_FEATURES_genes_to_phenotype.txt'
+# url <- 'http://compbio.charite.de/jenkins/job/hpo.annotations.monthly/lastStableBuild/artifact/annotation/ALL_SOURCES_ALL_FREQUENCIES_genes_to_phenotype.txt'
+
 hpo_genes <- read_tsv(url, col_names = c('entrez_id', 'gene', 'term', 'hp'), skip = 1)
 
+hpo_to_vector <- hpo_genes %>% select(term, hp) %>% distinct() %>% mutate(term = paste(term, '-', hp))
 
-vector_term <- hpo_genes %>% select(term, hp) %>% distinct() %>% pull(term)
-vector_hp <- hpo_genes %>% select(term, hp) %>% distinct() %>% pull(hp)
+vector_hp <- hpo_to_vector %>% pull(hp)
+vector_term <- hpo_to_vector %>% pull(term)
 
 
 # ------------------------------------------------------------------------------
@@ -839,13 +879,13 @@ df_enhancers <- df_enhancers %>%
   left_join(from_remot, by = c('chrom', 'start', 'end'))
 
 plot_p100 <- df_enhancers %>% select(id, phast100) %>% distinct() %>% ggplot(aes(phast100)) + geom_density() +
-  xlab('Phast100way placental score')
+  xlab('Phast100way score')
 plot_p46pla <-  df_enhancers %>% 
   select(id, phast46pla) %>% 
   distinct() %>% 
   ggplot(aes(phast46pla)) + 
   geom_density() +
-  xlab('Phast46way (Placental) score')
+  xlab('Phast46way score')
   
 # 
 # enh_post <- mod_remot('from_remot/enhancer_apolo_crossmap_cleaned_7_result.txt', 'EUR', 7, TRUE)
@@ -1219,6 +1259,13 @@ dbvar <- dbvar %>%
     str_detect(variant_type, 'loss') ~ 'deletion'
   )) %>%
   select(chrom, start, end, clinical_assertion, category_variant)
+
+
+# ------------------------------------------------------------------------------
+# Dataset: ACMG 59 GENES - I guess 100% overlapping with OMIM genes
+# ------------------------------------------------------------------------------
+
+
 
 # ------------------------------------------------------------------------------
 # AGGREGATE ALL THE INFORMATION

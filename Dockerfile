@@ -11,6 +11,8 @@ RUN R -e "install.packages('prettydoc')"
 
 RUN R -e "install.packages(c('shinydashboard', \
 'shinyjs', \
+'formattable' \
+'hrbrthemes' \
 'import', \
 'BiocManager', \
 'tablerDash', \
