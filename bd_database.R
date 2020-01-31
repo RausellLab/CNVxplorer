@@ -111,12 +111,18 @@ ref_scores <- tibble(score = c('gwas', # we could filter out by number of hits (
 
 # ------------------------------------------------------------------------------
 # Dataset: Protein-coding genes with HGCN symbol 
+# Source: https://www.genenames.org/download/statistics-and-files/
 # Source:  ftp://ftp.ebi.ac.uk/pub/databases/genenames/new/tsv/locus_types/gene_with_protein_product.txt
 # ------------------------------------------------------------------------------
 
-hgcn_genes <- read_excel('/home/cbl02/Storage/data/gene_with_protein_product.xlsx') %>% as_tibble()
+# test813 <- read_tsv('ftp://ftp.ebi.ac.uk/pub/databases/genenames/new/tsv/locus_types/gene_with_protein_product.txt')
+# hgcn_genes <- read_excel('/home/cbl02/Storage/data/gene_with_protein_product.xlsx') %>% as_tibble()
+hgcn_genes <- read_tsv('ftp://ftp.ebi.ac.uk/pub/databases/genenames/new/tsv/locus_types/gene_with_protein_product.txt')
+
+
 
 hgcn_genes <- hgcn_genes %>%
+  filter(status == 'Approved') %>%
   select(entrez_id, ensembl_gene_id, location, symbol) %>%
   rename(gene = symbol) %>%
   na.omit() %>%
@@ -127,22 +133,16 @@ human  <- useMart("ensembl", dataset = "hsapiens_gene_ensembl",
                   host    = "grch37.ensembl.org",
                   path    = "/biomart/martservice")
 
-# 
-# 'external_gene_name' - SYMBOL
-# interval_genes <- getBM(attributes = c('ensembl_gene_id_version', 'start_position','end_position', 'chromosome_name'),
-#                         mart = human ) %>% as_tibble() %>% filter(!str_detect(chromosome_name, 'PATCH'))
-interval_genes <- getBM(attributes = c('entrezgene_id', 'start_position','end_position', 'chromosome_name'),
+interval_genes <- getBM(attributes = c('ensembl_gene_id', 'start_position','end_position', 'chromosome_name'),
                         mart = human ) %>% 
                         as_tibble() %>% 
                         filter(!str_detect(chromosome_name, 'PATCH')) %>% 
-                        na.omit() %>%
-                        rename(entrez_id = entrezgene_id) %>%
-                        mutate(entrez_id = as.numeric(entrez_id))
+                        na.omit()
+                        # rename(entrez_id = entrezgene_id)
 
 hgcn_genes <- interval_genes %>% 
-  # rename(ensembl_gene_id = ensembl_gene_id_version) %>%
-  # mutate(entrez_id = str_remove(entrez_id, '\\..*')) %>%
-  right_join(hgcn_genes, by = c('entrez_id'))
+  right_join(hgcn_genes, by = c('ensembl_gene_id')) %>%
+  na.omit()
 
 
 hgcn_genes %>% count(start_position) %>% arrange(desc(n))
@@ -156,18 +156,24 @@ hgcn_genes %>% filter(is.na(start_position)) %>% select(ensembl_gene_id) %>% pul
 # Dataset: pLI
 # Source: https://storage.googleapis.com/gnomad-public/release/2.1.1/constraint/gnomad.v2.1.1.lof_metrics.by_gene.txt.bgz
 # Access:  06/06/19
+# There are 46 genes with 2 canonical transcript (canonical == TRUE)
 # ------------------------------------------------------------------------------
 
-pli <- read.table('/home/cbl02/Storage/data/gnomad.v2.1.1.lof_metrics.by_gene.txt', header = TRUE, sep = '\t', stringsAsFactors = FALSE) %>%
+
+pli <- read_tsv('/home/cbl02/Storage/data/gnomad.v2.1.1.lof_metrics.by_transcript.txt') %>%
   as_tibble() %>%
-  # filter(canonical == 'true') %>% 
-  select(gene, pLI, transcript, oe_lof, oe_lof_lower, oe_lof_upper ) %>%
-  mutate(pLI = round(pLI, 2))
+  filter(canonical == 'TRUE') %>% 
+  group_by(gene) %>%
+  slice(1) %>%
+  select(gene, pLI) %>%
+  mutate(pLI = round(pLI, 2)) %>%
+  ungroup()
 
 # ------------------------------------------------------------------------------
 # Dataset: Vg - Expected population variance in its dosage that is due to genetic differences among individuals
 # Source: https://www.biorxiv.org/content/10.1101/632794v1.supplementary-material - Table 1
 # # Access:  06/06/19
+# 5 ENTREZID linked to 2 ENSEMBL GENE
 # ------------------------------------------------------------------------------
 
 
@@ -178,14 +184,18 @@ vg_raw <- vg_raw %>% rename(vg = Avg_VG) %>% filter(vg != 'NaN') %>% mutate(vg =
 
 test <- clusterProfiler::bitr(vg_raw$gene, fromType = 'ENSEMBL', toType = "ENTREZID", OrgDb="org.Hs.eg.db")
 
-vg <- vg_raw %>% left_join(test, by = c('gene' = 'ENSEMBL')) %>% select(-gene) %>% select(ENTREZID, vg) %>%
-  mutate(ENTREZID = as.numeric(ENTREZID)) %>% rename(entrez_id = ENTREZID)
+vg <- vg_raw %>% left_join(test, by = c('gene' = 'ENSEMBL')) %>% 
+  select(-gene, ENTREZID, vg) %>% 
+  mutate(ENTREZID = as.numeric(ENTREZID)) %>% 
+  rename(entrez_id = ENTREZID) %>%
+  filter(!entrez_id %in% c(3117, 5414, 64788, 148753, 100652739))
 
 # ------------------------------------------------------------------------------
 # Dataset: Clingen
 # Source: ftp://ftp.ncbi.nlm.nih.gov/pub/dbVar/clingen/ClinGen_haploinsufficiency_gene_GRCh37.bed
 # Access: 06/06/19
 # Info score: https://www.ncbi.nlm.nih.gov/projects/dbvar/clingen/help.shtml#review
+# FILTER SCORE == 3
 # ------------------------------------------------------------------------------
 
 clingen_raw <- read.table('/home/cbl02/Storage/data/ClinGen_haploinsufficiency_gene_GRCh37.bed', col.names = c('chrom', 'start', 'end', 'gene', 'score'), stringsAsFactors = FALSE,
@@ -215,6 +225,7 @@ cnv_syndromes_clingen <- cnv_syndromes_clingen %>%
          ) %>%
   mutate(start = 1 + start)  %>% # .bed format 0-based
   mutate(source = 'clingen')
+
 # ------------------------------------------------------------------------------
 # Dataset: CNV Syndromes - DECIPHER
 # Source: sftp user@sftpsrv.sanger.ac.uk/decipher-agreements/pub
@@ -228,6 +239,10 @@ cnv_syndromes_decipher <-cnv_syndromes_decipher %>%
   mutate(phenotypes = str_replace_all(phenotypes, '\\|', ', ')) %>%
   mutate(source = 'decipher') %>%
   select(chrom, start, end, syndrome_name, variant_class, phenotypes, source)
+
+# ------------------------------------------------------------------------------
+# Dataset: DATASET - CNV syndromes from decipher and clinvar
+# ------------------------------------------------------------------------------
 
 
 syndromes_total <- cnv_syndromes_clingen %>%
@@ -244,19 +259,11 @@ syndromes_total <- cnv_syndromes_clingen %>%
 triplo <- read.table('/home/cbl02/Storage/data/ClinGen_triplosensitivity_gene.bed', col.names = c('chrom', 'start', 'end', 'gene', 'score'), stringsAsFactors = FALSE,
                      skip = 1, sep = '\t') %>%
   as_tibble() %>%
+  filter(!str_detect(score, 'Not yet evaluated')) %>%
   filter(score >= 1) %>%
   filter(score != 40) %>% 
-  filter(!str_detect(score, 'Not yet evaluated')) %>%
   select(gene) %>%
   pull(gene)
-
-# ------------------------------------------------------------------------------
-# Dataset: CNV syndromes
-# Source: Decipher
-# ------------------------------------------------------------------------------
-
-cnv_syndrome_decipher <- read_tsv('/home/cbl02/Storage/data/decipher_cnv_syndromes_13_12_19', col_names = TRUE)
-
 
 # ------------------------------------------------------------------------------
 # Dataset: DEVELOPMENTAL DISORDER GENES
@@ -331,11 +338,12 @@ omim  <- omim %>%
 # ------------------------------------------------------------------------------
 # Dataset: OMIM 
 # Source: Barthelemy script (data/OMIM/2019_06_10)
+# Most of the symbols are alias
 # ------------------------------------------------------------------------------
 
 omim_filtered <- read_tsv('/home/cbl02/Storage/data/matched_genes_all_pheno.tsv')
 
-omim_filtered <- omim_filtered %>%
+omim <- omim_filtered %>%
   filter(quality == 3,
          somatic == 0,
          complexity == 0) %>%
@@ -362,9 +370,7 @@ fda <- read.table('https://raw.githubusercontent.com/macarthur-lab/gene_lists/ma
 # Dataset: RVIS score 
 # Note: The newest RVIS release (v4) is based on the ExAC v2 standing variation 
 # Source: http://genic-intolerance.org/about.jsp
-# Access: 
 # ------------------------------------------------------------------------------
-
 
 rvis <- read.table('http://genic-intolerance.org/data/GenicIntolerance_v3_12Mar16.txt', sep = '\t', header = TRUE)
 rvis <- rvis %>% select(GENE, X.ExAC_0.05.popn) %>%
@@ -432,7 +438,6 @@ gwas <- gwas_raw %>% as_tibble() %>%
          CHR_POS = as.character(CHR_POS),
          INTERGENIC = as.numeric(as.character(INTERGENIC)),
          REPORTED.GENE.S. = as.character(REPORTED.GENE.S.)) %>%
-  
   filter(CHR_ID %in% c(1:22,'X')) %>%
   separate(REPORTED.GENE.S., into = as.character(1:150), sep = ',') %>% 
   select(CHR_ID, CHR_POS, INTERGENIC, '1') %>% 
@@ -444,13 +449,13 @@ gwas <- gwas_raw %>% as_tibble() %>%
   pull()
 
 
-gwas_variants <- gwas_raw %>% as_tibble() %>% 
+gwas_variants <- gwas_raw %>% 
+  as_tibble() %>% 
   select(CHR_ID, CHR_POS, INTERGENIC, REPORTED.GENE.S., DISEASE.TRAIT, LINK) %>% 
   mutate(CHR_ID = as.character(CHR_ID),
          CHR_POS = as.character(CHR_POS),
          INTERGENIC = as.numeric(as.character(INTERGENIC)),
          REPORTED.GENE.S. = as.character(REPORTED.GENE.S.)) %>%
-  
   filter(CHR_ID %in% c(1:22,'X')) %>%
   separate(REPORTED.GENE.S., into = as.character(1:150), sep = ',') %>% 
   select(CHR_ID, CHR_POS, INTERGENIC, DISEASE.TRAIT,'1', LINK) %>% 
@@ -470,13 +475,11 @@ ccr <- read.table('https://static-content.springer.com/esm/art%3A10.1038%2Fs4158
   rename(ccr = number_of_99th_percentile_CCRs) %>%
   mutate(gene = as.character(gene))
 
-
 # ------------------------------------------------------------------------------
 # Dataset: ncRVIS and ncGERP
 # Source: https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1005492#sec025
 # Table: S1 Data. Collection of RVIS and GERP scores and their corresponding percentile
 # ------------------------------------------------------------------------------
-
 
 nc_raw <- read_excel('/home/cbl02/Storage/data/journal.pgen.1005492.s011.XLSX.xlsx', sheet = 1)
 
@@ -497,9 +500,6 @@ nc <- nc_raw %>%
 # File name: 	GTEx_Analysis_2016-01-15_v7_RNASeQCv1.1.8_gene_tpm.gct.gz
 # ------------------------------------------------------------------------------
 
-# gtex <- read.table('https://storage.googleapis.com/gtex_analysis_v7/annotations/GTEx_v7_Annotations_SampleAttributesDS.txt',
-#                    sep = '\t', header = TRUE)
-
 gtex <- read.table('/home/cbl02/Storage/data/GTEx_Analysis_2016-01-15_v7_RNASeQCv1.1.8_gene_median_tpm.gct',
                    sep = '\t', header = TRUE, skip = 2)
 
@@ -507,7 +507,12 @@ gtex <- gtex %>%
   as_tibble() %>%
   rename(gene = Description) %>%
   select(-gene_id) %>%
-  gather('tissue', 'value', - gene)
+  gather('tissue', 'value', - gene) %>%
+  mutate(tissue = str_replace_all(tissue, '\\.\\.\\.', '-')) %>%
+  mutate(tissue = str_replace_all(tissue, '\\.\\.', '-')) %>%
+ mutate(tissue = str_replace_all(tissue, '\\.', '-'))
+
+
 
 # ------------------------------------------------------------------------------
 # Dataset: HPA
@@ -515,17 +520,10 @@ gtex <- gtex %>%
 # File name: 	GTEx_Analysis_2016-01-15_v7_RNASeQCv1.1.8_gene_tpm.gct.gz
 # ------------------------------------------------------------------------------
 
-hpa <- read.table('/home/cbl02/Storage/data/normal_tissue.tsv', header = TRUE, sep = '\t')
+hpa <- read_tsv('/home/cbl02/Storage/data/normal_tissue.tsv')
 
 hpa <- hpa %>%
-  as_tibble() %>%
-  rename(gene = Gene.name, tissue = Tissue, cell_type = Cell.type) %>%
-  # mutate(Level = as.numeric(case_when(
-  #   Level == 'High' ~ "3",
-  #   Level == 'Medium' ~ "2",
-  #   Level == 'Low' ~ "1",
-  #   Level == 'Not detected' ~ "0"
-  # ))) %>%
+  rename(gene = `Gene name`, tissue = Tissue, cell_type = `Cell type`) %>%
   select(-Gene)
 
 # ------------------------------------------------------------------------------
@@ -533,14 +531,14 @@ hpa <- hpa %>%
 # Source: http://www.informatics.jax.org/downloads/reports/HMD_HumanPhenotype.rpt
 # ------------------------------------------------------------------------------
 
-mgi <- read.table('http://www.informatics.jax.org/downloads/reports/HMD_HumanPhenotype.rpt', sep = '\t')
+mgi <- read_tsv('http://www.informatics.jax.org/downloads/reports/HMD_HumanPhenotype.rpt', col_names = FALSE)
 
 mgi <- mgi %>%
   as_tibble() %>%
-  select(-V8, -V3) %>%
-  rename(gene = V1, entrez_id = V2, gene_mouse = V5, pheno = V7, mgi = V6) %>%
+  select(-X8, -X3) %>%
+  rename(gene = X1, entrez_id = X2, gene_mouse = X5, pheno = X7, mgi = X6) %>%
   mutate(mgi = str_remove(mgi, pattern = '  ')) %>%
-  select(-V4) %>%
+  select(-X4) %>%
   filter(pheno != '')
 
 # ------------------------------------------------------------------------------
@@ -558,25 +556,25 @@ mgi <- mgi %>%
 # are deleted or duplicated causing the phenotype.
 #
 
-morbidmap <- read_xlsx('/home/cbl02/Storage/data/morbidmap.xlsx', skip = 3)
-
-morbidmap <- morbidmap %>% 
-  as_tibble() %>%
-  rename(pheno = `# Phenotype`, gene = `Gene Symbols`, mim_gene = `MIM Number`) %>%
-  select(- `Cyto Location`) %>%
-  mutate(mapping = 
-           case_when(
-             str_detect(pheno, '\\([1]\\)') ~ "1",
-             str_detect(pheno, '\\([2]\\)') ~ "2",
-             str_detect(pheno, '\\([3]\\)') ~ "3",
-             str_detect(pheno, '\\([4]\\)') ~ "4"
-           )) %>%
-  filter(!isNA(mapping)) %>%  # eliminate description at the bottom
-  mutate(pheno = str_remove(pheno, '\\([1-4]\\)' )) %>%
-  mutate(mim_disease = str_extract(pheno, '[0-9]{6}')) %>%
-  mutate(pheno = str_remove(pheno, '[0-9]{6}')) %>%
-  mutate(pheno = str_remove(pheno, ',  ')) %>%
-  select(gene, pheno, mim_gene, mim_disease, mapping)
+# morbidmap <- read_xlsx('/home/cbl02/Storage/data/morbidmap.xlsx', skip = 3)
+# 
+# morbidmap <- morbidmap %>% 
+#   as_tibble() %>%
+#   rename(pheno = `# Phenotype`, gene = `Gene Symbols`, mim_gene = `MIM Number`) %>%
+#   select(- `Cyto Location`) %>%
+#   mutate(mapping = 
+#            case_when(
+#              str_detect(pheno, '\\([1]\\)') ~ "1",
+#              str_detect(pheno, '\\([2]\\)') ~ "2",
+#              str_detect(pheno, '\\([3]\\)') ~ "3",
+#              str_detect(pheno, '\\([4]\\)') ~ "4"
+#            )) %>%
+#   filter(!isNA(mapping)) %>%  # eliminate description at the bottom
+#   mutate(pheno = str_remove(pheno, '\\([1-4]\\)' )) %>%
+#   mutate(mim_disease = str_extract(pheno, '[0-9]{6}')) %>%
+#   mutate(pheno = str_remove(pheno, '[0-9]{6}')) %>%
+#   mutate(pheno = str_remove(pheno, ',  ')) %>%
+#   select(gene, pheno, mim_gene, mim_disease, mapping)
 
 
 # ------------------------------------------------------------------------------
@@ -584,20 +582,20 @@ morbidmap <- morbidmap %>%
 # Source: biomart
 # ------------------------------------------------------------------------------
 
-
-human  <- useMart("ensembl", dataset = "hsapiens_gene_ensembl",
-                  host    = "grch37.ensembl.org",
-                  path    = "/biomart/martservice")
-
-
-para_genes <- getBM(attributes = c('external_gene_name', 'hsapiens_paralog_ensembl_gene'), 
-                        mart = human )
-
-para_genes %>% as_tibble() %>%
-  rename(gene = external_gene_name, para = hsapiens_paralog_ensembl_gene) %>%
-  filter(para != '') %>%
-  count(gene) %>%
-  filter(gene == 'DMD')
+# 
+# human  <- useMart("ensembl", dataset = "hsapiens_gene_ensembl",
+#                   host    = "grch37.ensembl.org",
+#                   path    = "/biomart/martservice")
+# 
+# 
+# para_genes <- getBM(attributes = c('external_gene_name', 'hsapiens_paralog_ensembl_gene'), 
+#                         mart = human )
+# 
+# para_genes %>% as_tibble() %>%
+#   rename(gene = external_gene_name, para = hsapiens_paralog_ensembl_gene) %>%
+#   filter(para != '') %>%
+#   count(gene) %>%
+#   filter(gene == 'DMD')
 
 
 # ------------------------------------------------------------------------------
@@ -646,7 +644,7 @@ gnomad_sv_raw <- gnomad_sv_raw %>%
 
 
 # ------------------------------------------------------------------------------
-# Dataset: Structural Variants (SV)
+# Dataset: Structural Variants (SV) - Population CNVs
 # Source: https://decipher.sanger.ac.uk/about#downloads/data
 # Population Copy-Number Variation Frequencies
 # Variables: duplicated - deletion - general // observations - frequency - se
@@ -664,8 +662,6 @@ gnomad_sv_raw <- gnomad_sv_raw %>%
 # Source: sftp user@sftpsrv.sanger.ac.uk/decipher-agreements/pub
 # ------------------------------------------------------------------------------
 
-
-
 decipher_sv_raw <- read_tsv('/home/cbl02/Storage/data/daa_decipher/decipher-cnvs-grch37-2020-01-19.txt', skip = 1) %>%
   as_tibble() %>%
   mutate(source = 'decipher') %>%
@@ -674,29 +670,13 @@ decipher_sv_raw <- read_tsv('/home/cbl02/Storage/data/daa_decipher/decipher-cnvs
   # filter(pathogenicity == 'Pathogenic') %>%
   select(id, chrom, start, end, source, pathogenicity, genotype, variant_class)
 
-# decipher_sv_raw %>% bind_rows(decipher_sv_raw2) %>%
-#   mutate(length_cnv = end - start + 1) %>%
-#   ggplot(aes(length_cnv, y = source)) +
-#   stat_density_ridges(quantile_lines = TRUE, quantiles = 2, aes(fill = source), alpha = 0.6, show.legend = FALSE, size = 1.25) +
-#   # geom_vline(aes(xintercept = size_cnv_query), linetype = 2, color = 'red', size = 1.5) +
-#   scale_x_log10() +
-#   scale_y_discrete(expand = c(0.01, 0)) +
-#   scale_fill_viridis_d() +
-#   # scale_fill_manual(values = c('#CD5C5C','#32CD32', '#32CD32')) +
-#   xlab('log10(CNVs size)') +
-#   ylab('Database') +
-#   theme_ridges()
 
-
-
-  
 # ------------------------------------------------------------------------------
 # Dataset: DGV
 # Source: http://dgv.tcag.ca/dgv/docs/GRCh37_hg19_variants_2016-05-15.txt
 # ------------------------------------------------------------------------------
 ## CHECK POSSIBLE MISTAKE READING DATA
 dgv_df <- read_tsv('/home/cbl02/Storage/data/GRCh37_hg19_variants_2016-05-15.txt') %>%
-  as_tibble() %>%
   filter(varianttype == 'CNV') %>%
   filter(variantsubtype %in% c('deletion', 'duplication')) %>%
   rename(id = variantaccession, chrom = chr) %>%
@@ -762,16 +742,13 @@ vector_term <- hpo_to_vector %>% pull(term)
 
 # ------------------------------------------------------------------------------
 # Dataset: TADs
-# Source: 30765865 - 25693564
-# Name file: https://raw.githubusercontent.com/JacobSpectorMD/ClinTAD/master/home/files/boundary.txt
+# Name file: http://promoter.bx.psu.edu/hi-c/publications.html
 # ------------------------------------------------------------------------------
 
-tad <- read.table('https://raw.githubusercontent.com/JacobSpectorMD/ClinTAD/master/home/files/boundary.txt', header = FALSE, sep = '\t', 
-                  stringsAsFactors = FALSE)
+tad <- read_tsv('/home/cbl02/Storage/data/H1-ESC_Dixon2015-raw_TADs.txt', col_names = FALSE)
 
 tad <- tad %>%
-  as_tibble() %>%
-  rename(chrom = V1, start = V2, end = V3) %>%
+  rename(chrom = X1, start = X2, end = X3) %>%
   mutate(chrom = str_remove(chrom, 'chr')) %>%
   mutate(id = row_number()) %>% select(id, chrom, start, end)
 
@@ -878,6 +855,11 @@ df_enhancers <- df_enhancers %>%
   left_join(from_python %>% select(id, phast100, phast46pla, phast46pri), by = 'id') %>%
   left_join(from_remot, by = c('chrom', 'start', 'end'))
 
+df_enhancers <- df_enhancers %>% mutate(phast100 = round(phast100, 2)) %>%
+  mutate(phast46pla = round(phast46pla, 2)) %>%
+  mutate(phast46pri = round(phast46pri, 2))
+  
+
 plot_p100 <- df_enhancers %>% select(id, phast100) %>% distinct() %>% ggplot(aes(phast100)) + geom_density() +
   xlab('Phast100way score')
 plot_p46pla <-  df_enhancers %>% 
@@ -943,22 +925,21 @@ lncrna_coord <- lncrna_coord %>%
   select(id, chrom, start, end, sense, n_exon)
 
 
-lncrna_expression_raw <- read.table('/home/cbl02/Storage/data/lncRNA/HumanRPKMs.txt', header = TRUE, sep = '\t',
-                     stringsAsFactors = FALSE)
 
 ## 7 organs: Brain, Cerebellum, Heart, Kidney, Liver, Ovary, Testis
 ## 26 developmental step: "10wpc, 11wpc, 12wpc, 13wpc, 16wpc, 18wpc, 19wpc, 20wpc, 4wpc, 5wpc, 6wpc, 7wpc, 
 # 8wpc, 9wpc, infant, newborn, olderMidAge, oldTeenager, school, senior, Senior, teenager, toddler, youngAdult, 
 # youngMidAge, youngTeenager"
 
-lncrna_expression <- lncrna_expression_raw %>%
-  rownames_to_column(var = 'id') %>%
-  as_tibble() %>%
-  gather('type', 'rpkm', -id) %>%
-  separate(col = type, into = c('organ', 'dev_step', 'dup'), sep = '\\.') %>%
-  mutate(dev_step = if_else(dev_step == 'Senior', 'senior', dev_step)) %>% # there was a typo in 85037 rows (Senior) and the rest, senior (510222)
-  filter(!str_detect(string = id, pattern = 'ENSG')) %>%
-  filter(str_detect(id, 'XLOC'))
+# lncrna_expression <-  read.table('/home/cbl02/Storage/data/lncRNA/HumanRPKMs.txt', header = TRUE, sep = '\t',
+#                                  stringsAsFactors = FALSE) %>%
+#   rownames_to_column(var = 'id') %>%
+#   as_tibble() %>%
+#   gather('type', 'rpkm', -id) %>%
+#   separate(col = type, into = c('organ', 'dev_step', 'dup'), sep = '\\.') %>%
+#   mutate(dev_step = if_else(dev_step == 'Senior', 'senior', dev_step)) %>% # there was a typo in 85037 rows (Senior) and the rest, senior (510222)
+#   filter(!str_detect(string = id, pattern = 'ENSG')) %>%
+#   filter(str_detect(id, 'XLOC'))
 
 
 
@@ -1008,8 +989,8 @@ lncrna_expression <- lncrna_expression_raw %>%
 blacklist_encode <- read_tsv('/home/cbl02/Storage/data/hg19-blacklist.v2.bed', col_names = FALSE) %>%
   as_tibble() %>%
   rename(chrom = X1, start = X2, end = X3, class = X4) %>%
-  # select(-X5) %>%
-  mutate(chrom = str_remove(chrom, 'chr'))
+mutate(start = start + 1) %>%
+    mutate(chrom = str_remove(chrom, 'chr'))
   
 
 
@@ -1042,21 +1023,25 @@ colnames(gdi) <- c('gene', 'gdi', 'gdi_phred', 'all_diseases', 'all_mendelian', 
                    'mendelian_ar', 'all_pid', 'pid_ad', 'pid_ar', 'all_cancer', 'cancer_dominant',
                    'cancer_recessive')
 
-gdi <- gdi %>% select(gene, gdi) %>% mutate(gdi = round(gdi, 2))
+gdi <- gdi %>% 
+  select(gene, gdi) %>% 
+  mutate(gdi = round(gdi, 2))
 
 # ------------------------------------------------------------------------------
 # Dataset: SNIPre
 # Source: antonio's email
+# two genes are duplicated and have wrong symbol (01-Mar, 02-Mar)
 # ------------------------------------------------------------------------------
 
-snipre <- read.table('/home/cbl02/Storage/data/Sniprefallgenes.txt', header = TRUE, stringsAsFactors = FALSE) %>%
-  as_tibble()
+snipre <- read_tsv('/home/cbl02/Storage/data/Sniprefallgenes.txt', col_names = TRUE)
 
 snipre <- snipre %>% select(Gene, SnIPRE.f) %>% 
-  rename(gene = Gene, snipre = SnIPRE.f) %>% 
+
+    rename(gene = Gene, snipre = SnIPRE.f) %>% 
   mutate(snipre = str_replace(snipre, ',', '.')) %>%
   mutate(snipre = as.numeric(snipre)) %>%
-  mutate(snipre = round(snipre, 2))
+  mutate(snipre = round(snipre, 2)) %>%
+  filter(!gene %in% c('01-Mar', '02-Mar'))
 
 
 # ------------------------------------------------------------------------------
@@ -1074,22 +1059,22 @@ para_genes <- read_tsv('/home/cbl02/Storage/data/dup_genes/dupgenes_ogee.txt')
 # Annotation: https://hpo.jax.org/app/help/annotations
 # ------------------------------------------------------------------------------
 
-hpo_omim <- read_tsv('/home/cbl02/Storage/data/phenotype_annotation_hpoteam.tab', col_names = FALSE)
-
-hpo_omim <- hpo_omim %>% 
-  filter(X1 == 'OMIM') %>%
-  # select(-X2) %>%
-  select(-X1, -X2, -X10, -X12, -X13, -X14) %>% # remove x1 because all values are omim - change if we include orphanet/omim - the other file
-  rename(desc = X3, 
-         pace = X4, 
-         hpo = X5, 
-         term = X6, 
-         evidence = X7, 
-         onset = X8, 
-         frequency = X9, 
-         clinical_modifier = X11) %>%
-  mutate(desc = str_remove(desc, '[0-9]{6}'),
-         desc = str_remove(desc, '#'))
+# hpo_omim <- read_tsv('/home/cbl02/Storage/data/phenotype_annotation_hpoteam.tab', col_names = FALSE)
+# 
+# hpo_omim <- hpo_omim %>% 
+#   filter(X1 == 'OMIM') %>%
+#   # select(-X2) %>%
+#   select(-X1, -X2, -X10, -X12, -X13, -X14) %>% # remove x1 because all values are omim - change if we include orphanet/omim - the other file
+#   rename(desc = X3, 
+#          pace = X4, 
+#          hpo = X5, 
+#          term = X6, 
+#          evidence = X7, 
+#          onset = X8, 
+#          frequency = X9, 
+#          clinical_modifier = X11) %>%
+#   mutate(desc = str_remove(desc, '[0-9]{6}'),
+#          desc = str_remove(desc, '#'))
 
 
 # ------------------------------------------------------------------------------
@@ -1100,50 +1085,50 @@ hpo_omim <- hpo_omim %>%
 # "gene_panel_218" "gene_panel_520" "gene_panel_530" "gene_panel_561" "gene_panel_82" 
 # ------------------------------------------------------------------------------
 
-library(rvest)
-website <- "https://panelapp.genomicsengland.co.uk/panels/"
-page <- read_html(website)
-
-c_ref <- page %>%
-  html_nodes("a") %>%       # find all links
-  html_attr("href")
-
-df_ref <- tibble(ref = c_ref, id = NA) %>%
-  filter(str_detect(ref, 'download')) %>%
-  mutate(ref = str_remove(ref, '/panels/')) %>% 
-  mutate(id = ref) %>%
-  mutate(id = str_remove(id, '/download/01234/'))
-  
-setwd('/home/cbl02/Storage/data/gene_panel')
-
-walk2(df_ref$ref, df_ref$id, function(a, b) 
-  download.file(url = paste0(website, a), destfile = paste0('gene_panel_', b))
-  )
-files_panel <- list.files()
-panel_total <- tibble()
-
-for (i in 1:length(files_panel)) {
-  print(i)
-  df_tmp <- read_tsv(paste0('/home/cbl02/Storage/data/gene_panel/', files_panel[i]))
-  df_tmp <- df_tmp %>% mutate(source = files_panel[i])
-  panel_total <- rbind(panel_total, df_tmp)
-}
-
-# we filtered out those genes not containing a "review ranking" ( 3,259 out 45488)
-# Filtering out genes with a evidence level (red - amber)
-panel_total <- panel_total %>%
-  rename(entity_name = `Entity Name`, 
-         entity_type = `Entity type`, 
-         gene = `Gene Symbol`,
-         sources = `Sources(; separated)`) %>%
-  filter(entity_type == 'gene') %>%  # optional - we can include regions in our analysis
-  filter(str_detect(sources, 'Expert Review')) %>%
-  separate_rows(sources, sep = ';') %>%
-  filter(str_detect(sources, 'Expert Review Green')) %>%
-  select(gene, Level4, -sources, source) 
-  
-
-setwd('/home/cbl02/Storage/cnvxplore')
+# library(rvest)
+# website <- "https://panelapp.genomicsengland.co.uk/panels/"
+# page <- read_html(website)
+# 
+# c_ref <- page %>%
+#   html_nodes("a") %>%       # find all links
+#   html_attr("href")
+# 
+# df_ref <- tibble(ref = c_ref, id = NA) %>%
+#   filter(str_detect(ref, 'download')) %>%
+#   mutate(ref = str_remove(ref, '/panels/')) %>% 
+#   mutate(id = ref) %>%
+#   mutate(id = str_remove(id, '/download/01234/'))
+#   
+# setwd('/home/cbl02/Storage/data/gene_panel')
+# 
+# walk2(df_ref$ref, df_ref$id, function(a, b) 
+#   download.file(url = paste0(website, a), destfile = paste0('gene_panel_', b))
+#   )
+# files_panel <- list.files()
+# panel_total <- tibble()
+# 
+# for (i in 1:length(files_panel)) {
+#   print(i)
+#   df_tmp <- read_tsv(paste0('/home/cbl02/Storage/data/gene_panel/', files_panel[i]))
+#   df_tmp <- df_tmp %>% mutate(source = files_panel[i])
+#   panel_total <- rbind(panel_total, df_tmp)
+# }
+# 
+# # we filtered out those genes not containing a "review ranking" ( 3,259 out 45488)
+# # Filtering out genes with a evidence level (red - amber)
+# panel_total <- panel_total %>%
+#   rename(entity_name = `Entity Name`, 
+#          entity_type = `Entity type`, 
+#          gene = `Gene Symbol`,
+#          sources = `Sources(; separated)`) %>%
+#   filter(entity_type == 'gene') %>%  # optional - we can include regions in our analysis
+#   filter(str_detect(sources, 'Expert Review')) %>%
+#   separate_rows(sources, sep = ';') %>%
+#   filter(str_detect(sources, 'Expert Review Green')) %>%
+#   select(gene, Level4, -sources, source) 
+#   
+# 
+# setwd('/home/cbl02/Storage/cnvxplore')
 
 
 
@@ -1179,12 +1164,6 @@ disgenet %>% ggplot(aes(score)) +
 
 genes_disgenet <- disgenet %>% select(geneSymbol) %>% distinct() %>% pull()
 
-# ------------------------------------------------------------------------------
-# Source: https://atlas.ctglab.nl/
-# Version: Release 2 v20190117
-# ------------------------------------------------------------------------------
-
-gwas_atlas <- read_tsv('/home/cbl02/Storage/data/gwasATLAS_v20190117.txt')
 
 # ------------------------------------------------------------------------------
 # Dataset: Imprinting genes
@@ -1300,19 +1279,10 @@ hgcn_genes <- hgcn_genes %>%
   rename(band = location)
 
 hgcn_genes <- hgcn_genes %>% 
-  mutate(pLI = ntile(pLI, 100)) %>% # pLI = 1 Likely Pathogenic
+  mutate(pLI = ntile(pLI, 100)) %>% # high pLI = 1 Likely Pathogenic
   mutate(rvis = ntile(-(rvis), 100)) %>% # low rvis = Likely Pathogenic
   mutate(ncrvis = ntile(-(ncrvis), 100)) %>% # low ncrvis = Likely Pathogenic
-  mutate(ncgerp = ntile(ncgerp, 100)) %>% # low ncgerp = Likely Pathogenic
+  mutate(ncgerp = ntile(ncgerp, 100)) %>% # high ncgerp = Likely Pathogenic
   mutate(gdi = ntile(-(gdi), 100)) %>% # low gdi = Likely Pathogenic
   mutate(hi = ntile(-(hi), 100)) %>% # low hi = Likely Pathogenic
   mutate(snipre = ntile(-(snipre), 100)) # low snipre = Likely Pathogenic
-  # ggplot(aes(pLI, snipre)) + # pLI = 1 Likely Pathogenic
-  # geom_point()
-hgcn_genes %>%
-  ggplot(aes(rvis, pLI)) +
-  geom_point()
-hgcn_genes %>%
-  slice(1:200) %>%
-  ggplot(aes(rvis, pLI)) +
-  geom_point()

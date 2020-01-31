@@ -213,7 +213,7 @@ get_sim_score <- function(genes_vector, patient_terms, hpo_list_genes, hpo_dbs) 
   
   
 
-  mat_test <- get_profile_sims(ontology = hpo_down, profile = hpo_patient, term_sets = genes_sample,
+  mat_test <- get_profile_sims(ontology = hpo_dbs, profile = hpo_patient, term_sets = genes_sample,
                    term_sim_method = 'resnik') %>%
     as_tibble(rownames = 'gene') %>%
     mutate(p_value = NA) %>%

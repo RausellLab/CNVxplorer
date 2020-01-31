@@ -1,4 +1,11 @@
 
+
+
+
+jaja <- entrez_link(db= 'omim', id= test4114[['ids']], dbfrom="pubmed")
+jaja2 <- jaja$links[['pubmed_omim_calculated']] %>% as.numeric()
+
+hgcn_genes %>% filter(entrez_id %in% jaja2)
 #3
 library(formattable)
 data_input <- test2049
