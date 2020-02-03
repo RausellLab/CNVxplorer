@@ -102,15 +102,11 @@ shiny::shinyApp(
   # ui = secure_app(
   
   ui = 
+  
     # shinyjs::useShinyjs(),
   
     tablerDashPage(
- #   verbatimTextOutput("auth_output"),
-    # enable_preloader = TRUE,
-    # loading_duration = 4,
-    
 
-    
     navbar = tablerDashNav(
       
       navMenu = tablerNavMenu(
@@ -124,6 +120,11 @@ shiny::shinyApp(
           tabName = "genetic_evidence",
           icon = "box",
           "Genetic evidence"
+        ),
+        tablerNavMenuItem(
+          tabName = "model",
+          icon = "box",
+          "Model organism"
         ),
         tablerNavMenuItem(
           tabName = "reg_region",
@@ -146,11 +147,7 @@ shiny::shinyApp(
           icon = "box",
           "Functional analysis"
         ),
-        # tablerNavMenuItem(
-        #   tabName = "model",
-        #   icon = "box",
-        #   "Model organism"
-        # ),
+
 
 
 
@@ -165,16 +162,17 @@ shiny::shinyApp(
         #   icon = "book",
         #   "CNVs NGS"
         # ),
-        tablerNavMenuItem(
-          tabName = "down_report",
-          icon = "download",
-          "Automated report"
-        )
+        
         # tablerNavMenuItem(
-        #   tabName = "Docu",
-        #   icon = "book",
-        #   "Documentation"
+        #   tabName = "down_report",
+        #   icon = "download",
+        #   "Automated report"
         # )
+        tablerNavMenuItem(
+          tabName = "Docu",
+          icon = "book",
+          "Documentation"
+        )
         
         
         ),
@@ -228,6 +226,7 @@ shiny::shinyApp(
         
         tablerTabItem(
           tabName = "overview",
+          shinyjs::useShinyjs(),
           
           use_waiter(),
           
@@ -256,6 +255,7 @@ shiny::shinyApp(
                 label = "Start!",
                 color = "success",
                 style = "material-flat",
+                size = 'lg',
                 # icon = icon("sliders"),
                 block = TRUE
               ),
@@ -282,7 +282,8 @@ shiny::shinyApp(
               # ),
               # hr(),
               # uiOutput('n_snv'),
-              uiOutput('ref_user_length')
+              uiOutput('ref_user_length'),
+              uiOutput('ref_user_cytoband')
               # uiOutput('n_genes')
               # uiOutput('score_rf')
               
@@ -1408,7 +1409,7 @@ shiny::shinyApp(
         tablerTabItem(
           tabName = "model",
           tablerCard(title = 'Phenotypes associated with the list of genes',
-                     echarts4rOutput('agg_model'),
+                     plotOutput('agg_model'),
                      width = 12),
           fluidRow(
             # tablerCard(title = 'Select a gene:',
@@ -1421,6 +1422,26 @@ shiny::shinyApp(
         ),
         tablerTabItem(
           tabName = "pubmed",
+          fluidRow(
+          tablerCard(
+            title = "OMIM entries associated with the literature ",
+            
+            collapsible = FALSE,
+            closable = FALSE,
+            DTOutput('omim_assoc'),
+            overflow = TRUE,
+            width = 6
+          ),
+          tablerCard(
+            title = "Gene entries associated with the literature ",
+            
+            collapsible = FALSE,
+            closable = FALSE,
+            DTOutput('gene_assoc'),
+            overflow = TRUE,
+            width = 6
+          )
+          ),
           fluidRow(
             tablerCard(
               title = "Pubmed articles associated with deletions in the region",
@@ -1550,22 +1571,18 @@ shiny::shinyApp(
     # 
     
     
-    
-    gene_selected <- reactive({
+    observeEvent(input$start_analysis, {
+
+      proxy <- dataTableProxy('dgenes')
+      clearSearch(proxy)
+      shinyjs::reset("dgenes_rows_selected")
+      shinyjs::reset("dgenes_rows_all")
+      shinyjs::reset("chosen_hp")
       
-      test4 <<- input$dgenes_rows_selected
+      shinyjs::reset("start_analysis")
       
-      test_1993 <<- input$dgenes_state
-      
-      
-      print(test4)
+
     })
-    
-    # observeEvent(input$start_analysis, {
-    # 
-    #   shinyjs::reset("start_analysis")
-    # 
-    # })
     
     # observe({
     #   input$start_analysis
@@ -2006,11 +2023,9 @@ shiny::shinyApp(
       
       query_pubmed <- entrez_search(db="pubmed", term= query_region, retmax = 200 )
 
-      validate(
-        need(length(query_pubmed[['ids']]) == 0, "0 articles found.")
-      )
-      
-      
+      # validate(
+      #   need(length(query_pubmed[['ids']]) == 0, "0 articles found.")
+      # )
     })
     
     
@@ -2067,6 +2082,65 @@ shiny::shinyApp(
       
     })
     
+    
+    output$omim_assoc <- renderDataTable({
+      
+      ids_query <- query_pubmed_dup()[['ids']]
+      ids_query <- c(ids_query, query_pubmed_del()[['ids']])
+      query_link <- entrez_link(db= 'omim', id= ids_query, dbfrom="pubmed")
+      query_link <- query_link$links[['pubmed_omim_calculated']] %>% as.numeric()
+      
+      validate(
+        need(query_link != 0, 'No OMIM entries')
+      )
+      
+      
+      query_tmp <- entrez_summary(db="omim", id= query_link)
+      
+      title <- unname(map_chr(query_tmp, function(x) x[["title"]]))
+      
+
+      
+      
+      tmp_df <- tibble('title' = title,'id_omim' = query_link) %>%
+        mutate(id_omim = paste0("<a href='", paste0('https://www.omim.org/entry/', id_omim),"' target='_blank'>", id_omim,"</a>")) 
+      
+      datatable(tmp_df, escape = FALSE, colnames = c('Title', 'ID OMIM'))
+      
+      
+    })
+    
+    output$gene_assoc <- renderDataTable({
+      
+      ids_query <- c(query_pubmed_del()[['ids']], query_pubmed_dup()[['ids']])
+      query_link <- entrez_link(db= 'gene', id= ids_query, dbfrom="pubmed")
+      test4141 <<- query_link
+      query_link <- query_link$links[['pubmed_gene']] %>% as.numeric()
+      
+      validate(
+        need(query_link != 0, 'No gene entries')
+      )
+      
+      test1311111 <<- query_link
+      query_tmp <- entrez_summary(db="gene", id= test1311111)
+      
+      title <- unname(map_chr(query_tmp, function(x) x[["name"]]))
+      id_gene <- unname(map_chr(query_tmp, function(x) x[["name"]]))
+      id_chrom <-unname(map_chr(query_tmp, function(x) x[["chromosome"]]))
+      
+      organism <- unname(map_chr(query_tmp, function(x) x[['organism']][['scientificname']]))
+      
+      
+      
+      
+      tmp_df <- tibble('title' = title,'id_gene' = id_gene, 'organism' = organism, 'chromosome' = id_chrom) %>%
+        mutate(id_gene = paste0("<a href='", paste0('https://www.ncbi.nlm.nih.gov/gene/', id_gene),"' target='_blank'>", id_gene,"</a>")) 
+      
+      datatable(tmp_df, escape = FALSE, colnames = c('Title', 'ID GENE', 'Organism', 'Chromosome'))
+      
+      
+    })
+    
     query_pubmed_dup <- reactive({
       
 
@@ -2098,10 +2172,10 @@ shiny::shinyApp(
       
       test4114 <<- query_pubmed
       
-      validate(
-        need(length(query_pubmed[['ids']]) == 0, "0 articles found.")
-      )
-      
+      # validate(
+      #   need(length(test4114[['ids']]) != 0, "0 articles found.")
+      # )
+      # 
     })
     
     output$n_pubmed_dup <- renderUI({
@@ -2433,6 +2507,13 @@ shiny::shinyApp(
     
     data_selected <- reactive({
       
+      # observeEvent({input$start_analysis,
+      #   
+      #   data_selected_prev()
+      #   
+      #   
+      # })
+      
       
       table_output <- data_selected_prev() %>% 
         mutate(source = 'CNV') %>% 
@@ -2508,15 +2589,11 @@ shiny::shinyApp(
     
     output$dgenes <- renderDataTable({
       
-      observeEvent(input$start_analysis, {
-        rows_selected <- NULL
-      })
+     req(data_selected())
+      
       
       tmp_df <-  data_selected() 
-      
-      
-      tes912 <<- data_selected()
-      
+    
       server <- TRUE
       data_input <- tmp_df %>% 
         select(-start_position, -end_position, -chrom) %>%
@@ -2577,9 +2654,13 @@ shiny::shinyApp(
       #             # columnDefs = list(list(className = 'dt-center', targets = '_all'))
       #           )) %>%
         
-        datatable(data_input, rownames = FALSE, filter = 'top', selection = 'single',
+        datatable(data_input, rownames = FALSE, 
+                  filter = list(position = 'top'), 
+                  selection = 'single',
                             options = list(
                               pageLength = 5,
+                              server = FALSE,
+                              
                               # autoWidth = TRUE,
                               style = 'bootstrap',
                               list(searchHighlight = TRUE),
@@ -2870,8 +2951,7 @@ shiny::shinyApp(
       
       df_tmp <- model_genes_phenotype() %>% select(-entrez_id, -gene_mouse)
       
-      datatable(df_tmp,
-                options = list(searchHighlight = TRUE,  style = 'bootstrap'))
+      datatable(df_tmp)
       
       
       
@@ -3370,22 +3450,25 @@ shiny::shinyApp(
     
     output$ref_user_genes_cnv <- renderUI({
       
-      
-
-      # observeEvent(input$start_analysis, {
-      #              
-      #              
-      # })
-      # 
-      # 
-      # 
-      rows_selected <- input$dgenes_rows_all
-
-      
-      
+      # req( input$tabs == 'genetic_evidence')
       tmp_df <- data_selected() %>% 
         select(-start_position, -end_position, -chrom) %>%
-        filter(source == 'CNV') 
+        filter(source == 'CNV')
+
+      
+      rows_selected <- input$dgenes_rows_all
+      
+
+      
+      # observeEvent(input$start_analysis, {
+      #   clearSearch(proxy)
+      #   # rows_selected <- nrow(tmp_df)
+      #     
+      # })
+
+      
+      
+
       
       if (length(rows_selected) == nrow(tmp_df) | is.null(rows_selected)) {
         tablerInfoCard(
@@ -3398,9 +3481,10 @@ shiny::shinyApp(
         )
       } else {
         df_genes <-tmp_df[rows_selected,]
+        
         tablerInfoCard(
           width = 12,
-          value = paste0(nrow(df_genes), '/', nrow(tmp_df) , " genes"),
+          value = paste0(length(rows_selected), '/', nrow(tmp_df) , " genes"),
           status = "success",
           icon = "database",
           # description =  name_region
@@ -3438,6 +3522,33 @@ shiny::shinyApp(
         icon = "database",
         description =  'Length of the genomic region'
 
+      )
+      
+      
+    })
+    
+    output$ref_user_cytoband <- renderUI({
+      
+      start_coordinates <- coord_user()[1]
+      end_coordinates <- coord_user()[2]
+      chrom_coordinates <- coord_user()[3]
+    
+      tmp_cyto <- chromPlot::hg_cytoBandIdeo %>%
+        filter(Chrom %in% chrom_coordinates) %>%
+        mutate(keep = map2_chr(Start, End, function(x,y) c(start_coordinates, end_coordinates) %overlaps% c(x,y))) %>%
+        filter(keep == TRUE) %>%
+        select(Name) %>%
+        pull() %>%
+        paste(collapse = ', ')
+        
+      
+      tablerInfoCard(
+        width = 12,
+        value =  tmp_cyto,
+        status = "primary",
+        icon = "database",
+        description =  'Cytoband(s) selected'
+        
       )
       
       
@@ -4332,7 +4443,7 @@ output$switch_tads <- renderUI({
     model_genes_phenotype <- reactive({
       
       
-      go <- Ontology("hp")
+      go <- Ontology("mp")
       
       test_tmp <- data_selected() %>% select(gene) %>% pull()
       mgi_tmp <- mgi %>% filter(gene %in% test_tmp)
@@ -4354,13 +4465,22 @@ output$switch_tads <- renderUI({
     })
     
     
-    output$agg_model <- renderEcharts4r({
+    output$agg_model <- renderPlot({
       
-      model_genes_phenotype() %>% count(description) %>% arrange(n) %>%
-        e_charts() %>% 
-        e_treemap(description, description, n) %>%
-        e_tooltip(trigger = "axis") %>%
-        e_title("")
+    
+      model_genes_phenotype() %>% count(description) %>% arrange(desc(n)) %>%
+        ggplot(aes(reorder(description, n), n)) + 
+        geom_col(aes(fill = n), color = 'black') +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+        coord_flip() +
+        scale_fill_viridis_c() +
+        theme_ipsum()
+        
+      # model_genes_phenotype() %>% count(description) %>% arrange(n) %>%
+      #   e_charts() %>% 
+      #   e_treemap(description, description, n) %>%
+      #   e_tooltip(trigger = "axis") %>%
+      #   e_title("")
       
       
     })
@@ -4962,15 +5082,7 @@ output$func_do  <- renderPlot({
       
       start_coordinates <- coord_user()[1]
       end_coordinates <- coord_user()[2]
-      # 
-      # test20 <<- check_cnv_df()
-      # test21 <<- start_coordinates
-      # test22 <<- end_coordinates
-      # 
-      # get_perc_overlap( %>% 
-      #                    rename(start_position = start, end_position = end), start_coordinates, 
-      #                  end_coordinates)
-      
+  
       tmp_df <-  get_perc_overlap(check_cnv_df() %>% 
                                     rename(start_position = start, end_position = end), start_coordinates, 
                                   end_coordinates)
@@ -5151,17 +5263,19 @@ output$func_do  <- renderPlot({
     output$df_overlap_cnvs <- renderDT({
       
       tmp_df <- df_overlap_cnvs_running() %>% filter(source == 'decipher')
-      datatable(tmp_df, colnames = c('ID', 'Chrom', 'Start', 'End', 'Database', 'CNV size', 'Percentage Overlap (%)'),
+      datatable(tmp_df, colnames = c('ID', 'Chrom', 'Start', 'End', 'Database', 'Pathogenicity', 'Genotype', 'Class', 
+                                     'CNV size', 'Percentage Overlap (%)'),
                 selection = 'single',
                 options = list(
-                  columnDefs = list(list(className = 'dt-center',  targets = 0:6))),  rownames= FALSE)
+                  columnDefs = list(list(className = 'dt-center',  targets = 0:9))),  rownames= FALSE)
     })
     
     
     output$df_overlap_cnvs_nonpatho <- renderDT({
       
-      tmp_df <- df_overlap_cnvs_running() %>% filter(source != 'decipher')
-      datatable(tmp_df, colnames = c('ID', 'Chrom', 'Start', 'End', 'Database', 'CNV size', 'Percentage Overlap (%)'),
+      tmp_df <- df_overlap_cnvs_running() %>% filter(source != 'decipher') %>% select(-pathogenicity, -genotype, -variant_class)
+      datatable(tmp_df, colnames = c('ID', 'Chrom', 'Start', 'End', 'Database', 'CNV size', 
+                                     'Percentage Overlap (%)'),
                 selection = 'single',
                 options = list(
                   columnDefs = list(list(className = 'dt-center',  targets = 0:6))),  rownames= FALSE)

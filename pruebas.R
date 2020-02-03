@@ -2,7 +2,22 @@
 
 
 
-jaja <- entrez_link(db= 'omim', id= test4114[['ids']], dbfrom="pubmed")
+
+
+
+test13413 <<- ids_query
+query_link <- entrez_link(db= 'omim', id= test13413, dbfrom="pubmed")
+
+test <- entrez_summary(db="omim", id= query_link$links[['pubmed_omim_calculated']])
+
+test$`614202`['title']
+query_link
+
+
+query_link <- query_link$links[['pubmed_omim_calculated']] %>% as.numeric()
+
+
+jaja <- entrez_link(db= 'omim', id= test4114[['ids']], dbfrom="pubmed", by_id = TRUE)
 jaja2 <- jaja$links[['pubmed_omim_calculated']] %>% as.numeric()
 
 hgcn_genes %>% filter(entrez_id %in% jaja2)
