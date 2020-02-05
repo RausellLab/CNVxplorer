@@ -39,27 +39,32 @@ library(formattable)
 
 
 # load('local_data.RData')
-source('functions.R')
-hpo_dbs <- ontologyIndex::get_OBO('http://purl.obolibrary.org/obo/hp.obo')
+
 
 
 # Files needed to run the app
 
-# hgcn_genes - List all the genes with scores
-# df_enhancers - List enhancers with phast100vert  + phast46pla + phast46pri
-# lncrna_coord - coordinates lncRNA
-# lncrna - Features per lncRNA
-# tad - List of TADs with coordinates
-# gtex - gene expression data across tissues
-# hpa - human protein expression
-# hpo - Human phenotype ontology
+# 1. hgcn_genes - List all the genes with scores
+# 2. df_enhancers - List enhancers with phast100vert  + phast46pla + phast46pri
+# 3. lncrna_coord - coordinates lncRNA
+# 4. lncrna - Features per lncRNA
+# 5. tad - List of TADs with coordinates
+# 6. gtex - gene expression data across tissues
+# 7. hpa - human protein expression
+# 8. hpo - Human phenotype ontology
+# 9. mgi - mouse model data
+# 10. blacklist_encode - problematics regions
 
+source('functions.R')
+hpo_dbs <- ontologyIndex::get_OBO('http://purl.obolibrary.org/obo/hp.obo')
+
+load('local_data.RData')
 
 
 # invisible(lapply(paste0('package:', names(sessionInfo()$otherPkgs)), detach, character.only=TRUE, unload=TRUE))
 # file.remove('local_data.RData')
 # save(hgcn_genes, df_enhancers, lncrna_coord, lncrna, tad, gtex, hpa, hpo_genes, vector_hp, vector_term, cnv_df,
-#     select, cnv_df, model1, denovo, ridges_home, plot_p100, plot_p46pla, gwas_variants, syndromes_total, file = "local_data.RData")
+#     select, cnv_df, model1, denovo, ridges_home, plot_p100, plot_p46pla, blacklist_encode, gwas_variants,mgi, syndromes_total, file = "local_data.RData")
 
 
 credentials <- data.frame(
@@ -134,7 +139,13 @@ shiny::shinyApp(
         tablerNavMenuItem(
           tabName = "disease",
           icon = "box",
-          "Disease-specificity"
+          "Phenotypic analysis"
+          
+        ),
+        tablerNavMenuItem(
+          tabName = "pubmed",
+          icon = "book",
+          "Biomedical literature"
         ),
         tablerNavMenuItem(
           tabName = "tissue",
@@ -147,15 +158,8 @@ shiny::shinyApp(
           icon = "box",
           "Functional analysis"
         ),
+        
 
-
-
-
-        tablerNavMenuItem(
-          tabName = "pubmed",
-          icon = "book",
-          "Biomedical literature"
-        ),
         
         # tablerNavMenuItem(
         #   tabName = "cnv_ngs",
@@ -169,7 +173,7 @@ shiny::shinyApp(
         #   "Automated report"
         # )
         tablerNavMenuItem(
-          tabName = "Docu",
+          tabName = "docu",
           icon = "book",
           "Documentation"
         )
@@ -283,7 +287,8 @@ shiny::shinyApp(
               # hr(),
               # uiOutput('n_snv'),
               uiOutput('ref_user_length'),
-              uiOutput('ref_user_cytoband')
+              uiOutput('ref_user_cytoband'),
+              uiOutput('check_blacklist')
               # uiOutput('n_genes')
               # uiOutput('score_rf')
               
@@ -329,13 +334,19 @@ shiny::shinyApp(
           
           fluidRow(
           column(width = 6,
-                 tags$b(tags$em("Evidence bibliography")),
-                 tags$hr(),
+                 tablerCard(width = 12,
+                            collapsible = FALSE,
+                            closable = FALSE,
+                            zoomable = FALSE,
+                            status = 'success',
+                            statusSide = 'left',
+                   title = tagList(shiny::icon("book"), "Biomedical literature"),
                  fluidRow(
+
                    column(width = 6,
                  uiOutput('n_pubmed_dup')),
                  column(width = 6,
-                 uiOutput('n_pubmed_del')))
+                 uiOutput('n_pubmed_del'))))
           ),
 
           
@@ -343,33 +354,54 @@ shiny::shinyApp(
           # fluidRow(
 
             column(width = 6,
-                   tags$b(tags$em("CNV databases")),
-                   tags$hr(),
-                   fluidRow(
-                     column(width = 6,
+
+              
+                            tablerCard(width = 12,
+                                       collapsible = FALSE,
+                                       closable = FALSE,
+                                       zoomable = FALSE,
+                                       status = 'primary',
+                                       statusSide = 'left',
+                                       title = tagList(shiny::icon("database"), "CNV databases"),
+                                       fluidRow(
+                                         
+                            column(width = 6,
                             uiOutput('n_cnv_patho')),
                      column(width = 6,
                             uiOutput('n_cnv_nopatho')
-                     ))
-            )
-            # )
-          ),
+                     ))))),
+
           
           fluidRow(
 
-            column(width = 6,
-                   tags$b(tags$em("Phenotype terms associated with disrupted genes")),
-                   tags$hr(),
-                   fluidRow(
                     column(width = 6,
+                           tablerCard(width = 12,
+                                      collapsible = FALSE,
+                                      closable = FALSE,
+                                      zoomable = FALSE,
+                                      status = 'success',
+                                      statusSide = 'left',
+                                      title = tagList(shiny::icon("book"), "Phenotypic analysis"),
+                                      fluidRow(
+                                        column(width = 6,
+                                               
                    uiOutput('hpo_unique')),
                    column(width = 6,
                    uiOutput('hpo_unique_genes')
-                   ))
+                   )))
             ),
             column(width = 6,
-                     tags$b(tags$em("Regulatory regions disrupted")),
-                     tags$hr(),
+                     
+                   tablerCard(width = 12,
+                              collapsible = FALSE,
+                              closable = FALSE,
+                              zoomable = FALSE,
+                              status = 'success',
+                              statusSide = 'left',
+                              title = tagList(shiny::icon("book"), "Regulatory regions"),
+                   
+                   
+                   
                    fluidRow(
                      
               column(width = 4,
@@ -382,7 +414,7 @@ shiny::shinyApp(
               )
                      
                      
-              )
+              ))
             )
             ),
           
@@ -392,8 +424,17 @@ shiny::shinyApp(
             
             
             column(width = 12,
-                   tags$b(tags$em("Gene content")),
-                   tags$hr(),
+
+                   tablerCard(width = 12,
+                              collapsible = FALSE,
+                              closable = FALSE,
+                              zoomable = FALSE,
+                              status = 'primary',
+                              statusSide = 'left',
+                              title = tagList(shiny::icon("book"), "Gene content"),
+                   
+                   
+                   
                    fluidRow(
                    column(width = 6,
                    uiOutput('n_clinvar'),
@@ -403,8 +444,9 @@ shiny::shinyApp(
                    column(width = 6,
                    uiOutput('n_hi'),
                    uiOutput('n_omim'),
+                   uiOutput('n_syndromes'),
                    uiOutput('n_gwas'))
-                   ) )
+                   ) ))
                    ),
           fluidRow(
           
@@ -436,7 +478,7 @@ shiny::shinyApp(
           #       #   style = "minimal",
           #       #   color = "primary"
           #       # ),
-          #       downloadButton("11download_dgenes", "Download table")
+          #       downButton("11download_dgenes", "Download table")
           #   )
           #   ),
           # tablerCard(
@@ -880,7 +922,7 @@ shiny::shinyApp(
         tablerTabItem(
           tabName = "genetic_evidence",
           tablerCard(
-            title = "CNV Syndromes",
+            title = "CNV Syndromes (DECIPHER and Clingen)",
             DTOutput("cnv_syndromes"),
             width = 12,
             collapsible = FALSE,
@@ -899,7 +941,7 @@ shiny::shinyApp(
 
           tablerCard(
             title = "Gene panel from CNV",
-            DTOutput("dgenes"),
+            DTOutput("dgenes") %>% withSpinner(type = 5),
             width = 12,
             collapsible = FALSE,
             closable = FALSE,
@@ -916,7 +958,7 @@ shiny::shinyApp(
           ),
           tablerCard(
             title = "Target-genes from disrupted enhancers",
-            DTOutput("genes_from_enhancers"),
+            DTOutput("genes_from_enhancers") %>% withSpinner(type = 5),
             width = 12,
             collapsible = FALSE,
             closable = FALSE,
@@ -933,7 +975,7 @@ shiny::shinyApp(
           ),
           tablerCard(
             title = "Target-genes from disrupted TADs",
-            DTOutput("genes_from_tads"),
+            DTOutput("genes_from_tads") %>% withSpinner(type = 5),
             width = 12,
             collapsible = FALSE,
             closable = FALSE,
@@ -1159,7 +1201,7 @@ shiny::shinyApp(
             tablerCard(title = 'Enhancers disrupted',
                        collapsible = FALSE,
                        closable = FALSE,
-                       dataTableOutput('df_enhancer'),
+                       dataTableOutput('df_enhancer') %>% withSpinner(type = 5),
                        width = 12,
                        options = tagList(
                         uiOutput('n_filtered_enhancers'),
@@ -1346,6 +1388,15 @@ shiny::shinyApp(
             ),
             options = tagList(
               actionBttn(
+                inputId = "reset_pheno_analysis",
+                label = "Reset",
+                size = 'sm',
+                color = "default",
+                style = "material-flat",
+                # icon = icon("sliders"),
+                block = TRUE
+              ),
+              actionBttn(
                 inputId = "run_pheno_analysis",
                 label = "run analysis!",
                 size = 'sm',
@@ -1417,6 +1468,18 @@ shiny::shinyApp(
             #            width = 3),
             tablerCard(title = 'Genes associated with phenotypes in mouse (MGI)',
                        DTOutput('model_genes'),
+                       width = 12))
+          
+        ),
+        tablerTabItem(
+          tabName = "docu",
+         print('TBA'),
+          fluidRow(
+            # tablerCard(title = 'Select a gene:',
+            #            uiOutput('gene_model'),
+            #            width = 3),
+            tablerCard(title = 'Genes associated with phenotypes in mouse (MGI)',
+                       DTOutput('model55_genes'),
                        width = 12))
           
         ),
@@ -1573,13 +1636,22 @@ shiny::shinyApp(
     
     observeEvent(input$start_analysis, {
 
-      proxy <- dataTableProxy('dgenes')
-      clearSearch(proxy)
+      # proxy <- dataTableProxy('dgenes')
+      # clearSearch(proxy)
       shinyjs::reset("dgenes_rows_selected")
       shinyjs::reset("dgenes_rows_all")
       shinyjs::reset("chosen_hp")
-      
+      shinyjs::reset("data_selected_prev")
       shinyjs::reset("start_analysis")
+      #
+      shinyjs::reset('enhancers_on_off')
+      shinyjs::reset('tads_on_off')
+      #
+      shinyjs::reset("enable_func_analysis")
+      shinyjs::reset("enable_path_analysis")
+      shinyjs::reset("enable_do_analysis")
+      shinyjs::reset("enable_group_go")
+      
       
 
     })
@@ -1590,6 +1662,59 @@ shiny::shinyApp(
     #   
     #   
     # })
+    
+    
+    map_blacklist <- reactive({
+      
+      start_coordinates <- coord_user()[1]
+      end_coordinates <- coord_user()[2]
+      chrom_coordinates <- coord_user()[3]
+      
+      blacklist_encode %>%
+        filter(chrom == chrom_coordinates) %>%
+        rowwise() %>%
+        mutate(keep = c(start, end) %overlaps% c(start_coordinates, end_coordinates)) %>%
+                 filter(isTRUE(keep)) %>%
+        ungroup()
+      
+      
+      
+    })
+    
+    
+    output$check_blacklist <- renderUI({
+      
+      tmp_df <- map_blacklist() 
+      
+      test918934181 <<- tmp_df
+      
+      req(nrow(tmp_df) > 0)
+      
+      if (tmp_df %>% count(class) %>% nrow() > 1) {
+        
+        say_this <- 'High signal and low mappability region(s) overlapping with the CNV'
+        
+      } else if (str_detect(tmp_df$class, 'High')) {
+        
+        say_this <- 'High signal region(s) overlapping with the CNV'
+        
+      } else {
+        say_this <- 'Low mappability region(s) overlapping with the CNV'
+      }
+      
+          
+          tablerInfoCard(
+            width = 12,
+            value =  nrow(tmp_df),
+            status = "danger",
+            icon = "database",
+            description =  say_this)
+
+          
+        })
+      
+      
+      
     
     
 
@@ -1614,6 +1739,12 @@ shiny::shinyApp(
     
     
     coord_user <- eventReactive(input$start_analysis, {
+      
+      # proxy <- dataTableProxy('dgenes')
+      # proxy %>% selectRows(NULL)
+      # selected_rows(NULL)
+      # 
+      # clearSearch(proxy)
       
       coord_start <- input$int_start
       coord_end <-  input$int_end
@@ -1764,14 +1895,16 @@ shiny::shinyApp(
     check_cnv_df <- reactive({
       
       
-      start_coordinates <- coord_user()[1]
-      end_coordinates <- coord_user()[2]
+      start_coordinates <- as.numeric(coord_user()[1])
+      end_coordinates <- as.numeric(coord_user()[2])
       chrom_coordinates <- coord_user()[3]
+      
+
+      
       
       df_output <- cnv_df %>%
         filter(chrom == chrom_coordinates) %>%
         rowwise() %>%
-        # check this because i dont get why did i use two overlaps
         mutate(keep = c(start, end) %overlaps% c(start_coordinates, end_coordinates)) %>%
         filter(keep == TRUE) %>%
         select(-keep)
@@ -1864,6 +1997,10 @@ shiny::shinyApp(
       
     })
     
+    observeEvent(input$reset_pheno_analysis, {
+      shinyjs::reset('chosen_hp')
+    })
+    
     test_hpo <- eventReactive(input$run_pheno_analysis, {
       
     # test_hpo <- reactive({
@@ -1895,11 +2032,13 @@ shiny::shinyApp(
       #   # filter(gene != 'patient')
         # 
 
-      result <- result %>% select(-n_freq, -p_value) %>%
+      result %>% select(-n_freq, -p_value) %>%
         mutate(similarity_score = round(value, 3)) %>%
-        select(-value)
-      result
-      # datatable(result)
+        select(-value) %>%
+        arrange(desc(similarity_score))
+
+      
+      
     })
     
     output$df_check_hp_genes <- renderDataTable({
@@ -2125,7 +2264,7 @@ shiny::shinyApp(
       query_tmp <- entrez_summary(db="gene", id= test1311111)
       
       title <- unname(map_chr(query_tmp, function(x) x[["name"]]))
-      id_gene <- unname(map_chr(query_tmp, function(x) x[["name"]]))
+      id_gene <- unname(map_chr(query_tmp, function(x) x[["uid"]]))
       id_chrom <-unname(map_chr(query_tmp, function(x) x[["chromosome"]]))
       
       organism <- unname(map_chr(query_tmp, function(x) x[['organism']][['scientificname']]))
@@ -2133,10 +2272,10 @@ shiny::shinyApp(
       
       
       
-      tmp_df <- tibble('title' = title,'id_gene' = id_gene, 'organism' = organism, 'chromosome' = id_chrom) %>%
+      tmp_df <- tibble('title' = title, 'organism' = organism, 'chromosome' = id_chrom, 'id_gene' = id_gene) %>%
         mutate(id_gene = paste0("<a href='", paste0('https://www.ncbi.nlm.nih.gov/gene/', id_gene),"' target='_blank'>", id_gene,"</a>")) 
       
-      datatable(tmp_df, escape = FALSE, colnames = c('Title', 'ID GENE', 'Organism', 'Chromosome'))
+      datatable(tmp_df, escape = FALSE, colnames = c('Title', 'Organism', 'Chromosome', 'ID GENE'), filter = 'top')
       
       
     })
@@ -2144,8 +2283,8 @@ shiny::shinyApp(
     query_pubmed_dup <- reactive({
       
 
-      start_coordinates <- coord_user()[1]
-      end_coordinates <- coord_user()[2]
+      start_coordinates <- as.numeric(coord_user()[1])
+      end_coordinates <- as.numeric(coord_user()[2])
       chrom_coordinates <- coord_user()[3]
       
       if (input$input_geno_karyo == 'Genomic coordinates') {
@@ -2552,10 +2691,13 @@ shiny::shinyApp(
     
     running_cnv_syndromes <- reactive({
 
-      start_coordinates <- coord_user()[1]
-      end_coordinates <- coord_user()[2]
+      start_coordinates <- as.numeric(coord_user()[1])
+      end_coordinates <- as.numeric(coord_user()[2])
       chrom_coordinates <- coord_user()[3]
       
+      test310 <<- start_coordinates
+      test311 <<- end_coordinates
+      test312 <<- chrom_coordinates
       
       tmp_df <- syndromes_total %>% 
         filter(chrom == chrom_coordinates) %>%
@@ -2575,26 +2717,27 @@ shiny::shinyApp(
       test441 <<- running_cnv_syndromes() %>% replace_na(replace = list(variant_class = '-', phenotypes = '-'))
       
       validate(
-        need(nrow(running_cnv_syndromes()) != 0, "No CNV syndromes in this region found.")
+        need(nrow(running_cnv_syndromes()) != 0, "No CNV syndromes found in this region")
       )
-      
-      
+
     datatable(running_cnv_syndromes())
-        
-      
-      
-      
-      
+
     })
+    
+    # observeEvent(input$start_analysis,{
+    #   removeUI(selector = "#dgenes")
+    # })
+    
+    
     
     output$dgenes <- renderDataTable({
       
-     req(data_selected())
+      server <- TRUE
+      
       
       
       tmp_df <-  data_selected() 
     
-      server <- TRUE
       data_input <- tmp_df %>% 
         select(-start_position, -end_position, -chrom) %>%
         filter(source == 'CNV') %>%
@@ -2602,16 +2745,12 @@ shiny::shinyApp(
         select(band, gene, disease, haplo, triplo, dev, fda, omim, fda, gwas, pLI, rvis, ccr, hi, gdi, snipre, ncrvis, 
                ncgerp, p_overlap)
       
-      test2049 <<- data_input
-    
+
       customGreen <- "#71CA97"
       customRed = "#ff7f7f"
-      
-
-      
+   
       categorical_yes <- formatter("span", style = x ~ ifelse(x == 'Yes', 
                                                                    style(color = customRed, font.weight = "bold"), NA))
-      
       
       continous_yes <-  formatter("span", style = x ~ ifelse(x %in% paste(seq(95,100)), 
                                                               style(color = customRed, font.weight = "bold"), NA))
@@ -2654,14 +2793,12 @@ shiny::shinyApp(
       #             # columnDefs = list(list(className = 'dt-center', targets = '_all'))
       #           )) %>%
         
-        datatable(data_input, rownames = FALSE, 
+        tmp_output <- datatable(data_input, rownames = FALSE, 
                   filter = list(position = 'top'), 
                   selection = 'single',
                             options = list(
                               pageLength = 5,
-                              server = FALSE,
-                              
-                              # autoWidth = TRUE,
+                              server = TRUE,
                               style = 'bootstrap',
                               list(searchHighlight = TRUE),
                               stateSave = FALSE)) %>%
@@ -2687,9 +2824,21 @@ shiny::shinyApp(
         #   backgroundRepeat = 'no-repeat',
         #   backgroundPosition = 'center'
         # )
+        
+        
+        tmp_output
+        
+        
+        
     })
-    # 
-    # 
+    
+    
+    
+    
+    # outputOptions(output, "dgenes", suspendWhenHidden= TRUE)
+    
+
+    
     output$genes_from_enhancers <- renderDataTable({
 
       if (!is.null(input$enhancers_on_off)) {
@@ -2919,8 +3068,7 @@ shiny::shinyApp(
       #     getStatus <- 'Hi there'
       #   }
       
-      datatable(tmp_df,
-                options = list(searchHighlight = TRUE), filter = 'top', style = 'bootstrap')
+      datatable(tmp_df, filter = 'top')
       
       
       
@@ -2949,9 +3097,12 @@ shiny::shinyApp(
     
     output$model_genes <- renderDT({
       
-      df_tmp <- model_genes_phenotype() %>% select(-entrez_id, -gene_mouse)
-      
-      datatable(df_tmp)
+      df_tmp <- model_genes_phenotype() %>% select(-entrez_id, -gene_mouse) %>%
+        mutate(mgi = paste0("<a href='", paste0('http://www.informatics.jax.org/marker/', mgi),"' target='_blank'>", mgi,"</a>")) %>%
+        mutate(mpo_id = paste0("<a href='", paste0('http://www.informatics.jax.org/vocab/mp_ontology/', mpo_id),"' target='_blank'>", mpo_id,"</a>"))
+        
+      datatable(df_tmp, escape = FALSE, rownames = FALSE, 
+                colnames = c('Human Ortholog gene', 'Mouse gene', 'Mouse phenotype id', 'Phenotype description'))
       
       
       
@@ -3448,27 +3599,55 @@ shiny::shinyApp(
       
     })
     
+    # outputOptions(output, "dgenes", suspendWhenHidden = FALSE)
+    
+    # observeEvent(input$start_analysis, {
+    # 
+    #   dt_test_proxy <- dataTableProxy("dgenes", session = shiny::getDefaultReactiveDomain(),
+    #                                   deferUntilFlush = TRUE)
+    #   
+    #   replaceData(dt_test_proxy, tmp_output)
+    # 
+    # })
+
+    
     output$ref_user_genes_cnv <- renderUI({
       
-      # req( input$tabs == 'genetic_evidence')
+      # shinyjs::reset('dgenes_rows_all')
+      
+      
+      rows_selected <- input$dgenes_rows_all
+      
+      
+      # observeEvent(input$start_analysis, {
+      #   
+      #   # shinyjs::hide("dgenes")
+      #   rows_selected <- input$dgenes_rows_all
+      #   
+      # })
+      
+
+      
+
+      
+      # observeEvent(input$start_analysis, {
+      #   proxy <- dataTableProxy('dgenes', session = session)
+      #   selectRows(proxy, selected = NULL)
+      #   # rows_selected2 <- input$dgenes_rows_all
+      #   rows_selected2 <- NULL
+      #   test311113 <<- rows_selected2
+      #   rows_selected <- rows_selected2
+      # })
+
+      
+      
+      
       tmp_df <- data_selected() %>% 
         select(-start_position, -end_position, -chrom) %>%
         filter(source == 'CNV')
 
       
-      rows_selected <- input$dgenes_rows_all
-      
-
-      
-      # observeEvent(input$start_analysis, {
-      #   clearSearch(proxy)
-      #   # rows_selected <- nrow(tmp_df)
-      #     
-      # })
-
-      
-      
-
+      test777777 <<- rows_selected
       
       if (length(rows_selected) == nrow(tmp_df) | is.null(rows_selected)) {
         tablerInfoCard(
@@ -3476,19 +3655,17 @@ shiny::shinyApp(
           value = paste0(nrow(tmp_df), " genes"),
           status = "success",
           icon = "database",
-          # description =  name_region
           description = 'Genes found in CNV'
         )
       } else {
-        df_genes <-tmp_df[rows_selected,]
-        
         tablerInfoCard(
           width = 12,
-          value = paste0(length(rows_selected), '/', nrow(tmp_df) , " genes"),
+          # value = paste0(length(rows_selected), '/', nrow(tmp_df) , " genes"),
+          value = paste0(nrow(tmp_df), " genes"),
+          
           status = "success",
           icon = "database",
-          # description =  name_region
-          description = 'Genes found in CNV (filtered)'
+          description = 'Genes found in CNV'
         )
       }
 
@@ -3529,13 +3706,22 @@ shiny::shinyApp(
     
     output$ref_user_cytoband <- renderUI({
       
-      start_coordinates <- coord_user()[1]
-      end_coordinates <- coord_user()[2]
+      start_coordinates <- as.numeric(coord_user()[1])
+      end_coordinates <- as.numeric(coord_user()[2])
       chrom_coordinates <- coord_user()[3]
+      
+      test91 <<- start_coordinates
+      test92 <<- end_coordinates
+      
+      test93 <<- chrom_coordinates
     
+      # 120600000 117800000
       tmp_cyto <- chromPlot::hg_cytoBandIdeo %>%
         filter(Chrom %in% chrom_coordinates) %>%
-        mutate(keep = map2_chr(Start, End, function(x,y) c(start_coordinates, end_coordinates) %overlaps% c(x,y))) %>%
+        # mutate(keep = map2_chr(Start, End, function(x,y) c(start_coordinates, end_coordinates) %overlaps% c(x,y))) %>%
+        rowwise() %>%
+        mutate(keep = c(start_coordinates, end_coordinates) %overlaps% c(Start, End)) %>%
+        ungroup() %>%
         filter(keep == TRUE) %>%
         select(Name) %>%
         pull() %>%
@@ -3564,7 +3750,7 @@ shiny::shinyApp(
       tmp_df <- data_selected_enhancers()
       
       
-      if (length(input$genes_from_enhancers_rows_all) == nrow(tmp_df) | is.null(input$genes_from_enhancers_rows_all)) {
+      # if (length(input$genes_from_enhancers_rows_all) == nrow(tmp_df) | is.null(input$genes_from_enhancers_rows_all)) {
         tablerInfoCard(
           width = 12,
           value = paste0('+', nrow(tmp_df), " genes"),
@@ -3573,17 +3759,17 @@ shiny::shinyApp(
           # description =  name_region
           description = 'Target-genes enhancers'
         )
-      } else {
-        df_genes <-tmp_df[input$genes_from_enhancers_rows_all,]
-        tablerInfoCard(
-          width = 12,
-          value = paste0('+', nrow(df_genes), '/', nrow(tmp_df) , " genes"),
-          status = "warning",
-          icon = "database",
-          # description =  name_region
-          description = 'Target-genes enhancers (filtered)'
-        )
-      }
+      # } else {
+        # df_genes <-tmp_df[input$genes_from_enhancers_rows_all,]
+        # tablerInfoCard(
+        #   width = 12,
+        #   value = paste0('+', nrow(df_genes), '/', nrow(tmp_df) , " genes"),
+        #   status = "warning",
+        #   icon = "database",
+        #   # description =  name_region
+        #   description = 'Target-genes enhancers (filtered)'
+        # )
+      # }
       
       # tablerInfoCard(
       #   width = 12,
@@ -3605,7 +3791,7 @@ shiny::shinyApp(
       tmp_df <- data_selected_tads()
    
 
-      if (length(input$genes_from_tads_rows_all) == nrow(tmp_df) | is.null(input$genes_from_tads_rows_all)) {
+      # if (length(input$genes_from_tads_rows_all) == nrow(tmp_df) | is.null(input$genes_from_tads_rows_all)) {
         tablerInfoCard(
           width = 12,
           value = paste0('+', nrow(tmp_df), " genes"),
@@ -3614,17 +3800,17 @@ shiny::shinyApp(
           # description =  name_region
           description = 'Genes disrupted in TADs'
         )
-      } else {
-        df_genes <-tmp_df[input$genes_from_tads_rows_all,]
-        tablerInfoCard(
-          width = 12,
-          value = paste0('+', nrow(df_genes), '/', nrow(tmp_df) , " genes"),
-          status = "warning",
-          icon = "database",
-          # description =  name_region
-          description = 'Genes disrupted in TADs (filtered)'
-        )
-      }
+      # } else {
+        # df_genes <-tmp_df[input$genes_from_tads_rows_all,]
+        # tablerInfoCard(
+        #   width = 12,
+        #   value = paste0('+', nrow(df_genes), '/', nrow(tmp_df) , " genes"),
+        #   status = "warning",
+        #   icon = "database",
+        #   # description =  name_region
+        #   description = 'Genes disrupted in TADs (filtered)'
+        # )
+      # }
       
     })
     
@@ -4093,6 +4279,29 @@ output$switch_tads <- renderUI({
       
     })
     
+    
+    
+    output$n_syndromes <- renderUI({
+      
+      
+      n_syndromes <- running_cnv_syndromes()
+      
+      
+      tablerStatCard(
+        value =  nrow(n_syndromes),
+        title =  'CNV syndromes',
+        # trend = -10,
+        width = 12
+      )
+      
+      
+      
+      
+      
+      
+      
+    })
+    
     output$n_disease <- renderUI({
       
       
@@ -4237,7 +4446,7 @@ output$switch_tads <- renderUI({
       
       tmp_df <- hpo_filter() 
 
-      tmp_df <- tmp_df  %>% count(gene) %>% left_join(test_hpo(), by = 'gene')
+      tmp_df <- tmp_df  %>% count(gene) %>% left_join(test_hpo(), by = 'gene') 
       datatable(tmp_df, filter = 'top', colnames = c('Gene', 'Nº phenotypic terms', 'similarity score'), option = list(
         selection = 'single'
       ))
@@ -4253,7 +4462,7 @@ output$switch_tads <- renderUI({
       validate(
         need(input$hpo_filter_genes_rows_selected != '', "Please, select a gene.")
       )
-      
+
      
       
       tmp_df <- hpo_filter() %>%
@@ -4590,7 +4799,7 @@ output$switch_tads <- renderUI({
                                 # qvalueCutoff  = 0.05)
         
 
-        go_analysis <- go_analysis %>% as_tibble()
+        go_analysis <- go_analysis %>% as_tibble() %>% filter(Count > 1)
         test231312321 <<- go_analysis
         
       
@@ -5405,9 +5614,9 @@ output$func_do  <- renderPlot({
       
       req(input$start_analysis > 0)
       
-      start_coordinates <- coord_user()[1]
-      end_coordinates <- coord_user()[2]
-      chrom_coordinates <- coord_user()[3]
+      start_coordinates <- as.numeric(coord_user()[1])
+      end_coordinates <- as.numeric(coord_user()[2])
+      chrom_coordinates <- as.numeric(coord_user()[3])
       
 
       

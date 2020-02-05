@@ -117,6 +117,7 @@ ref_scores <- tibble(score = c('gwas', # we could filter out by number of hits (
 
 # test813 <- read_tsv('ftp://ftp.ebi.ac.uk/pub/databases/genenames/new/tsv/locus_types/gene_with_protein_product.txt')
 # hgcn_genes <- read_excel('/home/cbl02/Storage/data/gene_with_protein_product.xlsx') %>% as_tibble()
+
 hgcn_genes <- read_tsv('ftp://ftp.ebi.ac.uk/pub/databases/genenames/new/tsv/locus_types/gene_with_protein_product.txt')
 
 
@@ -126,14 +127,18 @@ hgcn_genes <- hgcn_genes %>%
   select(entrez_id, ensembl_gene_id, location, symbol) %>%
   rename(gene = symbol) %>%
   na.omit() %>%
-  mutate(entrez_id = as.numeric(entrez_id))
+  mutate(entrez_id = as.numeric(entrez_id)) %>%
+  mutate(chrom = str_remove(location, '\\q(.*)')) %>%
+  mutate(chrom = str_remove(chrom, 'p(.*)')) %>%
+  filter(chrom != 'mitochondria')
 
 
 human  <- useMart("ensembl", dataset = "hsapiens_gene_ensembl",
                   host    = "grch37.ensembl.org",
                   path    = "/biomart/martservice")
 
-interval_genes <- getBM(attributes = c('ensembl_gene_id', 'start_position','end_position', 'chromosome_name'),
+interval_genes <- getBM(attributes = c('ensembl_gene_id', 'start_position','end_position', 'chromosome_name', 
+                                      'entrezgene_id', 'version'),
                         mart = human ) %>% 
                         as_tibble() %>% 
                         filter(!str_detect(chromosome_name, 'PATCH')) %>% 
@@ -141,12 +146,26 @@ interval_genes <- getBM(attributes = c('ensembl_gene_id', 'start_position','end_
                         # rename(entrez_id = entrezgene_id)
 
 hgcn_genes <- interval_genes %>% 
-  right_join(hgcn_genes, by = c('ensembl_gene_id')) %>%
-  na.omit()
+  select(-entrezgene_id) %>%
+  right_join(hgcn_genes, by = c('ensembl_gene_id' = 'ensembl_gene_id', 'chromosome_name' = 'chrom')) %>%
+  distinct()
+
+no_coord_with_ensembl <- hgcn_genes %>% filter(is.na(start_position)) %>% 
+  select(-start_position, -end_position, -version) %>%
+  left_join(interval_genes %>% select(-ensembl_gene_id), by = c('entrez_id' = 'entrezgene_id', 'chromosome_name' = 'chromosome_name')) %>%
+  mutate(length = end_position - start_position + 1) %>%
+  group_by(gene) %>%
+  filter(version == max(version)) %>%
+  filter(length == max(length)) %>%
+  slice(1) %>%
+  ungroup() %>% 
+  distinct() %>%
+  select(-length)
+  
 
 
-hgcn_genes %>% count(start_position) %>% arrange(desc(n))
-hgcn_genes %>% filter(is.na(start_position)) %>% select(ensembl_gene_id) %>% pull()
+hgcn_genes <- hgcn_genes %>% na.omit() %>% bind_rows(no_coord_with_ensembl)
+
 
 # There are 398 genes with no coordinates
 
@@ -303,28 +322,28 @@ dev_genes <- read.table('/home/cbl02/Storage/data/DDG2P_6_6_2019.csv',
 # are deleted or duplicated causing the phenotype.
 #
 
-
-omim <- read_excel('/home/cbl02/Storage/data/morbidmap.xlsx', skip = 4, col_names = c('phenotype', 
-                                                                                      'gene', 'gene_id', 'location'))
-omim <- omim[1:7745,] # description of the (id) 
-
-omim$gene <-map_chr(omim$gene, function(x) str_split(x, ',')[[1]][1])
-omim$id_pheno <-map_chr(omim$phenotype, function(x) str_extract(x, '\\d{6}'))
-# omim$map_key <-map_chr(omim$phenotype, function(x) str_extract(x, '\\(([^)]+)\\)'))
-omim$map_key <-map_chr(omim$phenotype, function(x) str_extract(x, '\\(([[0-9]]+)\\)'))
-
-omim$map_key <-map_chr(omim$map_key, function(x) str_remove(x, '\\('))
-omim$map_key <-map_chr(omim$map_key, function(x) str_remove(x, '\\)'))
-
-omim$phenotype <-map_chr(omim$phenotype, function(x) str_replace(x, '\\d{6}', ''))
-omim$phenotype <-map_chr(omim$phenotype, function(x) str_replace(x, '\\d{6}', ''))
-omim$phenotype <-map_chr(omim$phenotype, function(x) gsub( '*\\(.*?\\) *', '', x)) 
-omim$phenotype <-map_chr(omim$phenotype, function(x) str_remove( x, ',  ')) 
-
-
-omim  <- omim %>% 
-  filter(map_key %in% c(1:4)) %>%
-  pull(gene)
+# 
+# omim <- read_excel('/home/cbl02/Storage/data/morbidmap.xlsx', skip = 4, col_names = c('phenotype', 
+#                                                                                       'gene', 'gene_id', 'location'))
+# omim <- omim[1:7745,] # description of the (id) 
+# 
+# omim$gene <-map_chr(omim$gene, function(x) str_split(x, ',')[[1]][1])
+# omim$id_pheno <-map_chr(omim$phenotype, function(x) str_extract(x, '\\d{6}'))
+# # omim$map_key <-map_chr(omim$phenotype, function(x) str_extract(x, '\\(([^)]+)\\)'))
+# omim$map_key <-map_chr(omim$phenotype, function(x) str_extract(x, '\\(([[0-9]]+)\\)'))
+# 
+# omim$map_key <-map_chr(omim$map_key, function(x) str_remove(x, '\\('))
+# omim$map_key <-map_chr(omim$map_key, function(x) str_remove(x, '\\)'))
+# 
+# omim$phenotype <-map_chr(omim$phenotype, function(x) str_replace(x, '\\d{6}', ''))
+# omim$phenotype <-map_chr(omim$phenotype, function(x) str_replace(x, '\\d{6}', ''))
+# omim$phenotype <-map_chr(omim$phenotype, function(x) gsub( '*\\(.*?\\) *', '', x)) 
+# omim$phenotype <-map_chr(omim$phenotype, function(x) str_remove( x, ',  ')) 
+# 
+# 
+# omim  <- omim %>% 
+#   filter(map_key %in% c(1:4)) %>%
+#   pull(gene)
 
 # omim %>% count(map_key)
 # A tibble: 4 x 2
@@ -714,11 +733,11 @@ ridges_home <- cnv_df %>%
 # Name file: inBio_Map_core_2016_09_12.tar.gz
 # ------------------------------------------------------------------------------
 
-inbio_network_raw <- read.table('/home/cbl02/Storage/data/core.psimitab', sep = '\t', header = FALSE)
-
-inbio_network <- inbio_network_raw %>%
-  as_tibble() %>%
-  slice(1:100)
+# inbio_network_raw <- read.table('/home/cbl02/Storage/data/core.psimitab', sep = '\t', header = FALSE)
+# 
+# inbio_network <- inbio_network_raw %>%
+#   as_tibble() %>%
+#   slice(1:100)
 
 
 # ------------------------------------------------------------------------------
@@ -1049,7 +1068,7 @@ snipre <- snipre %>% select(Gene, SnIPRE.f) %>%
 # Source: http://ogee.medgenius.info/downloads/
 # ------------------------------------------------------------------------------
 
-para_genes <- read_tsv('/home/cbl02/Storage/data/dup_genes/dupgenes_ogee.txt')
+# para_genes <- read_tsv('/home/cbl02/Storage/data/dup_genes/dupgenes_ogee.txt')
 
 # ------------------------------------------------------------------------------
 # Dataset: Phenotype terms associated with OMIM diseases
@@ -1169,16 +1188,16 @@ genes_disgenet <- disgenet %>% select(geneSymbol) %>% distinct() %>% pull()
 # Dataset: Imprinting genes
 # Source: http://www.geneimprint.com/site/genes-by-species
 # ------------------------------------------------------------------------------
-
-imp_genes <- read_tsv('/home/cbl02/Storage/data/imprinted_genes')
-
-imp_genes <- imp_genes %>% 
-  separate(Aliases, into = LETTERS[1:25], sep = ',') %>%
-  gather('remove', 'gene', -Location, -Status, -`Expressed Allele`) %>%
-  select(-remove) %>%
-  rename(expressed_allele = `Expressed Allele` ) %>%
-  select(gene, everything()) %>%
-  distinct()
+# 
+# imp_genes <- read_tsv('/home/cbl02/Storage/data/imprinted_genes')
+# 
+# imp_genes <- imp_genes %>% 
+#   separate(Aliases, into = LETTERS[1:25], sep = ',') %>%
+#   gather('remove', 'gene', -Location, -Status, -`Expressed Allele`) %>%
+#   select(-remove) %>%
+#   rename(expressed_allele = `Expressed Allele` ) %>%
+#   select(gene, everything()) %>%
+#   distinct()
 
 # ------------------------------------------------------------------------------
 # Dataset: De novo variants (denovo-db)

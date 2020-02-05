@@ -5,6 +5,32 @@
 
 
 
+
+
+test91 <<- start_coordinates
+test92 <<- end_coordinates
+
+test93 <<- chrom_coordinates
+
+# 120600000 117800000
+tmp_cyto <- chromPlot::hg_cytoBandIdeo %>%
+  filter(Chrom %in% test93) %>%
+  rowwise() %>%
+  mutate(keep = c(test91, test92) %overlaps% c(Start, End)) %>%
+  ungroup() %>%
+  filter(keep == TRUE) %>%
+  select(Name) %>%
+  pull() %>%
+  paste(collapse = ', ')
+
+
+
+
+
+
+
+
+
 test13413 <<- ids_query
 query_link <- entrez_link(db= 'omim', id= test13413, dbfrom="pubmed")
 
