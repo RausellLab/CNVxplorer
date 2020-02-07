@@ -38,7 +38,7 @@ library(ontologyIndex)
 library(formattable)
 
 
-# load('local_data.RData')
+load('local_data.RData')
 
 
 
@@ -62,8 +62,8 @@ load('local_data.RData')
 
 # invisible(lapply(paste0('package:', names(sessionInfo()$otherPkgs)), detach, character.only=TRUE, unload=TRUE))
 # file.remove('local_data.RData')
-# save(hgcn_genes, df_enhancers, lncrna_coord, lncrna, tad, gtex, hpa, hpo_genes, vector_hp, vector_term, cnv_df,
-#     select, cnv_df, model1, denovo, ridges_home, plot_p100, plot_p46pla, blacklist_encode, gwas_variants,mgi, syndromes_total, file = "local_data.RData")
+save(hgcn_genes, df_enhancers, lncrna_coord, lncrna, tad, gtex, hpa, hpo_genes, vector_hp, vector_term, cnv_df,
+    select, cnv_df, model1, denovo, ridges_home, plot_p100, plot_p46pla, blacklist_encode, mp_ontology, gwas_variants,mgi, syndromes_total, file = "local_data.RData")
 
 
 credentials <- data.frame(

@@ -1276,6 +1276,12 @@ test <- DBI::dbConnect(RMySQL::MySQL(),
 
 dbListTables(test)
 
+# ------------------------------------------------------------------------------
+# Get ontologies (Gene ontology (GO), The Mammalian Phenotype Ontology (mp))
+# ------------------------------------------------------------------------------
+
+mp_ontology <- rols::Ontology('MP')
+
 
 # ------------------------------------------------------------------------------
 # AGGREGATE ALL THE INFORMATION

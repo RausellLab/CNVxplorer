@@ -1,9 +1,14 @@
 
 
 
+ja <- rols::Ontology('MP')
+
+rols::term('MP', 'MP:0003279')
+
+rols::termLabel(rols::term('casa', 'MP:0003279'))
 
 
-
+rols::termLabel(rols::term(ja, 'MP:0003279'))
 
 a <- entrez_link(dbfrom = 'pubmed', db = 'all', id = '28428889')
 
