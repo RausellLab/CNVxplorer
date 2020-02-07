@@ -57,7 +57,6 @@ library(formattable)
 
 source('functions.R')
 hpo_dbs <- ontologyIndex::get_OBO('http://purl.obolibrary.org/obo/hp.obo')
-
 load('local_data.RData')
 
 
@@ -1500,7 +1499,7 @@ shiny::shinyApp(
             
             collapsible = FALSE,
             closable = FALSE,
-            DTOutput('gene_assoc'),
+            DTOutput('medgen_assoc'),
             overflow = TRUE,
             width = 6
           )
@@ -1739,13 +1738,7 @@ shiny::shinyApp(
     
     
     coord_user <- eventReactive(input$start_analysis, {
-      
-      # proxy <- dataTableProxy('dgenes')
-      # proxy %>% selectRows(NULL)
-      # selected_rows(NULL)
-      # 
-      # clearSearch(proxy)
-      
+   
       coord_start <- input$int_start
       coord_end <-  input$int_end
       coord_chrom <- input$input_chrom
@@ -1776,9 +1769,8 @@ shiny::shinyApp(
       c_output <- c(coord_start, coord_end, coord_chrom)
       
 
-      # shinyjs::reset('start_analysis')
-      
     })
+    
     
     
     
@@ -2224,8 +2216,7 @@ shiny::shinyApp(
     
     output$omim_assoc <- renderDataTable({
       
-      ids_query <- query_pubmed_dup()[['ids']]
-      ids_query <- c(ids_query, query_pubmed_del()[['ids']])
+      ids_query <- c(query_pubmed_dup()[['ids']], query_pubmed_del()[['ids']])
       query_link <- entrez_link(db= 'omim', id= ids_query, dbfrom="pubmed")
       query_link <- query_link$links[['pubmed_omim_calculated']] %>% as.numeric()
       
@@ -2268,14 +2259,38 @@ shiny::shinyApp(
       id_chrom <-unname(map_chr(query_tmp, function(x) x[["chromosome"]]))
       
       organism <- unname(map_chr(query_tmp, function(x) x[['organism']][['scientificname']]))
-      
-      
-      
+
       
       tmp_df <- tibble('title' = title, 'organism' = organism, 'chromosome' = id_chrom, 'id_gene' = id_gene) %>%
         mutate(id_gene = paste0("<a href='", paste0('https://www.ncbi.nlm.nih.gov/gene/', id_gene),"' target='_blank'>", id_gene,"</a>")) 
       
       datatable(tmp_df, escape = FALSE, colnames = c('Title', 'Organism', 'Chromosome', 'ID GENE'), filter = 'top')
+      
+      
+    })
+    
+    
+    output$medgen_assoc <- renderDataTable({
+      
+      ids_query <- c(query_pubmed_del()[['ids']], query_pubmed_dup()[['ids']])
+      query_link <- entrez_link(db= 'medgen', id= ids_query, dbfrom="pubmed")
+      test4141 <<- query_link
+      query_link <- query_link$links[['pubmed_medgen']] %>% as.numeric()
+      
+      validate(
+        need(FALSE, 'TBA')
+      )
+      
+      test1311111 <<- query_link
+      query_tmp <- entrez_summary(db="medgen", id= test1311111)
+      
+      title <- unname(map_chr(query_tmp, function(x) x[["name"]]))
+      id_medgen <- unname(map_chr(query_tmp, function(x) x[["uid"]]))
+    
+      
+      tmp_df <- tibble('title' = title, 'id_gene' = id_medgen)
+      
+      datatable(tmp_df, escape = FALSE, colnames = c('Title', 'id'))
       
       
     })
@@ -3706,6 +3721,9 @@ shiny::shinyApp(
     
     output$ref_user_cytoband <- renderUI({
       
+      
+      if (input$input_geno_karyo == 'Genomic coordinates') {
+        
       start_coordinates <- as.numeric(coord_user()[1])
       end_coordinates <- as.numeric(coord_user()[2])
       chrom_coordinates <- coord_user()[3]
@@ -3727,6 +3745,14 @@ shiny::shinyApp(
         pull() %>%
         paste(collapse = ', ')
         
+      
+      } else {
+        
+        
+        tmp_cyto <- input$input_karyotype
+        
+        
+      }
       
       tablerInfoCard(
         width = 12,
@@ -4652,7 +4678,7 @@ output$switch_tads <- renderUI({
     model_genes_phenotype <- reactive({
       
       
-      go <- Ontology("mp")
+      go <- rols::Ontology("mp")
       
       test_tmp <- data_selected() %>% select(gene) %>% pull()
       mgi_tmp <- mgi %>% filter(gene %in% test_tmp)
@@ -4662,7 +4688,7 @@ output$switch_tads <- renderUI({
         select(-delete)
       
       vector_mpo <- mgi_tmp %>% select(mpo_id) %>% unique() %>%
-        mutate(description = map_chr(mpo_id, function(x) termLabel(term(go, x)))) %>%
+        mutate(description = map_chr(mpo_id, function(x) rols::termLabel(term(go, x)))) %>%
         mutate(description = str_remove(description, ' phenotype'))
       
       mgi_tmp <- mgi_tmp %>% left_join(vector_mpo)
@@ -4941,8 +4967,8 @@ output$switch_tads <- renderUI({
     
     output$group_go  <- renderPlot({
       
-      test900 <<- running_go()
-      test344 <<- running_enrich_go()
+      # test900 <<- running_go()
+      # test344 <<- running_enrich_go()
       running_go() %>%
         arrange(desc(Count)) %>%
         filter(Count != 0) %>%
@@ -4960,12 +4986,10 @@ output$switch_tads <- renderUI({
           position = position_stack(vjust = 0.5),
           vjust = 0
         ) +
-        theme_fancy() +
+        theme_ipsum() +
         theme(axis.text=element_text(size=12),
               axis.title=element_text(size=14,face="bold"))
-      
-      
-      
+
     })
     
     

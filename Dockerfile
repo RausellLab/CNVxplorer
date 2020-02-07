@@ -3,6 +3,7 @@ FROM rocker/shiny-verse:3.6.1
 RUN apt-get update && apt-get install libcurl4-openssl-dev libv8-3.14-dev  libbz2-dev zlib1g-dev libncurses5-dev libncursesw5-dev liblzma-dev  -y &&\
   mkdir -p /var/lib/shiny-server/bookmarks/shiny
 	
+RUN apt-get  install libbz2-1.0 libbz2-dev libbz2-ocaml libbz2-ocaml-dev liblzma-dev libjpeg-dev -y
 
 RUN R -e "devtools::install_github('thomasp85/patchwork')"
 RUN R -e "devtools::install_github('glin/reactable')"
@@ -11,8 +12,8 @@ RUN R -e "install.packages('prettydoc')"
 
 RUN R -e "install.packages(c('shinydashboard', \
 'shinyjs', \
-'formattable' \
-'hrbrthemes' \
+'formattable', \
+'hrbrthemes', \
 'import', \
 'BiocManager', \
 'tablerDash', \
@@ -22,28 +23,26 @@ RUN R -e "install.packages(c('shinydashboard', \
 'DT', \
 'shinymanager', \
 'gghighlight', \
-'ReactomePA', \
 'shinycssloaders', \
 'plotly', \
 'waiter', \
 'DescTools', \
-'clusterProfiler', \
-'org.Hs.eg.db', \
-'DOSE', \
-'enrichplot', \
 'rentrez', \
 'reactable', \
 'ggridges', \
 'UpSetR', \
 'randomForest', \
-'chromPlot', \
-'Gviz', \
 'XML', \
 'shiny'))"
 
-RUN Rscript -e "BiocManager::install('rols')"
+RUN R -e "install.packages('ontologySimilarity')"
+RUN R -e "install.packages('ontologyIndex')"
 
-RUN Rscript -e "BiocManager::install(c('karyoploteR', 'Rhtslib', 'ReactomePA', 'clusterProfiler', 'org.Hs.eg.db', 'DOSE', 'enrichplot','rentrez', 'chromPlot', 'Gviz'))"
+RUN Rscript -e "BiocManager::install('rols')"
+RUN Rscript -e "BiocManager::install('ReactomePA')"
+RUN Rscript -e "BiocManager::install('Gviz')"
+
+RUN Rscript -e "BiocManager::install(c('karyoploteR', 'Rhtslib', 'ReactomePA', 'clusterProfiler', 'org.Hs.eg.db', 'DOSE', 'enrichplo', 'chromPlot'))"
 
 
 
@@ -57,3 +56,4 @@ RUN chmod -R +r /srv/shiny-server/
 EXPOSE 3838
 
 CMD ["/usr/bin/shiny-server.sh"] 
+

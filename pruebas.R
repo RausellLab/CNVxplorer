@@ -5,7 +5,11 @@
 
 
 
+a <- entrez_link(dbfrom = 'pubmed', db = 'all', id = '28428889')
 
+b <- entrez_summary(db="medgen", id= 254821)
+
+b$title
 
 test91 <<- start_coordinates
 test92 <<- end_coordinates
