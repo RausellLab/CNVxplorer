@@ -230,7 +230,7 @@ shiny::shinyApp(
           shinyjs::useShinyjs(),
           
           use_waiter(),
-          verbatimTextOutput("auth_output"),
+          # verbatimTextOutput("auth_output"),
           
           setZoom(class = "card"),
           chooseSliderSkin("Nice"),
