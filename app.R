@@ -37,11 +37,6 @@ library(ontologySimilarity)
 library(ontologyIndex)
 library(formattable)
 
-
-load('local_data.RData')
-
-
-
 # Files needed to run the app
 
 # 1. hgcn_genes - List all the genes with scores
@@ -54,6 +49,7 @@ load('local_data.RData')
 # 8. hpo - Human phenotype ontology
 # 9. mgi - mouse model data
 # 10. blacklist_encode - problematics regions
+# 11. mp_ontology - Mammalian Phenotype Ontology obkect 
 
 source('functions.R')
 hpo_dbs <- ontologyIndex::get_OBO('http://purl.obolibrary.org/obo/hp.obo')
@@ -67,7 +63,7 @@ load('local_data.RData')
 # 
 
 credentials <- data.frame(
-  user = c("arausell"),
+  user = c("necker"),
   password = c("jacques"),
   stringsAsFactors = FALSE
 )
@@ -105,7 +101,7 @@ shiny::shinyApp(
   
   # ui = secure_app(
   
-  ui = 
+  secure_app(ui = 
   
     # shinyjs::useShinyjs(),
   
@@ -217,6 +213,8 @@ shiny::shinyApp(
     title = "CNVxplorer - A web tool for the clinical interpretation of CNVs",
     body = tablerDashBody(
       
+      
+      
       tags$head(tags$script('
   $(document).on("shiny:sessioninitialized", function(event) {
     $(\'a[data-value="Page1"]\').tab("show");
@@ -232,6 +230,7 @@ shiny::shinyApp(
           shinyjs::useShinyjs(),
           
           use_waiter(),
+          verbatimTextOutput("auth_output"),
           
           setZoom(class = "card"),
           chooseSliderSkin("Nice"),
@@ -1609,16 +1608,16 @@ shiny::shinyApp(
       )
       
     )
-  ),
+  )),
   server = function(input, output, session) {
     
-    # res_auth <- secure_server(
-    #   check_credentials = check_credentials(credentials)
-    # )
-    # 
-    # output$auth_output <- renderPrint({
-    #   reactiveValuesToList(res_auth)
-    # })
+    res_auth <- secure_server(
+      check_credentials = check_credentials(credentials)
+    )
+    
+    output$auth_output <- renderPrint({
+      reactiveValuesToList(res_auth)
+    })
     
     #azteca
     # waitress <- waitress$new(theme = "overlay-percent") # call the waitress
@@ -4678,7 +4677,7 @@ output$switch_tads <- renderUI({
     model_genes_phenotype <- reactive({
       
       
-      go <- rols::Ontology("mp")
+      go <- mp_ontology
       
       test_tmp <- data_selected() %>% select(gene) %>% pull()
       mgi_tmp <- mgi %>% filter(gene %in% test_tmp)

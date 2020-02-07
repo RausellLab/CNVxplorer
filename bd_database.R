@@ -1280,8 +1280,7 @@ dbListTables(test)
 # Get ontologies (Gene ontology (GO), The Mammalian Phenotype Ontology (mp))
 # ------------------------------------------------------------------------------
 
-mp_ontology <- rols::Ontology('MP')
-
+mp_ontology <- rols::Ontology('mp')
 
 # ------------------------------------------------------------------------------
 # AGGREGATE ALL THE INFORMATION
