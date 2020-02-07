@@ -47,7 +47,7 @@ RUN Rscript -e "BiocManager::install(c('karyoploteR', 'Rhtslib', 'ReactomePA', '
 
 
 # Copy the app to the image
-COPY cnvxplore /srv/shiny-server/
+COPY cnvxplorer /srv/shiny-server/
 
 
 # Make all app files readable
