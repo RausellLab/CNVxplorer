@@ -386,7 +386,21 @@ shiny::shinyApp(
                    uiOutput('hpo_unique')),
                    column(width = 6,
                    uiOutput('hpo_unique_genes')
-                   )))
+                   ))),
+                   tablerCard(width = 12,
+                              collapsible = FALSE,
+                              closable = FALSE,
+                              zoomable = FALSE,
+                              status = 'success',
+                              statusSide = 'left',
+                              title = tagList(shiny::icon("book"), "Animal model"),
+                              fluidRow(
+                                column(width = 6,
+                                       
+                                       uiOutput('n_mortality')),
+                                column(width = 6,
+                                       uiOutput('n_embryo')
+                                )))
             ),
             column(width = 6,
                      
@@ -2081,7 +2095,7 @@ shiny::shinyApp(
       
       req(input$start_analysis > 0)
       
-      data_tmp <- check_cnv_df() %>% filter(source == 'decipher') %>% nrow()
+      data_tmp <- check_cnv_df() %>% filter(source == 'decipher' & pathogenicity == 'Pathogenic') %>% nrow()
       
       tablerStatCard(
         value =  data_tmp,
@@ -2350,6 +2364,38 @@ shiny::shinyApp(
       #   description = "Number of articles found in Pubmed associated with duplications",
       #   width = 12
       # )
+      
+    })
+    
+    
+    output$n_mortality <- renderUI({
+      
+      tmp_n <-  model_genes_phenotype() %>% count(description) %>% filter(description == 'mortality/aging') %>% pull(n)
+      
+      tablerStatCard(
+        value =  tmp_n,
+        # status = "primary",
+        # icon = 'book',
+        title = "Genes associated with mortality/aging phenotype in mouse model",
+        width = 12
+      )
+      
+      
+    })
+    
+    output$n_embryo <- renderUI({
+      
+      
+      tmp_n <<- model_genes_phenotype() %>% count(description) %>% filter(description == 'embryo') %>% pull(n)
+      
+      
+      tablerStatCard(
+        value =   tmp_n,
+        # status = "primary",
+        # icon = 'book',
+        title = "Genes associated with embryonic phenotype in mouse model",
+        width = 12
+      )
       
     })
     
@@ -2863,7 +2909,8 @@ shiny::shinyApp(
       server <- TRUE
       data_input <- data_selected() %>% filter(source == 'Enhancer') %>%
         select(-start_position, -end_position, -chrom) %>%
-        select(-p_overlap)
+        select(band, gene, disease, haplo, triplo, dev, fda, omim, fda, gwas, pLI, rvis, ccr, hi, gdi, snipre, ncrvis, 
+               ncgerp, p_overlap)
 
       datatable(data_input, rownames = FALSE, filter = 'top',
                 selection = 'single',
@@ -2876,7 +2923,10 @@ shiny::shinyApp(
                   stateSave = FALSE
                   # colnames = c('Entrez id', 'Band', 'Gene', 'pLI', 'Database', 'CNV size', 'Percentage Overlap (%)')
                   # columnDefs = list(list(className = 'dt-center', targets = '_all'))
-                ))
+                )) %>%
+        formatStyle(c('pLI', 'rvis', 'hi', 'gdi', 'snipre', 'ncrvis', 'ncgerp'), color = styleInterval(94, c('weight', '#ff7f7f'))) %>%
+        formatStyle(c('ccr'), color = styleInterval(1, c('weight', '#ff7f7f'))) %>%
+        formatStyle(c('disease', 'haplo', 'triplo', 'omim', 'dev', 'fda', 'gwas'), color = styleEqual(c('No', 'Yes'), c('weight', '#ff7f7f')))
       # formatStyle(
       #   'pLI',
       #   background = styleColorBar(c(0,1), '#ca7171'),
@@ -2899,7 +2949,8 @@ shiny::shinyApp(
           server <- TRUE
           data_input <- data_selected() %>% filter(source == 'TAD') %>%
             select(-start_position, -end_position, -chrom) %>%
-            select(-p_overlap)
+            select(band, gene, disease, haplo, triplo, dev, fda, omim, fda, gwas, pLI, rvis, ccr, hi, gdi, snipre, ncrvis, 
+                   ncgerp, p_overlap)
           
           datatable(data_input, rownames = FALSE, filter = 'top',
                     selection = 'single',
@@ -5314,8 +5365,10 @@ output$func_do  <- renderPlot({
       
       start_coordinates <- coord_user()[1]
       end_coordinates <- coord_user()[2]
+      
+      test31111 <<- check_cnv_df()
   
-      tmp_df <-  get_perc_overlap(check_cnv_df() %>% 
+      tmp_df <-  get_perc_overlap(check_cnv_df()  %>%
                                     rename(start_position = start, end_position = end), start_coordinates, 
                                   end_coordinates)
 
@@ -5331,7 +5384,7 @@ output$func_do  <- renderPlot({
       start_coordinates <- as.numeric(start_coordinates)
       end_coordinates <- as.numeric(end_coordinates)
 
-      df_pathogenic <- df_overlap_cnvs_running() %>% filter(source == 'decipher')
+      df_pathogenic <- df_overlap_cnvs_running() %>% filter(source == 'decipher') 
 
       cnv_input <- GRanges(
         seqnames= chrom_coordinates,
@@ -5494,7 +5547,15 @@ output$func_do  <- renderPlot({
     
     output$df_overlap_cnvs <- renderDT({
       
-      tmp_df <- df_overlap_cnvs_running() %>% filter(source == 'decipher')
+      
+      tmp_df <- df_overlap_cnvs_running() %>% filter(source == 'decipher') %>% filter(pathogenicity == 'Pathogenic')
+      
+      
+      validate(
+        need(nrow(tmp_df) == 0, "No pathogenic CNVs found in this region.")
+      )
+      
+      
       datatable(tmp_df, colnames = c('ID', 'Chrom', 'Start', 'End', 'Database', 'Pathogenicity', 'Genotype', 'Class', 
                                      'CNV size', 'Percentage Overlap (%)'),
                 selection = 'single',

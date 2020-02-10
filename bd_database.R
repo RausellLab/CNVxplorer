@@ -162,7 +162,7 @@ no_coord_with_ensembl <- hgcn_genes %>% filter(is.na(start_position)) %>%
   distinct() %>%
   select(-length)
   
-
+# MAKE A THIRD ROUND WITH 336 GENES WITHOUT COORDINATES AND THEREFORE REMOVED.
 
 hgcn_genes <- hgcn_genes %>% na.omit() %>% bind_rows(no_coord_with_ensembl)
 
@@ -1267,14 +1267,20 @@ dbvar <- dbvar %>%
 # ------------------------------------------------------------------------------
 # HGMD database
 # ------------------------------------------------------------------------------
+
 library(RMySQL)
+
 
 test <- DBI::dbConnect(RMySQL::MySQL(),
                        host = '10.200.27.108',
                        user = 'cbl',
+                       dbname = 'hgmd_pro-2019.4',
                        password = 'hgmdcbl')
 
 dbListTables(test)
+a <- dbGetQuery(test, "SELECT * FROM allmut")
+test_50 <- a %>% as_tibble() %>%  mutate(length = endCoord - startCoord + 1) %>% filter(length > 50)
+
 
 # ------------------------------------------------------------------------------
 # Get ontologies (Gene ontology (GO), The Mammalian Phenotype Ontology (mp))

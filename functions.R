@@ -106,8 +106,8 @@ get_perc_overlap <- function(df, start_cnv, end_cnv) {
   # start_cnv <- 34813719
   # end_cnv <- 36278623
   # 
-  # df <- test20 %>%  rename(start_position = start, end_position = end)
-  
+  # df <- test1521
+  # 
   start_cnv <- as.numeric(start_cnv)
   end_cnv <- as.numeric(end_cnv)
   

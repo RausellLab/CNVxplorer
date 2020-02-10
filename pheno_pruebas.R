@@ -5,9 +5,7 @@ library(ontologySimilarity)
 library(GOSemSim)
 
 
-library(ontologyIndex)
 
-library(formattable)
 
 go_test <- ontologyIndex::get_OBO('http://purl.obolibrary.org/obo/go.obo')
 
@@ -69,14 +67,24 @@ ddd <- read_tsv('/home/cbl02/Desktop/ddd169_phenotypes.tsv') %>%
   mutate(child_hpo = child_hpo %>% str_replace_all('\\|', ', ') %>% str_split(', ')) %>%
   rename(hpo_list = child_hpo)
 
-total_genes <- base::split(hpo_genes$hp, hpo_genes$gene)
+
+official_symbols_omim <- hgcn_genes %>% select(gene) %>% filter(gene %in% dev_genes) %>% pull()
+
+ddd <- ddd %>% filter(causal_gene %in% official_symbols_omim)
+
+
+hpoa <- hpo_genes %>% filter(gene %in% official_symbols_omim)
+
+total_genes <- base::split(hpoa$hp, hpoa$gene)
 counter = 0
 df_result <- tibble(id_patient = 'NA', rank_resnik_avg = NA, rank_lin_avg = NA)
+
 for (i in 1:nrow(ddd)) {
   print(i)
   causal_gene <- ddd$causal_gene[i]
   patient_id <- ddd$patient_ID[i]
   hpo_list <- ddd$hpo_list[i]
+  
   not_included <- hpo_list[[1]][!hpo_list[[1]] %in% hpo_down$id]
   any_dup <- hpo_list[duplicated(hpo_list)]
   
@@ -142,27 +150,32 @@ top_lin = case_when(
 
 ))
 
+my_order <- c('top_50', 'top_100', 'top_150', 'top_200', 'top_250', 'top_300', 'top_350', 'total')
+
 tmp_resnik <- tmp2 %>%
   count(top_resnik) %>%
+  na.omit() %>%
   mutate(perc_resnik = n / sum(n) * 100) %>%
-  select(top_resnik, perc_resnik)
+  select(top_resnik, perc_resnik) %>%
+  mutate(cum_resnik = cumsum(perc_resnik))
+  
 
 
 tmp_lin <- tmp2 %>%
   count(top_lin) %>%
   mutate(perc_lin = n / sum(n) * 100) %>%
-  select(top_lin, perc_lin)
+  select(top_lin, perc_lin) %>%
+  arrange(match(top_lin, my_order)) %>%
+  mutate(cum_lin = cumsum(perc_lin))
+  
 # resnik method = 1.234995
 # HP:0005289
 # HP:0004438
 
 tmp_resnik %>%
   left_join(tmp_lin, by = c('top_resnik' = 'top_lin')) %>%
-  mutate(perc_lin = replace_na(perc_lin, 0)) %>%
-  mutate(cum_resnik = cumsum(perc_resnik)) %>%
-  mutate(cum_lin = cumsum(perc_lin)) %>%
   pivot_longer(cols = starts_with('cum')) %>%
-  ggplot(aes(top_resnik, value)) +
+  ggplot(aes(reorder(top_resnik, value), value)) +
   geom_line(aes(group = name, color = name)) +
   geom_point(aes(fill =name, group = name), shape = 21) +
   xlab('Rank of causative gene') +

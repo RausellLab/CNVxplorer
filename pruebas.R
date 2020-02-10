@@ -1,5 +1,34 @@
 
 
+########### CNVSCORE ###############
+library(parsnip)
+
+input_training <- cnv_df
+
+check_n_proteins <- function(start, end, chrom ) {
+  
+  tmp_out <- hgcn_genes %>%
+    filter(chrom == chrom) %>%
+    rowwise() %>%
+    mutate(keep = c(start_position, end_position) %overlaps% c(start, end)) %>%
+    filter(keep == TRUE) %>%
+    nrow()
+  
+return(tmp_out)  
+  
+}
+
+b <- input_training %>% 
+  rename(label = pathogenicity) %>%
+  filter(label %in% c('Pathogenic', NA)) %>%
+  mutate(label = if_else(label == 'Pathogenicity', 'patho', 'no_patho')) %>%
+  mutate(id_sample = row_number()) %>%
+  select(id_sample, chrom, start,end, label) %>%
+  dplyr::slice(1:10)
+
+
+pmap(b, check_n_proteins)
+########## CNVSCORE ################
 
 ja <- rols::Ontology('MP')
 
