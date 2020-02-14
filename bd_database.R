@@ -39,13 +39,17 @@ ref_scores <- tibble(score = c('gwas', # we could filter out by number of hits (
                                'haplo',
                                'triplo',
                                'vg',
+                               'dev',
                                'rvis',
                                'clinvar',  # it could be extended with reference variant - omim - disease
                                'ccr',
                                'ncRVIS',
                                'ncGERP',
+                               'gene panel',
                                'HI score'),
                      level = c('gene-level',
+                               'gene-level',
+                               'gene-level',
                                'gene-level',
                                'gene-level',
                                'gene-level',
@@ -69,11 +73,13 @@ ref_scores <- tibble(score = c('gwas', # we could filter out by number of hits (
                                      '-',
                                      '-',
                                      '-',
+                                     'Developmental disorder genes',
                                      '-',
                                      '-',
                                      '-',
                                      '-',
                                      '-',
+                                     'Genomics England panel genes',
                                      '-'),
                      type = c('d',
                               'd',
@@ -83,14 +89,16 @@ ref_scores <- tibble(score = c('gwas', # we could filter out by number of hits (
                               'd',
                               'd',
                               'd',
+                              'd',
                               'c',
                               'c',
                               'd',
                               'c',
                               'c',
                               'c',
+                              'd',
                               'c'),
-                     source = c('-',
+                     date = c('-',
                                 '-',
                                 '-',
                                 '-',
@@ -99,12 +107,34 @@ ref_scores <- tibble(score = c('gwas', # we could filter out by number of hits (
                                 '-',
                                 '-',
                                 '-',
+                                '14-02-2020',
                                 '-',
                                 '-',
                                 '-',
                                 '-',
+                              '-',
                                 '-',
-                                '-'))
+                                '-'),
+                     any_filter = c('-',
+                              '-',
+                              '-',
+                              '-',
+                              '-',
+                              '-',
+                              '-',
+                              '-',
+                              '-',
+                              'DDD category: confirmed',
+                              '-',
+                              '-',
+                              '-',
+                              '-',
+                              '-',
+                              'source: Expert Review Green',
+                              '-')
+                     
+
+                     )
 
 
 # Load datasets
@@ -296,14 +326,14 @@ triplo <- read.table('/home/cbl02/Storage/data/ClinGen_triplosensitivity_gene.be
 # THERE ARE RELEVANT FEATURES SUCH AS MODE, CONSEQUENCE, DISEASE THAT MAY BE RELEVANT
 # FOR THE APP
 
-dev_genes <- read.table('/home/cbl02/Storage/data/DDG2P_6_6_2019.csv', 
-                        header = TRUE, stringsAsFactors = FALSE,
-                        sep = ',') %>%
-  as_tibble() %>%
-  filter(DDD.category == 'confirmed') %>%
-  select(gene.symbol) %>%
-  rename(gene = gene.symbol) %>%
-  pull(gene)
+dev_raw <- read_csv('/home/cbl02/Storage/data/DDG2P_14_2_2020.csv', 
+                      col_names = TRUE) %>%
+  filter(`DDD category`  == 'confirmed') %>%
+  rename(gene = `gene symbol`) %>%
+  select(gene, `gene mim`, `disease name`, `allelic requirement`, `organ specificity list`, pmids)
+  
+
+dev_genes <- dev_raw %>% pull(gene)
 
 # ------------------------------------------------------------------------------
 # Dataset: OMIM 
@@ -367,11 +397,18 @@ omim <- omim_filtered %>%
          somatic == 0,
          complexity == 0) %>%
   rename(gene = Gene_symbols) %>%
+  separate_rows(gene, sep = ', ')
+
+
+omim_genes <- omim_filtered %>%
+  filter(quality == 3,
+         somatic == 0,
+         complexity == 0) %>%
+  rename(gene = Gene_symbols) %>%
   select(gene) %>% 
   separate_rows(gene, sep = ', ') %>%
   distinct() %>%
   pull()
-
 # ------------------------------------------------------------------------------
 # Dataset: FDA 
 # Source: MacArthur lab github
@@ -405,11 +442,11 @@ rvis <- rvis %>% select(GENE, X.ExAC_0.05.popn) %>%
 # Access: 
 # ------------------------------------------------------------------------------
 
-clinvar_raw <- read.table('/home/cbl02/Storage/data/clinvar_20190527.vcf', skip = 28)
+clinvar_raw <- read.table('/home/cbl02/Storage/data/clinvar_20191219.vcf', skip = 28)
 
-clinvar <- clinvar_raw %>% 
+clinvar_genes <- clinvar_raw %>% 
   as_tibble() %>%
-  filter(!str_detect(V8, 'CLNSIG=Pathogenic')) %>%
+  filter(str_detect(V8, 'CLNSIG=Pathogenic') | str_detect(V8, 'CLNSIG=Likely_pathogenic')) %>%
   select(V8) %>%
   mutate(gene = str_extract(V8, pattern =  'GENEINFO[^;]*')) %>%
   select(-V8) %>%
@@ -417,7 +454,24 @@ clinvar <- clinvar_raw %>%
   mutate(gene = str_remove(gene, '\\:.*')) %>%
   distinct() %>%
   na.omit() %>%
-  pull() 
+  pull()
+
+
+clinvar_variants <- clinvar_raw %>%
+  as_tibble() %>%
+  filter(str_detect(V8, 'CLNSIG=Pathogenic') | str_detect(V8, 'CLNSIG=Likely_pathogenic')) %>%
+  mutate(V8 = as.character(V8)) %>%
+  mutate(disease_identifier = str_extract(V8, 'CLNDISDB([^;]+)')) %>%
+  mutate(disease_identifier = str_remove(disease_identifier, 'CLNDISDB=')) %>%
+  mutate(disease_name = str_extract(V8, 'CLNDN([^;]+)')) %>%
+  mutate(disease_name = str_remove(disease_name, 'CLNDN=')) %>%
+  mutate(clinical_sign = str_extract(V8, 'CLNSIG([^;]+)')) %>%
+  mutate(clinical_sign = str_remove(clinical_sign, 'CLNSIG=')) %>%
+  mutate(gene = str_extract(V8, 'GENEINFO([^:]+)')) %>% 
+  mutate(gene = str_remove(gene, 'GENEINFO=')) %>%
+  rename(chrom = V1, pos = V2, id = V3, reference = V4, alternative = V5) %>%
+  select(chrom, pos, reference, alternative, gene, clinical_sign, disease_identifier, disease_name, id)
+
 
 # ------------------------------------------------------------------------------
 # Dataset: Haploinsufficiency prediction
@@ -686,7 +740,7 @@ decipher_sv_raw <- read_tsv('/home/cbl02/Storage/data/daa_decipher/decipher-cnvs
   mutate(source = 'decipher') %>%
   rename(id = `# patient_id`, chrom = chr) %>%
   mutate(id = as.character(id)) %>%
-  # filter(pathogenicity == 'Pathogenic') %>%
+  filter(pathogenicity %in% c('Pathogenic', 'Likely pathogenic')) %>%
   select(id, chrom, start, end, source, pathogenicity, genotype, variant_class)
 
 
@@ -760,6 +814,13 @@ vector_term <- hpo_to_vector %>% pull(term)
 
 
 # ------------------------------------------------------------------------------
+# Dataset: Human Phenotype Ontology
+# ------------------------------------------------------------------------------
+
+hpo_dbs <- ontologyIndex::get_OBO('http://purl.obolibrary.org/obo/hp.obo')
+
+
+# ------------------------------------------------------------------------------
 # Dataset: TADs
 # Name file: http://promoter.bx.psu.edu/hi-c/publications.html
 # ------------------------------------------------------------------------------
@@ -783,7 +844,7 @@ genehancer <- read.table('/home/cbl02/Storage/data/genehancer_V4_11.gff', header
                   stringsAsFactors = FALSE)
 
 df <- genehancer %>%
-  as.tibble() %>%
+  as_tibble() %>%
   filter(V3 == 'Enhancer') %>%
   select(-V2, -V3, -V7, -V8) %>%
   rename(chrom = V1, start = V4, end = V5, score_enh = V6, attributes = V9)
@@ -1103,7 +1164,7 @@ snipre <- snipre %>% select(Gene, SnIPRE.f) %>%
 # We got 306 (5 less than expected) because these panels were empty:
 # "gene_panel_218" "gene_panel_520" "gene_panel_530" "gene_panel_561" "gene_panel_82" 
 # ------------------------------------------------------------------------------
-
+# 
 # library(rvest)
 # website <- "https://panelapp.genomicsengland.co.uk/panels/"
 # page <- read_html(website)
@@ -1114,43 +1175,57 @@ snipre <- snipre %>% select(Gene, SnIPRE.f) %>%
 # 
 # df_ref <- tibble(ref = c_ref, id = NA) %>%
 #   filter(str_detect(ref, 'download')) %>%
-#   mutate(ref = str_remove(ref, '/panels/')) %>% 
+#   mutate(ref = str_remove(ref, '/panels/')) %>%
 #   mutate(id = ref) %>%
 #   mutate(id = str_remove(id, '/download/01234/'))
-#   
-# setwd('/home/cbl02/Storage/data/gene_panel')
 # 
-# walk2(df_ref$ref, df_ref$id, function(a, b) 
+setwd('/home/cbl02/Storage/data/gene_panel')
+# 
+# walk2(df_ref$ref, df_ref$id, function(a, b)
 #   download.file(url = paste0(website, a), destfile = paste0('gene_panel_', b))
 #   )
-# files_panel <- list.files()
-# panel_total <- tibble()
-# 
-# for (i in 1:length(files_panel)) {
-#   print(i)
-#   df_tmp <- read_tsv(paste0('/home/cbl02/Storage/data/gene_panel/', files_panel[i]))
-#   df_tmp <- df_tmp %>% mutate(source = files_panel[i])
-#   panel_total <- rbind(panel_total, df_tmp)
-# }
-# 
-# # we filtered out those genes not containing a "review ranking" ( 3,259 out 45488)
-# # Filtering out genes with a evidence level (red - amber)
-# panel_total <- panel_total %>%
-#   rename(entity_name = `Entity Name`, 
-#          entity_type = `Entity type`, 
-#          gene = `Gene Symbol`,
-#          sources = `Sources(; separated)`) %>%
-#   filter(entity_type == 'gene') %>%  # optional - we can include regions in our analysis
-#   filter(str_detect(sources, 'Expert Review')) %>%
-#   separate_rows(sources, sep = ';') %>%
-#   filter(str_detect(sources, 'Expert Review Green')) %>%
-#   select(gene, Level4, -sources, source) 
-#   
-# 
-# setwd('/home/cbl02/Storage/cnvxplore')
+files_panel <- list.files()
+panel_total <- tibble()
 
+for (i in 1:length(files_panel)) {
+  print(i)
+  df_tmp <- read_tsv(paste0('/home/cbl02/Storage/data/gene_panel/', files_panel[i]))
+  df_tmp <- df_tmp %>% mutate(source = files_panel[i])
+  panel_total <- rbind(panel_total, df_tmp)
+}
 
+# we filtered out those genes not containing a "review ranking" ( 3,233 out 45488)
+# Filtering out genes with a evidence level (red - amber)
+panel_total <- panel_total %>%
+  rename(entity_name = `Entity Name`,
+         entity_type = `Entity type`,
+         gene = `Gene Symbol`,
+         sources = `Sources(; separated)`) %>%
+  filter(entity_type == 'gene') %>%  # optional - we can include regions in our analysis
+  filter(str_detect(sources, 'Expert Review')) %>%
+  separate_rows(sources, sep = ';') %>%
+  filter(str_detect(sources, 'Expert Review Green')) %>%
+  select(gene, Level4, -sources, source, Phenotypes)
 
+panel_total_genes <- panel_total %>% pull(gene) %>% unique()
+
+setwd('/home/cbl02/Storage/cnvxplore')
+
+# ------------------------------------------------------------------------------
+# Dataset: Orphadata - RARE DISEASES WITH THEIR ASSOCIATED GENES
+# Source: http://www.orphadata.org/data/xml/en_product6.xml
+# ------------------------------------------------------------------------------
+library(xml2)
+
+orphanet_raw <- read_tsv("/home/cbl02/Storage/data/orphanet_test.tsv" )
+
+orphanet_raw <- orphanet_raw %>%
+  select(Symbol, OrphaNumber5, Name6, OrphaNumber, Name, SourceOfValidation, Name15) %>%
+  distinct() %>%
+  rename(gene = Symbol)
+
+orphanet_genes <- orphanet_raw %>% pull(gene) %>% unique()
+  
 
 # ------------------------------------------------------------------------------
 # Source: /home/cbl02/Storage/data/curated_gene_disease_associations.tsv
@@ -1178,8 +1253,8 @@ snipre <- snipre %>% select(Gene, SnIPRE.f) %>%
 
 disgenet <- read_tsv('/home/cbl02/Storage/data/curated_gene_disease_associations.tsv')
 
-disgenet %>% ggplot(aes(score)) +
-  geom_histogram()
+disgenet %>%
+  filter(source %in% c('CLINGEN', 'GENOMICS_ENGLAND', 'ORPHANET'))
 
 genes_disgenet <- disgenet %>% select(geneSymbol) %>% distinct() %>% pull()
 
@@ -1206,9 +1281,10 @@ genes_disgenet <- disgenet %>% select(geneSymbol) %>% distinct() %>% pull()
 # non-SSC Samples	
 # ------------------------------------------------------------------------------
 
-denovo <- read_tsv('/home/cbl02/Storage/data/denovo-db.non-ssc-samples.variants.v.1.6.1.tsv', skip = 1)
+denovo <- read.table('/home/cbl02/Storage/data/denovo-db.non-ssc-samples.variants.v.1.6.1.tsv', skip = 1, sep = '\t', header = TRUE)
 
 denovo <- denovo %>% 
+  as_tibble() %>%
   select(Chr, Position, Gene, PrimaryPhenotype, StudyName, PubmedID, FunctionClass) %>%
   rename(chrom = Chr)
 
@@ -1287,14 +1363,12 @@ test_50 <- a %>% as_tibble() %>%  mutate(length = endCoord - startCoord + 1) %>%
 # ------------------------------------------------------------------------------
 
 mp_ontology <- rols::Ontology('mp')
+hpo_dbs <- ontologyIndex::get_OBO('http://purl.obolibrary.org/obo/hp.obo')
 
 # ------------------------------------------------------------------------------
 # AGGREGATE ALL THE INFORMATION
 # ------------------------------------------------------------------------------
 
-
-# CHECK DUPLICATED GENES ONCE EVERYTHING IS AGGREGATED!!
-# ZMYM6
 
 hgcn_genes <- hgcn_genes %>%
   left_join(pli) %>% # pli score
@@ -1303,11 +1377,13 @@ hgcn_genes <- hgcn_genes %>%
   mutate(triplo = as.factor(if_else(gene %in% triplo, 'Yes', 'No'))) %>% # triploinsufficiency genes 
   mutate(dev = as.factor(if_else(gene %in% dev_genes, 'Yes', 'No'))) %>% # developmental disorder genes - it can be extended with mode, consecuence and disease
   mutate(fda = as.factor(if_else(gene %in% fda, 'Yes', 'No'))) %>% #  Mechanistic targets of FDA-approved drugs 
-  mutate(clinvar = as.factor(if_else(gene %in% clinvar, 'Yes', 'No'))) %>% # List of genes with likely pathogenic and pathogenic variants
+  mutate(clinvar = as.factor(if_else(gene %in% clinvar_genes, 'Yes', 'No'))) %>% # List of genes with likely pathogenic and pathogenic variants
   mutate(gwas = as.factor(if_else(gene %in% gwas, 'Yes', 'No'))) %>% # GWAS genes
-  mutate(omim = as.factor(if_else(gene %in% omim, 'Yes', 'No'))) %>% # GWAS genes
+  mutate(omim = as.factor(if_else(gene %in% omim_genes, 'Yes', 'No'))) %>% # OMIM genes
+  mutate(orphanet = as.factor(if_else(gene %in% orphanet_genes, 'Yes', 'No'))) %>% # OMIM genes
+  mutate(genomics_england = as.factor(if_else(gene %in% panel_total_genes, 'Yes', 'No'))) %>% # Genomics England panel 
   mutate(essent = as.factor(if_else(ensembl_gene_id %in% e_intersect$V1 , 'Yes', 'No'))) %>% # essential genes (intersection mgi_invitro)
-  mutate(disease = as.factor(if_else(gene %in% genes_disgenet , 'Yes', 'No'))) %>%
+  # mutate(disease = as.factor(if_else(gene %in% genes_disgenet , 'Yes', 'No'))) %>%
   left_join(ccr) %>% # Genes with CCRs in the 99th percentile or higher 
   left_join(nc) %>% # non-coding scores RVIS and ncGERP - 5UTR + 3UTR + 250bp upstream
   left_join(rvis) %>% # RVIS score based
@@ -1317,8 +1393,11 @@ hgcn_genes <- hgcn_genes %>%
 
 hgcn_genes <- hgcn_genes %>% 
   rename(chrom = chromosome_name) %>%
+  mutate(clingen = if_else(haplo == 'Yes' | triplo == 'Yes', 'Yes', 'No')) %>%
   mutate(ccr = ifelse(is.na(ccr), 0, ccr)) %>%
-  rename(band = location)
+  rename(band = location) %>%
+  mutate(disease = if_else(haplo == 'Yes' | triplo == 'Yes' | clingen == 'Yes' | genomics_england == 'Yes' | dev == 'Yes' | orphanet == 'Yes' |  fda == 'Yes' | omim == 'Yes', 'Yes', 'No' ) )
+
 
 hgcn_genes <- hgcn_genes %>% 
   mutate(pLI = ntile(pLI, 100)) %>% # high pLI = 1 Likely Pathogenic
@@ -1328,3 +1407,4 @@ hgcn_genes <- hgcn_genes %>%
   mutate(gdi = ntile(-(gdi), 100)) %>% # low gdi = Likely Pathogenic
   mutate(hi = ntile(-(hi), 100)) %>% # low hi = Likely Pathogenic
   mutate(snipre = ntile(-(snipre), 100)) # low snipre = Likely Pathogenic
+
