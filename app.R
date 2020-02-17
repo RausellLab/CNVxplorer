@@ -36,6 +36,7 @@ library(shiny)
 library(ontologySimilarity)
 library(ontologyIndex)
 library(formattable)
+library(shinyalert)
 
 # Files needed to run the app
 
@@ -107,11 +108,13 @@ shiny::shinyApp(
   
   ui = 
   
-    # shinyjs::useShinyjs(),
   
     tablerDashPage(
-
+      
     navbar = tablerDashNav(
+      
+      shinyjs::useShinyjs(),
+      
       
       navMenu = tablerNavMenu(
 
@@ -227,7 +230,7 @@ shiny::shinyApp(
       
       tablerTabItems(
         
-
+        
         
         tablerTabItem(
           tabName = "overview",
@@ -1705,6 +1708,9 @@ shiny::shinyApp(
   ),
   server = function(input, output, session) {
     
+    
+
+    
     # res_auth <- secure_server(
     #   check_credentials = check_credentials(credentials)
     # )
@@ -1831,17 +1837,24 @@ shiny::shinyApp(
     
     
     coord_user <- eventReactive(input$start_analysis, {
+      
+      
    
-      coord_start <- input$int_start
-      coord_end <-  input$int_end
+      coord_start <- as.numeric(input$int_start)
+      coord_end <-  as.numeric(input$int_end)
       coord_chrom <- input$input_chrom
       
+      
+      # observeEvent(TRUE, {
+      #   # Show a modal when the button is pressed
+      #   shinyalert("Oops!", "Something went wrong.", type = "error")
+      # })
       
       
       if (input$input_geno_karyo == 'Genomic coordinates') {
 
-        coord_start <- as.numeric(coord_start)
-        coord_end <- as.numeric(coord_end)
+        coord_start <- coord_start
+        coord_end <- coord_end
         
         
       } else {
@@ -4649,7 +4662,7 @@ output$switch_tads <- renderUI({
         xlim(c(0,100)) +
         ylab('Similarity score') +
         xlab('pLI score (0-100)') +
-        theme_ipsum()
+        theme_fancy()
       
       ggplotly(p)
       
@@ -4739,7 +4752,7 @@ output$switch_tads <- renderUI({
         ylab('Phenotypic similarity score') +
         xlab('Genes') +
         scale_fill_viridis_c() +
-        theme_ipsum() +
+        theme_fancy() +
         theme(axis.text.x = element_text(angle = 45, hjust = 1),
               axis.title.x = element_text(size = 16),
               axis.title.y = element_text(size = 16))
@@ -4902,7 +4915,7 @@ output$switch_tads <- renderUI({
         theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
         coord_flip() +
         scale_fill_viridis_c() +
-        theme_ipsum()
+        theme_fancy()
         
       # model_genes_phenotype() %>% count(description) %>% arrange(n) %>%
       #   e_charts() %>% 
@@ -5179,7 +5192,7 @@ output$switch_tads <- renderUI({
           position = position_stack(vjust = 0.5),
           vjust = 0
         ) +
-        theme_ipsum() +
+        theme_fancy() +
         theme(axis.text=element_text(size=12),
               axis.title=element_text(size=14,face="bold"))
 
@@ -5404,62 +5417,62 @@ output$func_do  <- renderPlot({
     cnetplot(running_do(), foldChange= hgcn_genes$entrez_id, readable = TRUE)
 })
     
-    output$table_all_genes  <-  renderReactable({
-      
-     reactable(hgcn_genes,
-               filterable = TRUE,
-               selection = "single", 
-               selectionId = "selected",
-               
-               columns = list(chrom = colDef(name = "Chromosome"),
-                              start_position = colDef(name = "Start"),
-                              end_position = colDef(name = "End"),
-                              location = colDef(name = "Location"),
-                              gene = colDef(name = "Gene"),
-                              haplo = colDef(name = "Haploinsufficiency",
-                                             cell = function(value) {
-                                               
-                                               if (value == 0) "\u2718" else "\u2713"
-                                             }),
-                              triplo = colDef(name = "Triplosensitivity",
-                                              cell = function(value) {
-                                                
-                                                if (value == 0) "\u2718" else "\u2713"
-                                              }),
-                              dev = colDef(name = "Developmental disorder gene",
-                                           cell = function(value) {
-                                             
-                                             if (value == 0) "\u2718" else "\u2713"
-                                           }),
-                              fda = colDef(name = "FDA-approved drug targets",
-                                           cell = function(value) {
-                                             
-                                             if (value == 0) "\u2718" else "\u2713"
-                                           }),
-                              clinvar = colDef(name = "ClinVar genes",
-                                               cell = function(value) {
-                                                 
-                                                 if (value == 0) "\u2718" else "\u2713"
-                                               }),
-                              ccr = colDef(name = "CCR"),
-                              ncrvis = colDef(name = "Ncrvis"),
-                              ncgerp = colDef(name = "Ncgerp"),
-                              hi = colDef(name = "HI index", 
-                                          format = colFormat(suffix = " %", digits = 1))
-                              # cell = function(value) {
-                              #   if (is.na(value)) {
-                              #     classes <- "tag num-low"
-                              #   } else if (value >= 0.9) {
-                              #     classes <- 'tag num-high'
-                              #   } else  {
-                              #     classes <- "tag num-high"
-                              #   }
-                              #   value <- format(value, nsmall = 1)
-                              #   span(class = classes, value)
-                              # })
-               ))
-      
-    })
+    # output$table_all_genes  <-  renderReactable({
+    #   
+    #  reactable(hgcn_genes,
+    #            filterable = TRUE,
+    #            selection = "single", 
+    #            selectionId = "selected",
+    #            
+    #            columns = list(chrom = colDef(name = "Chromosome"),
+    #                           start_position = colDef(name = "Start"),
+    #                           end_position = colDef(name = "End"),
+    #                           location = colDef(name = "Location"),
+    #                           gene = colDef(name = "Gene"),
+    #                           haplo = colDef(name = "Haploinsufficiency",
+    #                                          cell = function(value) {
+    #                                            
+    #                                            if (value == 0) "\u2718" else "\u2713"
+    #                                          }),
+    #                           triplo = colDef(name = "Triplosensitivity",
+    #                                           cell = function(value) {
+    #                                             
+    #                                             if (value == 0) "\u2718" else "\u2713"
+    #                                           }),
+    #                           dev = colDef(name = "Developmental disorder gene",
+    #                                        cell = function(value) {
+    #                                          
+    #                                          if (value == 0) "\u2718" else "\u2713"
+    #                                        }),
+    #                           fda = colDef(name = "FDA-approved drug targets",
+    #                                        cell = function(value) {
+    #                                          
+    #                                          if (value == 0) "\u2718" else "\u2713"
+    #                                        }),
+    #                           clinvar = colDef(name = "ClinVar genes",
+    #                                            cell = function(value) {
+    #                                              
+    #                                              if (value == 0) "\u2718" else "\u2713"
+    #                                            }),
+    #                           ccr = colDef(name = "CCR"),
+    #                           ncrvis = colDef(name = "Ncrvis"),
+    #                           ncgerp = colDef(name = "Ncgerp"),
+    #                           hi = colDef(name = "HI index", 
+    #                                       format = colFormat(suffix = " %", digits = 1))
+    #                           # cell = function(value) {
+    #                           #   if (is.na(value)) {
+    #                           #     classes <- "tag num-low"
+    #                           #   } else if (value >= 0.9) {
+    #                           #     classes <- 'tag num-high'
+    #                           #   } else  {
+    #                           #     classes <- "tag num-high"
+    #                           #   }
+    #                           #   value <- format(value, nsmall = 1)
+    #                           #   span(class = classes, value)
+    #                           # })
+    #            ))
+    #   
+    # })
     
     
     output$button_download <- downloadHandler(
