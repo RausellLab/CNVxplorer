@@ -36,7 +36,6 @@ library(shiny)
 library(ontologySimilarity)
 library(ontologyIndex)
 library(formattable)
-library(shinyalert)
 
 # Files needed to run the app
 
@@ -1017,7 +1016,7 @@ shiny::shinyApp(
             )
           ),
           tablerCard(
-            title = "Disease sources evidences",
+            title = "Disease evidences",
             DTOutput("select_gene_disease") %>% withSpinner(type = 5),
             width = 9,
             collapsible = FALSE,
@@ -2979,9 +2978,17 @@ shiny::shinyApp(
       } else if (input$select_source == 'orphanet') {
         
         tmp_df <- orphanet_raw %>% 
-        filter(gene  == gene_selected)
+        filter(gene  == gene_selected) %>%
+          select(gene, Name6, Name, OrphaNumber, SourceOfValidation ) %>%
+          mutate(OrphaNumber = paste0("<a href='", 
+                                       paste0('https://www.orpha.net/consor/cgi-bin/Disease_Search.php?lng=EN&data_id=8648&Disease_Disease_Search_diseaseGroup=', OrphaNumber),"' target='_blank'>", OrphaNumber,"</a>") )
         
-        datatable(tmp_df, rownames = FALSE)
+        datatable(tmp_df, escape = FALSE, rownames = FALSE, colnames = c('Gene',
+                                                                         'Description', 
+                                                         # 'ID Orpha gene', 
+                                                         'Disease', 
+                                                         'ID Orpha disease', 
+                                                         'Source of validation'))
      
       }  else if (input$select_source == 'dev') {
         
@@ -2996,7 +3003,7 @@ shiny::shinyApp(
         tmp_df <- panel_total %>%
           filter(gene == gene_selected)
         
-        datatable(tmp_df, rownames = FALSE)
+        datatable(tmp_df, rownames = FALSE, colnames = c('Gene', 'Gene panel', 'Gene panel id', 'Phenotype associated'))
         
       } else if (input$select_source == 'clingen') {
            
@@ -3029,12 +3036,7 @@ shiny::shinyApp(
       tmp_output <- datatable(data_input, rownames = FALSE, 
                               filter = list(position = 'top'), 
                               selection = 'single',
-                              options = list(
-                                pageLength = 5,
-                                server = TRUE,
-                                style = 'bootstrap',
-                                list(searchHighlight = TRUE),
-                                stateSave = FALSE)) %>%
+                              options = list(dom = 't')) %>%
         formatStyle(c('pLI', 'rvis', 'hi', 'gdi', 'snipre', 'ncrvis', 'ncgerp', 'essent'), color = styleInterval(94, c('weight', '#ff7f7f'))) %>%
         formatStyle(c('ccr'), color = styleInterval(1, c('weight', '#ff7f7f')))
         # formatStyle(c('disease', 'haplo', 'triplo', 'omim', 'dev', 'fda', 'gwas'), color = styleEqual(c('No', 'Yes'), c('weight', '#ff7f7f')))

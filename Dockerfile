@@ -21,9 +21,9 @@ RUN R -e "devtools::install_github('glin/reactable')"
 
 RUN R -e "install.packages(c('shinydashboard', \
 'shinyjs', \
-'prettydoc' \
-'ontologySimilarity' \
-'ontologyIndex' \
+'prettydoc', \
+'ontologySimilarity', \
+'ontologyIndex', \
 'formattable', \
 'hrbrthemes', \
 'import', \
