@@ -533,7 +533,10 @@ gwas_variants <- gwas_raw %>%
   separate(REPORTED.GENE.S., into = as.character(1:150), sep = ',') %>% 
   select(CHR_ID, CHR_POS, INTERGENIC, DISEASE.TRAIT,'1', LINK) %>% 
   rename('gene' = '1') %>%
-  mutate(CHR_POS = as.numeric(CHR_POS))
+  mutate(CHR_POS = as.numeric(CHR_POS)) %>%
+  mutate(gene = if_else(gene == 'NR', '-', gene)) %>%
+  mutate(INTERGENIC = if_else(INTERGENIC == 1, 'Yes', 'No'))
+  
 
 # ------------------------------------------------------------------------------
 # Dataset: CCR score - Nº of regions located in a gene that are above of P99
@@ -699,11 +702,10 @@ mgi <- mgi %>%
 # PESR_GT_OVERDISPERSION this neither...
 
 
-gnomad_sv_raw <- read_tsv('/home/cbl02/Storage/data/gnomad_v2.1_sv.sites.bed')
+gnomad_sv_raw <- read_tsv('/home/cbl02/Storage/data/gnomad_v2.1_sv.sites.bed', col_types = list(`#chrom` = col_character()))
 
 
 gnomad_sv_raw <- gnomad_sv_raw %>%
-  as_tibble() %>%
   filter(SVTYPE %in% c('DEL', 'DUP')) %>%
   filter(FILTER == 'PASS') %>%
   select(`#chrom`, start, end, name) %>%
@@ -749,13 +751,15 @@ decipher_sv_raw <- read_tsv('/home/cbl02/Storage/data/daa_decipher/decipher-cnvs
 # Source: http://dgv.tcag.ca/dgv/docs/GRCh37_hg19_variants_2016-05-15.txt
 # ------------------------------------------------------------------------------
 ## CHECK POSSIBLE MISTAKE READING DATA
-dgv_df <- read_tsv('/home/cbl02/Storage/data/GRCh37_hg19_variants_2016-05-15.txt') %>%
+dgv_df <- read_tsv('/home/cbl02/Storage/data/GRCh37_hg19_variants_2016-05-15.txt',
+                   col_types = list(chr = col_character())) %>%
   filter(varianttype == 'CNV') %>%
   filter(variantsubtype %in% c('deletion', 'duplication')) %>%
   rename(id = variantaccession, chrom = chr) %>%
   select(id, chrom, start, end) %>%
   mutate(source = 'dgv',
-         chrom = as.character(chrom))  
+         chrom = as.character(chrom))  %>%
+  mutate(start = as.numeric(start), end = as.numeric(end))
 
 
 # ------------------------------------------------------------------------------
