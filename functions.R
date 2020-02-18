@@ -141,11 +141,14 @@ get_perc_overlap <- function(df, start_cnv, end_cnv) {
 # Output: plot
 # ------------------------------------------------------------------------------
 
-get_upset <- function(df) {
+get_upset <- function(df, gene = FALSE) {
   
 
+  # df <- test41114
+  
+  
   df_tmp <- df %>% 
-    select(term) %>%
+    dplyr::select(term) %>%
     distinct() %>%
     mutate(id_row = row_number())
   
@@ -154,7 +157,7 @@ get_upset <- function(df) {
   
   
   validate(
-    need(length(vector_hpo) > 1, "Please, select more than one phenotype term.")
+    need(length(vector_hpo) > 1, "No intersection found")
   )
   
   vector_genes <- df %>% select(gene) %>% distinct() %>% pull()
@@ -169,9 +172,11 @@ get_upset <- function(df) {
     
   }
   
-  upset(fromList(list_result), empty.intersections = "on", order.by = "freq",
+ name_axis <-  if_else(gene,'Disease database', 'Phenotype term')
+  
+        upset(fromList(list_result), order.by = "freq" ,
         point.size = 3.5, line.size = 2, number.angles = 0,
-        mainbar.y.label = "Phenotype Terms Intersections", sets.x.label = "Genes Associated Per Phenotype Term",
+        mainbar.y.label = paste(name_axis, "Intersections"), sets.x.label = paste('Genes Associated Per', name_axis),
         text.scale = c(1.3, 1.3, 1, 1, 2, 2))
   
   

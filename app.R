@@ -85,7 +85,7 @@ theme_fancy <- function() {
 
 
 
-human_chrom <- hg19 <- list('chr1' = 1, 'chr2' = 2,'chr3' = 3,'chr4' = 4,'chr5' = 5,'chr6' = 6,'chr7' = 7,'chr8' = 8,'chr9' = 9,'chr10' = 10,'chr11' = 11,'chr12' = 12,'chr13' = 13,
+human_chrom <- list('chr1' = 1, 'chr2' = 2,'chr3' = 3,'chr4' = 4,'chr5' = 5,'chr6' = 6,'chr7' = 7,'chr8' = 8,'chr9' = 9,'chr10' = 10,'chr11' = 11,'chr12' = 12,'chr13' = 13,
                             'chr14' = 14,'chr15' = 15,'chr16' = 16,'chr17' = 17,'chr18' = 18,'chr19' = 19, 'chr20' = 20, 'chr21' = 21,  'chr22' = 22,
                             'chrX' = 'X','chrY' = 'Y')
 
@@ -112,7 +112,7 @@ shiny::shinyApp(
       
     navbar = tablerDashNav(
       
-      shinyjs::useShinyjs(),
+      # shinyjs::useShinyjs(),
       
       
       navMenu = tablerNavMenu(
@@ -997,11 +997,19 @@ shiny::shinyApp(
               downloadButton("downl323rtfgsoad_dgenes", "Download table")
             )
           ),
+          tablerCard(
+            title = "Intersection of disease genes",
+            plotOutput("plot_upset_disease"),
+            width = 12,
+            collapsible = FALSE,
+            closable = FALSE,
+            overflow = TRUE
+            ),
         fluidRow(
           tablerCard(
             title = "Disease genes",
             DTOutput("dgenes") %>% withSpinner(type = 5),
-            width = 3,
+            width = 4,
             collapsible = FALSE,
             closable = FALSE,
             overflow = TRUE,
@@ -1018,7 +1026,7 @@ shiny::shinyApp(
           tablerCard(
             title = "Disease evidences",
             DTOutput("select_gene_disease") %>% withSpinner(type = 5),
-            width = 9,
+            width = 8,
             collapsible = FALSE,
             closable = FALSE,
             overflow = TRUE,
@@ -1072,15 +1080,15 @@ shiny::shinyApp(
               downloadButton("downloa33341dssss_dgenes", "Download table")
             )
           ),
-          tablerCard(
-            title = "Comparison scores",
-            collapsible = FALSE,
-            closable = FALSE,
-
-            plotlyOutput("dot_comparison"),
-            width = 12,
-            overflow = TRUE
-          ),
+          # tablerCard(
+          #   title = "Comparison scores",
+          #   collapsible = FALSE,
+          #   closable = FALSE,
+          # 
+          #   plotlyOutput("dot_comparison"),
+          #   width = 12,
+          #   overflow = TRUE
+          # ),
           # column(6,
           # tablerCard(
           #   title = "Clinical panels (Genomics England PanelApp)",
@@ -1996,9 +2004,6 @@ shiny::shinyApp(
       end_coordinates <- as.numeric(coord_user()[2])
       chrom_coordinates <- coord_user()[3]
       
-
-      
-      
       df_output <- cnv_df %>%
         filter(chrom == chrom_coordinates) %>%
         rowwise() %>%
@@ -2187,7 +2192,7 @@ shiny::shinyApp(
       
       req(input$start_analysis > 0)
       
-      data_tmp <- check_cnv_df() %>% filter(source == 'decipher' & pathogenicity == 'Pathogenic') %>% nrow()
+      data_tmp <- check_cnv_df() %>% filter(source == 'decipher' & pathogenicity %in% c('Pathogenic', 'Likely pathogenic')) %>% nrow()
       
       tablerStatCard(
         value =  data_tmp,
@@ -2860,7 +2865,9 @@ shiny::shinyApp(
         rowwise() %>%
         mutate(keep = c(start, end) %overlaps% c(start_coordinates, end_coordinates)) %>%
         filter(keep == TRUE) %>%
-        select(-keep)
+        select(-keep) %>%
+        replace_na(replace = list(variant_class = '-', phenotypes = '-')) %>%
+        select(chrom, start, end, syndrome_name, variant_class, phenotypes, source)
       
 
       
@@ -2870,19 +2877,48 @@ shiny::shinyApp(
     
     output$cnv_syndromes <- renderDataTable({
       
-      test441 <<- running_cnv_syndromes() %>% replace_na(replace = list(variant_class = '-', phenotypes = '-'))
-      
       validate(
-        need(nrow(running_cnv_syndromes()) != 0, "No CNV syndromes found in this region")
+        need(nrow(running_cnv_syndromes()) != 0, "No CNV syndromes found")
       )
 
-    datatable(running_cnv_syndromes())
+    datatable(running_cnv_syndromes(), 
+              colnames = c('Chrom', 'Start', 'End', 'CNV syndrome name', 'Variant class', 'Phenotypes', 'Source' ))
 
     })
     
     # observeEvent(input$start_analysis,{
     #   removeUI(selector = "#dgenes")
     # })
+    
+    running_upset_disease <- reactive({
+      
+      
+      test41114 <<- data_selected()  %>% 
+        select(-start_position, -end_position, -chrom) %>%
+        filter(source == 'CNV') %>%
+        filter(disease == 'Yes') %>%
+        select(-source, -disease) %>%
+        select(gene, orphanet, dev, genomics_england, omim, clingen) %>%
+          pivot_longer(-gene) %>%
+          filter(value == 'Yes') %>%
+          rename(term = name) %>%
+        mutate(term = str_replace(term, 'orphanet', 'ORPHANET'),
+               term = str_replace(term, 'dev', 'DECIPHER'),
+               term = str_replace(term, 'genomics_england', 'GENOMICS ENGLAND'),
+               term = str_replace(term, 'omim', 'OMIM'),
+               term = str_replace(term, 'clingen', 'CLINGEN'))
+
+    })
+    
+    
+    output$plot_upset_disease <- renderPlot({
+      
+      
+      get_upset(running_upset_disease(), gene = TRUE)
+      
+      
+      
+    })
     
     
     
@@ -2895,14 +2931,20 @@ shiny::shinyApp(
         select(-start_position, -end_position, -chrom) %>%
         filter(source == 'CNV') %>%
         select(-source) %>%
-        select(band, gene, disease, haplo, triplo, dev, fda, omim, fda, gwas, p_overlap) %>%
-        filter(disease == 'Yes') %>%
-        select(band, gene, disease)
-
-  
-        tmp_output <- datatable(data_input, rownames = FALSE, 
+        select(band, gene, disease, orphanet, dev, fda, omim, fda, gwas, p_overlap) %>%
+        filter(disease == 'Yes')
+        # mutate(n_evidences = sample(1:4, n(), replace = TRUE)) %>%
+        # select(band, gene, n_evidences)
+      
+      data_tmp <- data_input %>% left_join(running_upset_disease() %>% count(gene, value), by = 'gene') %>%
+        select(band, gene, n) %>% arrange(desc(n))
+      
+      test0131 <<- data_tmp
+   
+        tmp_output <- datatable(data_tmp, rownames = FALSE, colnames = c('Band', 'Gene', 'Nº evidences'),
                   filter = list(position = 'top'), 
-                  selection = 'single') %>%
+                  selection = 'single',
+                  options = list(columnDefs = list(list(className = 'dt-center', targets = '_all'))))
                   # options = list(dom = 't')) %>%
                             # options = list(
                             #   list(dom = 't'),
@@ -2914,7 +2956,7 @@ shiny::shinyApp(
         # formatStyle(c('pLI', 'rvis', 'hi', 'gdi', 'snipre', 'ncrvis', 'ncgerp'), color = styleInterval(94, c('weight', '#ff7f7f'))) %>%
         # formatStyle(c('ccr'), color = styleInterval(1, c('weight', '#ff7f7f'))) %>%
         # formatStyle(c('disease', 'haplo', 'triplo', 'omim', 'dev', 'fda', 'gwas'), color = styleEqual(c('No', 'Yes'), c('weight', '#ff7f7f')))
-        formatStyle(c('disease'), color = styleEqual(c('No', 'Yes'), c('weight', '#ff7f7f')))
+        # formatStyle(c('disease'), color = styleEqual(c('No', 'Yes'), c('weight', '#ff7f7f')))
         
         
         tmp_output
@@ -2943,10 +2985,13 @@ shiny::shinyApp(
       
       test99931 <<- options_sources
       
+      
+      test <- split(options_sources, toupper(options_sources) %>% str_replace('_', ' ') %>% str_replace('DEV', 'DECIPHER'))
+      
       pickerInput(
         inputId = "select_source",
         label = "", 
-        choices = options_sources
+        choices = test
       )
       
       
@@ -2971,17 +3016,29 @@ shiny::shinyApp(
       if (input$select_source == 'omim') {
         
         tmp_df <- omim %>% 
-          # replace_na('-') %>%
+          replace_na(list(gene_inheritance_mode = '-')) %>%
           filter(gene == gene_selected) %>%
-          select(MIM_gene_number, gene_inheritance_mode, MIM_pheno_number, Phenotype)
-        datatable(tmp_df, rownames = FALSE)
-      } else if (input$select_source == 'orphanet') {
+          select(MIM_gene_number, gene_inheritance_mode, MIM_pheno_number, Phenotype) %>%
+          mutate(Phenotype = str_remove(Phenotype, '[0-9]{6}')) %>%
+          mutate(MIM_gene_number =  paste0("<a href='", 
+                                           paste0('https://www.omim.org/entry/', MIM_gene_number),"' target='_blank'>", MIM_gene_number,"</a>")) %>%
+          mutate(MIM_pheno_number =  paste0("<a href='", 
+                                       paste0('https://www.omim.org/entry/', MIM_pheno_number),"' target='_blank'>", MIM_pheno_number,"</a>")) 
+        datatable(tmp_df, escape = FALSE, rownames = FALSE, colnames = c('Gene MIM number', 'Inheritance', 'Phenotype MIM number', 'Phenotype'))
+      
+        } else if (input$select_source == 'orphanet') {
         
         tmp_df <- orphanet_raw %>% 
         filter(gene  == gene_selected) %>%
+          replace_na(list(SourceOfValidation = '-')) %>%
+          mutate(SourceOfValidation = str_replace_all(SourceOfValidation, '_', '<br>')) %>%
           select(gene, Name6, Name, OrphaNumber, SourceOfValidation ) %>%
+          mutate(gene = paste0("<a href='", 
+                                      paste0('https://www.orpha.net/consor/cgi-bin/Disease_Genes.php?lng=EN&data_id=16132&Disease_Disease_Genes_diseaseGroup=', gene),"' target='_blank'>", gene,"</a>")) %>%
           mutate(OrphaNumber = paste0("<a href='", 
                                        paste0('https://www.orpha.net/consor/cgi-bin/Disease_Search.php?lng=EN&data_id=8648&Disease_Disease_Search_diseaseGroup=', OrphaNumber),"' target='_blank'>", OrphaNumber,"</a>") )
+        
+        
         
         datatable(tmp_df, escape = FALSE, rownames = FALSE, colnames = c('Gene',
                                                                          'Description', 
@@ -2993,25 +3050,40 @@ shiny::shinyApp(
       }  else if (input$select_source == 'dev') {
         
         tmp_df <- dev_raw %>%
-          # replace_na('-') %>%
-          filter(gene == gene_selected)
+          filter(gene == gene_selected) %>%
+          mutate(`gene mim` =  paste0("<a href='", 
+                                           paste0('https://www.omim.org/entry/', `gene mim`),"' target='_blank'>", `gene mim`,"</a>")) %>%
+          mutate(`organ specificity list` = str_replace_all(`organ specificity list`, ';', '<br>')) %>%
+          mutate(pmids = str_replace_all(pmids, ';', '<br>'))
+          
+          
+        datatable(tmp_df, rownames = FALSE, escape = FALSE, colnames = c('Gene', 'Gene MIM number', 'Disease', 'Allelic requirement', 
+                                                                         'Organ specificity', 'PMIDS'))
         
-        datatable(tmp_df, rownames = FALSE)
       } else if (input$select_source == 'genomics_england') {
            
-        
         tmp_df <- panel_total %>%
-          filter(gene == gene_selected)
+          filter(gene == gene_selected) %>%
+          mutate(source = str_remove(source, 'gene_panel_')) %>%
+          mutate(Phenotypes = str_replace_all(Phenotypes, ';', '<br>')) %>%
+          mutate(gene = paste0("<a href='", 
+                 paste0('https://panelapp.genomicsengland.co.uk/panels/entities/', gene),"' target='_blank'>", gene,"</a>")) %>%
+          mutate(source = paste0("<a href='", 
+                             paste0('https://panelapp.genomicsengland.co.uk/panels/', source),"' target='_blank'>", source,"</a>")) %>%
+        mutate(Level4 = paste0(Level4, ' (', source, ')')) %>% 
+          select(-source)
         
-        datatable(tmp_df, rownames = FALSE, colnames = c('Gene', 'Gene panel', 'Gene panel id', 'Phenotype associated'))
+        datatable(tmp_df, escape = FALSE, rownames = FALSE, colnames = c('Gene', 'Gene panel', 'Phenotype associated'))
         
       } else if (input$select_source == 'clingen') {
            
         tmp_df <- data_selected() %>%
           filter(gene == gene_selected) %>%
-          select(gene, haplo, triplo)
+          select(gene, haplo, triplo) %>%
+            mutate(gene = paste0("<a href='", 
+                                 paste0('https://www.ncbi.nlm.nih.gov/projects/dbvar/clingen/clingen_gene.cgi?sym=', gene),"' target='_blank'>", gene,"</a>"))
         
-        datatable(tmp_df, rownames = FALSE)
+        datatable(tmp_df, escape = FALSE, rownames = FALSE, colnames = c('Gene', 'Haploinsufficient', 'Triplosensitivity'))
         
         
          }
@@ -3035,8 +3107,9 @@ shiny::shinyApp(
       
       tmp_output <- datatable(data_input, rownames = FALSE, 
                               filter = list(position = 'top'), 
-                              selection = 'single',
-                              options = list(dom = 't')) %>%
+                              selection = 'single'
+                              # options = list(dom = 't')
+                              ) %>%
         formatStyle(c('pLI', 'rvis', 'hi', 'gdi', 'snipre', 'ncrvis', 'ncgerp', 'essent'), color = styleInterval(94, c('weight', '#ff7f7f'))) %>%
         formatStyle(c('ccr'), color = styleInterval(1, c('weight', '#ff7f7f')))
         # formatStyle(c('disease', 'haplo', 'triplo', 'omim', 'dev', 'fda', 'gwas'), color = styleEqual(c('No', 'Yes'), c('weight', '#ff7f7f')))
@@ -3349,48 +3422,48 @@ shiny::shinyApp(
       
     })
     
-    output$dot_comparison <- renderPlotly({
-      
-      validate(
-        need(FALSE, "TBA")
-      )
-      
-      validate(
-        need(input$dgenes_rows_selected != '', "Please, select a gene in the datatable.")
-      )
-      
-      name_gene_filtered <- data_selected() %>% slice(input$dgenes_rows_selected) %>% select(gene) %>% pull()
-      
-      p <- data_selected() %>%
-        
-        ggplot(aes(pLI, rvis)) +
-        geom_point(col = "steelblue") +
-        theme_fancy() +
-        gghighlight(gene == name_gene_filtered)
-      
-      p <- ggplotly(p)
-      p <- plotly_build(p)
-      
-      p$x$data[1][[1]]$text <- paste0('Gene symbol: ', data_selected() %>% pull(gene), 
-                                      "<br>",
-                                      'pLI: ', data_selected()  %>% pull(pLI),
-                                      "<br>",
-                                      'RVIS: ', data_selected()  %>% pull(rvis)
-                                      
-      )
-      
-      p$x$data[[2]]$text <- paste0('Gene symbol: ', data_selected()  %>% slice(input$dgenes_rows_selected) %>% pull(gene), 
-                                   "<br>",
-                                   'pLI: ', data_selected() %>% slice(input$dgenes_rows_selected) %>% pull(pLI),
-                                   "<br>",
-                                   'RVIS: ', data_selected() %>% slice(input$dgenes_rows_selected)  %>% pull(rvis)
-      )
-      
-      test1898 <<- p
-      p
-      
-      
-    })
+    # output$dot_comparison <- renderPlotly({
+    #   
+    #   validate(
+    #     need(FALSE, "TBA")
+    #   )
+    #   
+    #   validate(
+    #     need(input$dgenes_rows_selected != '', "Please, select a gene in the datatable.")
+    #   )
+    #   
+    #   name_gene_filtered <- data_selected() %>% slice(input$dgenes_rows_selected) %>% select(gene) %>% pull()
+    #   
+    #   p <- data_selected() %>%
+    #     
+    #     ggplot(aes(pLI, rvis)) +
+    #     geom_point(col = "steelblue") +
+    #     theme_fancy() +
+    #     gghighlight(gene == name_gene_filtered)
+    #   
+    #   p <- ggplotly(p)
+    #   p <- plotly_build(p)
+    #   
+    #   p$x$data[1][[1]]$text <- paste0('Gene symbol: ', data_selected() %>% pull(gene), 
+    #                                   "<br>",
+    #                                   'pLI: ', data_selected()  %>% pull(pLI),
+    #                                   "<br>",
+    #                                   'RVIS: ', data_selected()  %>% pull(rvis)
+    #                                   
+    #   )
+    #   
+    #   p$x$data[[2]]$text <- paste0('Gene symbol: ', data_selected()  %>% slice(input$dgenes_rows_selected) %>% pull(gene), 
+    #                                "<br>",
+    #                                'pLI: ', data_selected() %>% slice(input$dgenes_rows_selected) %>% pull(pLI),
+    #                                "<br>",
+    #                                'RVIS: ', data_selected() %>% slice(input$dgenes_rows_selected)  %>% pull(rvis)
+    #   )
+    #   
+    #   test1898 <<- p
+    #   p
+    #   
+    #   
+    # })
     
     
     
@@ -5520,7 +5593,7 @@ output$func_do  <- renderPlot({
     df_overlap_cnvs_running <- reactive({
       
       req(input$start_analysis > 0)
-      
+
       start_coordinates <- as.numeric(coord_user()[1])
       end_coordinates <- as.numeric(coord_user()[2])
       
@@ -5535,14 +5608,19 @@ output$func_do  <- renderPlot({
     
     intersection_running <- reactive({
 
-      start_coordinates <- coord_user()[1]
-      end_coordinates <- coord_user()[2]
+      start_coordinates <- as.numeric(coord_user()[1])
+      end_coordinates <- as.numeric(coord_user()[2])
       chrom_coordinates <- coord_user()[3]
       
-      start_coordinates <- as.numeric(start_coordinates)
-      end_coordinates <- as.numeric(end_coordinates)
+      test00000 <<- df_overlap_cnvs_running() 
 
       df_pathogenic <- df_overlap_cnvs_running() %>% filter(source == 'decipher') 
+      
+      test93131 <<- df_pathogenic
+      
+      validate(
+        need(nrow(df_pathogenic) != 0, "No pathogenic CNVs found")
+      )
 
       cnv_input <- GRanges(
         seqnames= chrom_coordinates,
@@ -5705,12 +5783,13 @@ output$func_do  <- renderPlot({
     
     output$df_overlap_cnvs <- renderDT({
       
+      test0001 <<- df_overlap_cnvs_running()
       
-      tmp_df <- df_overlap_cnvs_running() %>% filter(source == 'decipher') %>% filter(pathogenicity == 'Pathogenic')
+      tmp_df <- df_overlap_cnvs_running() %>% filter(source == 'decipher') %>% filter(pathogenicity %in% c('Pathogenic', 'Likely pathogenic'))
       
       
       validate(
-        need(nrow(tmp_df) == 0, "No pathogenic CNVs found in this region.")
+        need(nrow(tmp_df) != 0, "No pathogenic CNVs found.")
       )
       
       
@@ -5831,7 +5910,7 @@ output$func_do  <- renderPlot({
         select(-keep) %>%
         mutate(pubmed_id = str_extract(LINK, '\\d{8}')) %>%
         select(-LINK)
-      
+      test0054 <<- tmp_df
       tmp_df
       
     })
@@ -5841,11 +5920,11 @@ output$func_do  <- renderPlot({
       tmp_df <- running_gwas() %>%
         mutate(pubmed_id = paste0("<a href='", paste0('https://pubmed.ncbi.nlm.nih.gov/', pubmed_id),"' target='_blank'>", pubmed_id,"</a>"))
       
-      
+      # test0007 <<- tmp_df
       
       datatable(tmp_df, 
                 escape = FALSE,
-                colnames = c('Chromosome', 'Position','Intergenic', 'Disease trait', 'gene', 'Link study'),
+                colnames = c('Chrom', 'Position','Intergenic', 'Disease trait', 'gene', 'Link study'),
                 rownames = FALSE)
       
       
@@ -5890,12 +5969,36 @@ output$func_do  <- renderPlot({
         ungroup() %>%
         filter(keep == TRUE) %>%
         select(-keep)
+        # mutate(disease_identifier = str_replace_all(disease_identifier, '|', '<br>')) %>%
+        # mutate(disease_name = str_replace_all(disease_name, '|', '<br>'))
+        # 
       
       test9131 <<- tmp_df
       
       tmp_df
       
     })
+    
+    output$df_clinvar <- renderDataTable({
+      
+      
+      tmp_df <- running_clinvar() %>% 
+        mutate(id = paste0("<a href='", paste0('https://www.ncbi.nlm.nih.gov/clinvar/variation/', id),"' target='_blank'>", id,"</a>"))
+      
+      
+      
+      datatable(tmp_df, escape = FALSE, colnames = c('Chrom', 'Position','Reference', 'Alternative','Gene','Clinical significance',
+                                                     'Disease Identifier', 
+                                                     'Disease name', 'Clinvar ID'), 
+                rownames = FALSE
+                # options = list(columnDefs = list(list(className = 'dt-center', targets = '_all')))
+                
+                
+                )
+      
+      
+    })
+    
     
     
     
@@ -5916,25 +6019,7 @@ output$func_do  <- renderPlot({
       
     })
     
-    output$df_clinvar <- renderDataTable({
-      
-      
-      
-      tmp_df <- running_clinvar() %>% 
-        mutate(id = paste0("<a href='", paste0('https://www.ncbi.nlm.nih.gov/clinvar/variation/', id),"' target='_blank'>", id,"</a>"))
-      
-      # tmp_df <- tmp_df %>% 
-      
-      
-      # tmp_df <- running_de_novo() %>% mu
-      
-      datatable(tmp_df, escape = FALSE, colnames = c('Chromosome', 'Position','Reference', 'Alternative','Gene','Clinical significance',
-                                                     'Disease Identifier', 
-                                                     'Disease name', 'Clinvar ID'), rownames = FALSE)
-      
-      
-    })
-    
+
     
     
     
