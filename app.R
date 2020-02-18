@@ -1561,7 +1561,7 @@ shiny::shinyApp(
         ),
         tablerTabItem(
           tabName = "model",
-          tablerCard(title = 'Phenotypes associated with the list of genes',
+          tablerCard(title = 'Mouse henotypes associated with genes',
                      plotOutput('agg_model'),
                      width = 12),
           fluidRow(
@@ -3001,6 +3001,8 @@ shiny::shinyApp(
     
     output$select_gene_disease <- renderDataTable({
       
+      req(input$select_source)
+      
       validate(
         need(input$dgenes_rows_selected != '', 'Please, select a disease gene on the left panel')
       )
@@ -3395,8 +3397,11 @@ shiny::shinyApp(
         mutate(mgi = paste0("<a href='", paste0('http://www.informatics.jax.org/marker/', mgi),"' target='_blank'>", mgi,"</a>")) %>%
         mutate(mpo_id = paste0("<a href='", paste0('http://www.informatics.jax.org/vocab/mp_ontology/', mpo_id),"' target='_blank'>", mpo_id,"</a>"))
         
+# test342121 <<- df_tmp  
       datatable(df_tmp, escape = FALSE, rownames = FALSE, 
-                colnames = c('Human Ortholog gene', 'Mouse gene', 'Mouse phenotype id', 'Phenotype description'))
+                colnames = c('Human Ortholog gene', 'Mouse gene', 'Mouse phenotype id', 'Phenotype description'),
+                options = list(
+                  columnDefs = list(list(className = 'dt-center', targets = 0:3) )))
       
       
       
@@ -4984,13 +4989,27 @@ output$switch_tads <- renderUI({
     output$agg_model <- renderPlot({
       
     
-      model_genes_phenotype() %>% count(description) %>% arrange(desc(n)) %>%
+      tmp_df <- model_genes_phenotype() %>% 
+        count(description) %>% arrange(desc(n))
+      
+     if (nrow(test412214214124) > 10) {
+       
+       tmp_df <- tmp_df %>% slice(1:10)
+     }
+      
+      tmp_df %>%
         ggplot(aes(reorder(description, n), n)) + 
         geom_col(aes(fill = n), color = 'black') +
         theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
         coord_flip() +
         scale_fill_viridis_c() +
-        theme_fancy()
+        ylab('Number of genes') +
+        xlab('Mouse phenotype terms') + 
+        theme_fancy() +
+        theme(axis.title.x = element_text(size = 16),
+              axis.title.y = element_text(size = 16),
+              axis.text.x = element_text(size = 16),
+              axis.text.y = element_text(size = 16))
         
       # model_genes_phenotype() %>% count(description) %>% arrange(n) %>%
       #   e_charts() %>% 
