@@ -101,33 +101,43 @@ check_regions <- function(chrom = NULL, start = NULL, end = NULL) {
 
 
 
-get_perc_overlap <- function(df, start_cnv, end_cnv) {
+get_perc_overlap <- function(df, chrom_cnv, start_cnv, end_cnv) {
   
   # start_cnv <- 34813719
   # end_cnv <- 36278623
   # 
-  # df <- test1521
-  # 
-  start_cnv <- as.numeric(start_cnv)
-  end_cnv <- as.numeric(end_cnv)
+
   
-  df <- df %>%
-    rename(start_gene = start_position, end_gene = end_position) %>%
-    mutate(type_overlap = case_when(
-      start_gene <  start_cnv & end_gene < end_cnv ~ "left",
-      start_gene > start_cnv & end_gene < end_cnv  ~ "center",
-      start_gene >  start_cnv & end_gene > end_cnv ~ "right",
-      start_gene < start_cnv & end_gene > end_cnv ~ 'all'
-    )) %>%
-    mutate(p_overlap = case_when(
-      type_overlap ==  'center' ~ 1,
-      type_overlap ==  'all' ~ 1,
-      type_overlap ==  'right'  ~ (end_cnv - start_gene + 1) / (end_gene - start_gene + 1) ,
-      type_overlap ==  'left'  ~ (end_gene - start_gene + 1) / (end_gene - start_gene + 1)
-    )) %>%
-    mutate(p_overlap = round(p_overlap * 100, 0)) %>%
-    rename(start_position = start_gene, end_position = end_gene) %>%
-    select(-type_overlap)
+  tmp_df <- df %>% dplyr::select(chrom, start, end)
+  
+  df <- bed_intersect(tibble(chrom = chrom_cnv, start = start_cnv, end = end_cnv ), tmp_df ) %>%
+    mutate(p_overlap = (.overlap /(end.x - start.x + 1))*100) %>% arrange(p_overlap) %>%
+    mutate(p_overlap = round(p_overlap, 2)) %>%
+    select(start.y, end.y, p_overlap) %>%
+    right_join(df, by = c('start.y' = 'start', 'end.y' = 'end')) %>%
+    rename(start = start.y, end = end.y) %>%
+    select(-p_overlap, p_overlap)
+  
+  # df <- df %>%
+  #   rename(start_gene = start_position, end_gene = end_position) %>%
+  #   mutate(type_overlap = case_when(
+  #     start_cnv <  start_gene & end_cnv > start_gene ~ "left",
+  #     start_cnv > start_gene & end_cnv < end_gene  ~ "center",
+  #     start_cnv <  end_gene & end_cnv > end_gene ~ "right",
+  #     start_cnv < start_gene & end_cnv > end_gene ~ 'all'
+  #   )) %>%
+  #   mutate(p_overlap = case_when(
+  #     type_overlap ==  'center' ~ 1,
+  #     type_overlap ==  'all' ~ (end_gene - start_gene + 1) / (end_cnv - start_cnv + 1) ,
+  #     type_overlap ==  'right'  ~ (end_gene - start_cnv + 1) / (end_cnv - start_cnv + 1) ,
+  #     type_overlap ==  'left'  ~ (end_cnv - start_gene + 1) / (end_cnv - start_cnv + 1)
+  #   )) %>%
+  #   mutate(p_overlap = round(p_overlap * 100, 0)) %>%
+  #   rename(start_position = start_gene, end_position = end_gene)
+  # select(-type_overlap)
+  
+  
+
   
   return(df)
 }

@@ -36,6 +36,8 @@ library(shiny)
 library(ontologySimilarity)
 library(ontologyIndex)
 library(formattable)
+library(valr)
+
 
 # Files needed to run the app
 
@@ -998,6 +1000,30 @@ shiny::shinyApp(
             )
           ),
           tablerCard(
+            title = "Overlap with pathogenic CNVs (DECIPHER)",
+            DTOutput('df_overlap_cnvs'),
+            width = 12,
+            collapsible = FALSE,
+            closable = FALSE,
+            overflow = TRUE,
+            options = tagList(
+              downloadButton("download_df_overlap_cnvs", "Download table")
+              
+            )
+          ),
+          tablerCard(
+            title = "Overlap with non-pathogenic CNVs (gnomAD, DGV, DECIPHER)",
+            DTOutput('df_overlap_cnvs_nonpatho'),
+            width = 12,
+            collapsible = FALSE,
+            closable = FALSE,
+            overflow = TRUE,
+            options = tagList(
+              downloadButton("download_df_overlap_cnvs_nonpatho", "Download table")
+              
+            )
+          ),
+          tablerCard(
             title = "Intersection of disease genes",
             plotOutput("plot_upset_disease"),
             width = 12,
@@ -1215,30 +1241,7 @@ shiny::shinyApp(
 
               )
             ),
-            tablerCard(
-              title = "Overlap with pathogenic CNVs (DECIPHER)",
-              DTOutput('df_overlap_cnvs'),
-              width = 12,
-              collapsible = FALSE,
-              closable = FALSE,
-              overflow = TRUE,
-              options = tagList(
-                downloadButton("download_df_overlap_cnvs", "Download table")
 
-              )
-            ),
-            tablerCard(
-              title = "Overlap with non-pathogenic CNVs (gnomAD, DGV, DECIPHER)",
-              DTOutput('df_overlap_cnvs_nonpatho'),
-              width = 12,
-              collapsible = FALSE,
-              closable = FALSE,
-              overflow = TRUE,
-              options = tagList(
-                downloadButton("download_df_overlap_cnvs_nonpatho", "Download table")
-
-              )
-            ),
             # tablerCard(
             #   title = "Barplot ",
             #   plotOutput('plot_cnv_bar'),
@@ -2716,11 +2719,12 @@ shiny::shinyApp(
       
       test1521 <<- data_raw
 
-      data_raw <- get_perc_overlap(data_raw, as.numeric(coord_user()[1]), as.numeric(coord_user()[2]))
+      data_raw <- get_perc_overlap(data_raw %>% rename(start = start_position, end = end_position), 
+                                   chrom_coordinates, 
+                                   start_coordinates, 
+                                   end_coordinates)
       
-      data_raw <- data_raw %>% distinct()
-      
-      test007 <<- data_raw
+      data_raw <- data_raw %>% rename(start_position = start, end_position = end)
       
       data_raw
 
@@ -5615,53 +5619,57 @@ output$func_do  <- renderPlot({
 
       start_coordinates <- as.numeric(coord_user()[1])
       end_coordinates <- as.numeric(coord_user()[2])
+      chrom_coordinates <- coord_user()[3]
       
-      test31111 <<- check_cnv_df()
+      test0131 <<- check_cnv_df()
   
-      tmp_df <-  get_perc_overlap(check_cnv_df()  %>%
-                                    rename(start_position = start, end_position = end), start_coordinates, 
+      tmp_df <-  get_perc_overlap(check_cnv_df(), 
+                                  chrom_coordinates,  
+                                  start_coordinates, 
                                   end_coordinates)
+      
+      test0012 <<- tmp_df
 
       tmp_df
     })
     
-    intersection_running <- reactive({
-
-      start_coordinates <- as.numeric(coord_user()[1])
-      end_coordinates <- as.numeric(coord_user()[2])
-      chrom_coordinates <- coord_user()[3]
-      
-      test00000 <<- df_overlap_cnvs_running() 
-
-      df_pathogenic <- df_overlap_cnvs_running() %>% filter(source == 'decipher') 
-      
-      test93131 <<- df_pathogenic
-      
-      validate(
-        need(nrow(df_pathogenic) != 0, "No pathogenic CNVs found")
-      )
-
-      cnv_input <- GRanges(
-        seqnames= chrom_coordinates,
-        ranges= IRanges(start= start_coordinates, end = end_coordinates)
-      )
-
-      cnvs_pathogenic <- GRanges(
-        seqnames= df_pathogenic$chrom,
-        ranges= IRanges(start= df_pathogenic$start_position, end = df_pathogenic$end_position)
-      )
-
-      gr_intersect <- intersect(cnv_input, cnvs_pathogenic) %>% as_tibble()
-      
-      gr_intersect <- gr_intersect %>%
-        mutate(id = as.factor(seq(1:n())))
-
-      test711 <<- gr_intersect
-
-      gr_intersect
-
-
-    })
+    # intersection_running <- reactive({
+    # 
+    #   start_coordinates <- as.numeric(coord_user()[1])
+    #   end_coordinates <- as.numeric(coord_user()[2])
+    #   chrom_coordinates <- coord_user()[3]
+    #   
+    #   test00000 <<- df_overlap_cnvs_running() 
+    # 
+    #   df_pathogenic <- df_overlap_cnvs_running() %>% filter(source == 'decipher') 
+    #   
+    #   test93131 <<- df_pathogenic
+    #   
+    #   validate(
+    #     need(nrow(df_pathogenic) != 0, "No pathogenic CNVs found")
+    #   )
+    # 
+    #   cnv_input <- GRanges(
+    #     seqnames= chrom_coordinates,
+    #     ranges= IRanges(start= start_coordinates, end = end_coordinates)
+    #   )
+    # 
+    #   cnvs_pathogenic <- GRanges(
+    #     seqnames= df_pathogenic$chrom,
+    #     ranges= IRanges(start= df_pathogenic$start_position, end = df_pathogenic$end_position)
+    #   )
+    # 
+    #   gr_intersect <- intersect(cnv_input, cnvs_pathogenic) %>% as_tibble()
+    #   
+    #   gr_intersect <- gr_intersect %>%
+    #     mutate(id = as.factor(seq(1:n())))
+    # 
+    #   test711 <<- gr_intersect
+    # 
+    #   gr_intersect
+    # 
+    # 
+    # })
 
     output$df_intersection <- renderDataTable({
       
@@ -5685,11 +5693,9 @@ output$func_do  <- renderPlot({
       )
       
 
-      start_coordinates <- coord_user()[1]
-      end_coordinates <- coord_user()[2]
+      start_coordinates <- as.numeric(coord_user()[1])
+      end_coordinates <- as.numeric(coord_user()[2])
       
-      start_coordinates <- as.numeric(start_coordinates)
-      end_coordinates <- as.numeric(end_coordinates)
 
       
       df_tmp <-intersection_running()
@@ -5813,7 +5819,7 @@ output$func_do  <- renderPlot({
       
       
       datatable(tmp_df, colnames = c('ID', 'Chrom', 'Start', 'End', 'Database', 'Pathogenicity', 'Genotype', 'Class', 
-                                     'CNV size', 'Percentage Overlap (%)'),
+                                     'CNV size', 'Overlap (%)'),
                 selection = 'single',
                 options = list(
                   columnDefs = list(list(className = 'dt-center',  targets = 0:9))),  rownames= FALSE)
