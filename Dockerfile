@@ -17,6 +17,7 @@ mkdir -p /var/lib/shiny-server/bookmarks/shiny
 
 RUN R -e "devtools::install_github('thomasp85/patchwork')"
 RUN R -e "devtools::install_github('glin/reactable')"
+RUN R -e "devtools::install_github('rnabioco/valr')"
 
 
 RUN R -e "install.packages(c('shinydashboard', \
