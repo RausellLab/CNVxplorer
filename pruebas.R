@@ -8,16 +8,20 @@
 # VENN DIAGRAM 
 #####
 
+test771
+
+get_upset(check_hp_genes())
 
 
 
+test004 <-test0312 %>% select(-band, -p_overlap, -disease) %>%
+  pivot_longer(-gene) %>%
+  filter(value == 'Yes') %>%
+  rename(term = name)
+  
 
 
-
-
-
-
-
+test004 %>% count(gene, value)
 
 
 
