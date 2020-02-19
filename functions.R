@@ -101,15 +101,17 @@ check_regions <- function(chrom = NULL, start = NULL, end = NULL) {
 
 
 
-get_perc_overlap <- function(df, chrom_cnv, start_cnv, end_cnv) {
+get_perc_overlap <- function(df, chrom_cnv, start_cnv, end_cnv, is_a_gene = FALSE) {
   
+  # df <- test1521 %>% rename(start = start_position, end = end_position)
+  # chrom_cnv <- '6'
   # start_cnv <- 34813719
   # end_cnv <- 36278623
-  # 
+
 
   
   tmp_df <- df %>% dplyr::select(chrom, start, end)
-  
+  if (is_a_gene == FALSE) {
   df <- bed_intersect(tibble(chrom = chrom_cnv, start = start_cnv, end = end_cnv ), tmp_df ) %>%
     mutate(p_overlap = (.overlap /(end.x - start.x + 1))*100) %>% arrange(p_overlap) %>%
     mutate(p_overlap = round(p_overlap, 2)) %>%
@@ -117,6 +119,23 @@ get_perc_overlap <- function(df, chrom_cnv, start_cnv, end_cnv) {
     right_join(df, by = c('start.y' = 'start', 'end.y' = 'end')) %>%
     rename(start = start.y, end = end.y) %>%
     select(-p_overlap, p_overlap)
+  
+  } else {
+    
+    df <- bed_intersect(tmp_df, tibble(chrom = chrom_cnv, start = start_cnv, end = end_cnv)) %>%
+      mutate(p_overlap = (.overlap /(end.x - start.x + 1))*100) %>% 
+      arrange(p_overlap) %>%
+      mutate(p_overlap = round(p_overlap, 2)) %>%
+      select(start.x, end.x, p_overlap) %>%
+      right_join(df, by = c('start.x' = 'start', 'end.x' = 'end')) %>%
+      rename(start = start.x, end = end.x) %>%
+      select(-p_overlap, p_overlap)
+    
+    
+    
+    
+    
+  }
   
   # df <- df %>%
   #   rename(start_gene = start_position, end_gene = end_position) %>%
@@ -187,7 +206,7 @@ get_upset <- function(df, gene = FALSE) {
         upset(fromList(list_result), order.by = "freq" ,
         point.size = 3.5, line.size = 2, number.angles = 0,
         mainbar.y.label = paste(name_axis, "Intersections"), sets.x.label = paste('Genes Associated Per', name_axis),
-        text.scale = c(1.3, 1.3, 1, 1, 2, 2))
+        text.scale = c(1.3, 1.3, 2, 2, 2, 2))
   
   
 }
