@@ -1400,7 +1400,7 @@ hgcn_genes <- hgcn_genes %>%
   mutate(clingen = if_else(haplo == 'Yes' | triplo == 'Yes', 'Yes', 'No')) %>%
   mutate(ccr = ifelse(is.na(ccr), 0, ccr)) %>%
   rename(band = location) %>%
-  mutate(disease = if_else(haplo == 'Yes' | triplo == 'Yes' | clingen == 'Yes' | genomics_england == 'Yes' | dev == 'Yes' | orphanet == 'Yes' |  fda == 'Yes' | omim == 'Yes', 'Yes', 'No' ) )
+  mutate(disease = if_else(clingen == 'Yes' | genomics_england == 'Yes' | dev == 'Yes' | orphanet == 'Yes' | omim == 'Yes', 'Yes', 'No' ) )
 
 
 hgcn_genes <- hgcn_genes %>% 
