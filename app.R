@@ -114,7 +114,8 @@ shiny::shinyApp(
       
     navbar = tablerDashNav(
       
-      # shinyjs::useShinyjs(),
+      shinyjs::useShinyjs(),
+      
       
       
       navMenu = tablerNavMenu(
@@ -178,8 +179,16 @@ shiny::shinyApp(
         tablerNavMenuItem(
           tabName = "docu",
           icon = "book",
-          "Documentation"
+          'Documentation'
         )
+        
+        
+        # a("Computation Completed", href="#shiny-tab-tabItem2", "data-toggle" = "tab")
+        # tablerNavMenuItem(
+        #   tabName = "feedback",
+        #   icon = "book",
+        #   a("Feedback", href="www.google.com")
+        # )
         
         
         ),
@@ -216,8 +225,8 @@ shiny::shinyApp(
     footer = tablerDashFooter(
       tablerIcon(name = "maestro", lib = "payment"),
       tablerIcon(name = "mastercard", lib = "payment"),
-      copyrights = "@David Granjon, 2019"
-    ),
+      copyrights = "@David Granjon, 2019"),
+    
     title = "CNVxplorer - A web tool for the clinical interpretation of CNVs",
     body = tablerDashBody(
       
@@ -236,7 +245,6 @@ shiny::shinyApp(
         tablerTabItem(
           tabName = "overview",
           shinyjs::useShinyjs(),
-          
           use_waiter(),
           # verbatimTextOutput("auth_output"),
           
@@ -1759,9 +1767,23 @@ shiny::shinyApp(
       shinyjs::reset("enable_path_analysis")
       shinyjs::reset("enable_do_analysis")
       shinyjs::reset("enable_group_go")
+    })
+    
+    
+    observeEvent(input$enhancers_on_off, {
       
+      shinyjs::reset("enable_func_analysis")
+      shinyjs::reset("enable_path_analysis")
+      shinyjs::reset("enable_do_analysis")
+      shinyjs::reset("enable_group_go")
+    })
+    
+    observeEvent(input$tads_on_off, {
       
-
+      shinyjs::reset("enable_func_analysis")
+      shinyjs::reset("enable_path_analysis")
+      shinyjs::reset("enable_do_analysis")
+      shinyjs::reset("enable_group_go")
     })
     
     # observe({
@@ -2722,7 +2744,8 @@ shiny::shinyApp(
       data_raw <- get_perc_overlap(data_raw %>% rename(start = start_position, end = end_position), 
                                    chrom_coordinates, 
                                    start_coordinates, 
-                                   end_coordinates)
+                                   end_coordinates,
+                                   is_a_gene = TRUE)
       
       data_raw <- data_raw %>% rename(start_position = start, end_position = end)
       
@@ -2873,6 +2896,10 @@ shiny::shinyApp(
         replace_na(replace = list(variant_class = '-', phenotypes = '-')) %>%
         select(chrom, start, end, syndrome_name, variant_class, phenotypes, source)
       
+      # test91311 <<- tmp_df
+      get_perc_overlap(tmp_df, chrom_coordinates, start_coordinates, end_coordinates)
+      # get_perc_overlap(test91311 %>% ungroup(), '17', test310, test311)
+      
 
       
 
@@ -2885,8 +2912,8 @@ shiny::shinyApp(
         need(nrow(running_cnv_syndromes()) != 0, "No CNV syndromes found")
       )
 
-    datatable(running_cnv_syndromes(), 
-              colnames = c('Chrom', 'Start', 'End', 'CNV syndrome name', 'Variant class', 'Phenotypes', 'Source' ))
+    datatable(running_cnv_syndromes(), rownames = FALSE,
+              colnames = c('Chrom', 'Start', 'End', 'CNV syndrome name', 'Variant class', 'Phenotypes', 'Source', 'Overlap(%)'))
 
     })
     
@@ -2897,7 +2924,7 @@ shiny::shinyApp(
     running_upset_disease <- reactive({
       
       
-      test41114 <<- data_selected()  %>% 
+      test41114 <<- data_selected() %>% 
         select(-start_position, -end_position, -chrom) %>%
         filter(source == 'CNV') %>%
         filter(disease == 'Yes') %>%
@@ -4469,7 +4496,7 @@ output$switch_tads <- renderUI({
   
   switchInput(
     inputId = "tads_on_off",
-    label = "Add target genes to analysis?",
+    label = "Add genes to analysis?",
     inline = TRUE,
     width = 'auto',
     # status = "warning",
@@ -5185,10 +5212,11 @@ output$switch_tads <- renderUI({
         distinct() %>%
         mutate(pvalue = round(pvalue, 3)) %>%
         mutate(p.adjust = round(p.adjust, 3)) %>%
-        mutate(qvalue = round(qvalue, 3))
-        
+        mutate(qvalue = round(qvalue, 3)) %>%
+        mutate(ID = paste0("<a href='", paste0('http://amigo.geneontology.org/amigo/term/', ID),"' target='_blank'>", ID,"</a>"))
       
-      datatable(df)
+      
+      datatable(df, escape = FALSE)
       
       
     })
@@ -5331,7 +5359,7 @@ output$switch_tads <- renderUI({
       
 
       validate(
-        need(length(filtered_genes) != 0, "0 enriched terms found.")
+        need(length(filtered_genes) != 0, "0 genes found.")
       )
       
       if (input$kegg_reactome == 'Reactome') {
@@ -5340,18 +5368,22 @@ output$switch_tads <- renderUI({
                                           pvalueCutoff = as.numeric(input$sign_vline_path), 
                                           universe = hgcn_genes %>% select(entrez_id) %>% pull() %>% as.character(),
                                           readable= TRUE)  %>% 
-          as_tibble()
+          as_tibble() %>%
+          mutate(ID = paste0("<a href='", paste0('https://reactome.org/content/detail/', ID),"' target='_blank'>", ID,"</a>"))
         
       } else {
         pathway_analysis <- clusterProfiler::enrichKEGG(gene= filtered_genes ,
                                                         pvalueCutoff= as.numeric(input$sign_vline_path),
                                                         universe = hgcn_genes %>% select(entrez_id) %>% pull() %>% as.character()) %>% 
           as_tibble()
+          # mutate(ID = paste0("<a href='", paste0('https://reactome.org/content/detail/', ID),"' target='_blank'>", ID,"</a>"))
       }
       
+      pathway_analysis <- pathway_analysis %>%
+        filter(Count > 1)
       
       validate(
-        need(nrow(pathway_analysis) != 0, "0 enriched terms found.")
+        need(nrow(pathway_analysis) != 0, "0 enriched pathways found.")
       )      
       
       pathway_analysis %>%
@@ -5401,7 +5433,7 @@ output$switch_tads <- renderUI({
         # na.omit() %>%
         distinct()
       
-      datatable(df)
+      datatable(df, escape = FALSE)
 
     })
     
@@ -5467,7 +5499,7 @@ output$switch_tads <- renderUI({
       
       filtered_genes <- df_genes %>% select(entrez_id) %>% pull()  %>% as.character()
       validate(
-        need(length(filtered_genes) != 0, "0 enriched terms found.")
+        need(length(filtered_genes) != 0, "0 enriched diseases found.")
       )
 
       enrich_dgn <- enrichDO(gene  = filtered_genes,
@@ -5502,9 +5534,11 @@ output$switch_tads <- renderUI({
         distinct() %>%
         mutate(pvalue = round(pvalue, 3)) %>%
         mutate(p.adjust = round(p.adjust, 3)) %>%
-        mutate(qvalue = round(qvalue, 3))
+        mutate(qvalue = round(qvalue, 3)) %>%
+        mutate(ID = paste0("<a href='", paste0('https://www.ebi.ac.uk/ols/ontologies/doid/terms?iri=http%3A%2F%2Fpurl.obolibrary.org%2Fobo%2F', ID),"' target='_blank'>", ID,"</a>"))
+      
 
-      datatable(df)
+      datatable(df, escape = FALSE)
       
     })
 
