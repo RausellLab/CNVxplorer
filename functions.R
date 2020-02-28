@@ -111,7 +111,9 @@ get_perc_overlap <- function(df, chrom_cnv, start_cnv, end_cnv, is_a_gene = FALS
 
   
   tmp_df <- df %>% dplyr::select(chrom, start, end)
+  
   if (is_a_gene == FALSE) {
+    
   df <- bed_intersect(tibble(chrom = chrom_cnv, start = start_cnv, end = end_cnv ), tmp_df ) %>%
     mutate(p_overlap = (.overlap /(end.x - start.x + 1))*100) %>% arrange(p_overlap) %>%
     mutate(p_overlap = round(p_overlap, 2)) %>%
@@ -201,11 +203,11 @@ get_upset <- function(df, gene = FALSE) {
     
   }
   
- name_axis <-  if_else(gene,'Disease database', 'Phenotype term')
+ name_axis <-  if_else(gene,'Gene ', 'Phenotype term')
   
         upset(fromList(list_result), order.by = "freq" ,
         point.size = 3.5, line.size = 2, number.angles = 0,
-        mainbar.y.label = paste(name_axis, "Intersections"), sets.x.label = paste('Genes Associated Per', name_axis),
+        mainbar.y.label = paste(name_axis, "intersections"), sets.x.label = 'Number of genes',
         text.scale = c(1.3, 1.3, 2, 2, 2, 2))
   
   
@@ -245,7 +247,8 @@ get_sim_score <- function(genes_vector, patient_terms, hpo_list_genes, hpo_dbs) 
   
   genes_sample <- base::split(tmp_df$hp, tmp_df$gene)
   
-  
+  test00021 <<- genes_sample
+  test00022 <<- hpo_patient
 
   mat_test <- get_profile_sims(ontology = hpo_dbs, profile = hpo_patient, term_sets = genes_sample,
                    term_sim_method = 'resnik') %>%

@@ -210,8 +210,8 @@ hgcn_genes <- hgcn_genes %>% na.omit() %>% bind_rows(no_coord_with_ensembl)
 
 
 pli <- read_tsv('/home/cbl02/Storage/data/gnomad.v2.1.1.lof_metrics.by_transcript.txt') %>%
-  as_tibble() %>%
   filter(canonical == 'TRUE') %>% 
+  # filter(exp_lof < 10) %>% # take into account - important for remot gw project
   group_by(gene) %>%
   slice(1) %>%
   select(gene, pLI) %>%
@@ -241,7 +241,7 @@ vg <- vg_raw %>% left_join(test, by = c('gene' = 'ENSEMBL')) %>%
 
 # ------------------------------------------------------------------------------
 # Dataset: Clingen
-# Source: ftp://ftp.ncbi.nlm.nih.gov/pub/dbVar/clingen/ClinGen_haploinsufficiency_gene_GRCh37.bed
+# Source: ftp://ftp.clinicalgenome.org/
 # Access: 06/06/19
 # Info score: https://www.ncbi.nlm.nih.gov/projects/dbvar/clingen/help.shtml#review
 # FILTER SCORE == 3
@@ -702,19 +702,22 @@ mgi <- mgi %>%
 # PESR_GT_OVERDISPERSION this neither...
 
 
-gnomad_sv_raw <- read_tsv('/home/cbl02/Storage/data/gnomad_v2.1_sv.sites.bed', col_types = list(`#chrom` = col_character()))
 
 
-gnomad_sv_raw <- gnomad_sv_raw %>%
+gnomad_sv_raw <-  read_tsv('/home/cbl02/Storage/data/gnomad_v2.1_sv.sites.bed', col_types = list(`#chrom` = col_character())) %>%
   filter(SVTYPE %in% c('DEL', 'DUP')) %>%
   filter(FILTER == 'PASS') %>%
-  select(`#chrom`, start, end, name) %>%
   rename(id = name) %>%
   mutate(id  = str_remove(id, 'gnomAD-SV_v2.1_')) %>%
   mutate(source = 'gnomad_v2.1') %>%
   rename(chrom = `#chrom`) %>%
   mutate(chrom = as.character(chrom)) %>%
   mutate(start = start + 1)
+
+
+gnomad_sv <- gnomad_sv_raw %>%
+  select(chrom, start, end, id, source) 
+  
     
 
 
@@ -725,12 +728,15 @@ gnomad_sv_raw <- gnomad_sv_raw %>%
 # Variables: duplicated - deletion - general // observations - frequency - se
 # ------------------------------------------------------------------------------
 # 
-# decipher_sv_raw <- read.table('/home/cbl02/Storage/data/population_cnv.txt', sep = '\t', header = TRUE) %>%
-#   as_tibble() %>%
-#   mutate(source = 'decipher') %>%
-#   rename(id = population_cnv_id, chrom = chr) %>%
-#   mutate(id = as.character(id)) %>%
-#   select(id, chrom, start, end, source)
+decipher_control_raw <- read_tsv('/home/cbl02/Storage/data/population_cnv.txt', col_names = TRUE) %>%
+  mutate(source = 'decipher_control') %>%
+  rename(id = population_cnv_id, chrom = chr) %>%
+  mutate(id = as.character(id)) %>%
+  mutate(chrom = as.character(chrom)) %>%
+  mutate(chrom = if_else(chrom == 23, 'X', chrom))
+
+decipher_control <- decipher_control_raw %>%
+  select(id, chrom, start, end, source)
 
 # ------------------------------------------------------------------------------
 # Dataset: CNVs PATHOGENIC Decipher
@@ -743,7 +749,10 @@ decipher_sv_raw <- read_tsv('/home/cbl02/Storage/data/daa_decipher/decipher-cnvs
   rename(id = `# patient_id`, chrom = chr) %>%
   mutate(id = as.character(id)) %>%
   filter(pathogenicity %in% c('Pathogenic', 'Likely pathogenic')) %>%
-  select(id, chrom, start, end, source, pathogenicity, genotype, variant_class)
+  mutate(phenotypes = str_replace_all(phenotypes, '\\|', '<br>')) %>%
+  select(id, chrom, start, end, source, pathogenicity, genotype, variant_class, phenotypes)
+
+
 
 
 # ------------------------------------------------------------------------------
@@ -751,23 +760,32 @@ decipher_sv_raw <- read_tsv('/home/cbl02/Storage/data/daa_decipher/decipher-cnvs
 # Source: http://dgv.tcag.ca/dgv/docs/GRCh37_hg19_variants_2016-05-15.txt
 # ------------------------------------------------------------------------------
 ## CHECK POSSIBLE MISTAKE READING DATA
-dgv_df <- read_tsv('/home/cbl02/Storage/data/GRCh37_hg19_variants_2016-05-15.txt',
+
+dgv_df_raw <- read_tsv('/home/cbl02/Storage/data/GRCh37_hg19_variants_2016-05-15.txt',
                    col_types = list(chr = col_character())) %>%
   filter(varianttype == 'CNV') %>%
-  filter(variantsubtype %in% c('deletion', 'duplication')) %>%
+  filter(!variantsubtype %in% c('deletion', 'duplication')) %>%
   rename(id = variantaccession, chrom = chr) %>%
-  select(id, chrom, start, end) %>%
   mutate(source = 'dgv',
          chrom = as.character(chrom))  %>%
   mutate(start = as.numeric(start), end = as.numeric(end))
+
+dgv_df <- dgv_df_raw %>%
+  select(id, chrom, start, end, source)
+
+  
 
 
 # ------------------------------------------------------------------------------
 # Dataset: Aggregation of data from DECIPHER, gnomAD and DGV
 # ------------------------------------------------------------------------------
 
-cnv_df <- decipher_sv_raw %>% bind_rows(gnomad_sv_raw) %>% bind_rows(dgv_df) %>%
-  mutate(length_cnv = end - start + 1)
+cnv_df <- decipher_sv_raw %>% 
+  bind_rows(gnomad_sv) %>% 
+  bind_rows(dgv_df) %>%
+  bind_rows(decipher_control) %>%
+  mutate(length_cnv = end - start + 1) %>% 
+  mutate(phenotypes = replace_na(phenotypes, '-'))
 
 # ------------------------------------------------------------------------------
 # Dataset: Ridges plot from HOME
@@ -817,11 +835,12 @@ vector_hp <- hpo_to_vector %>% pull(hp)
 vector_term <- hpo_to_vector %>% pull(term)
 
 
-# ------------------------------------------------------------------------------
-# Dataset: Human Phenotype Ontology
-# ------------------------------------------------------------------------------
 
-hpo_dbs <- ontologyIndex::get_OBO('http://purl.obolibrary.org/obo/hp.obo')
+
+
+
+
+
 
 
 # ------------------------------------------------------------------------------
@@ -1285,9 +1304,9 @@ genes_disgenet <- disgenet %>% select(geneSymbol) %>% distinct() %>% pull()
 # non-SSC Samples	
 # ------------------------------------------------------------------------------
 
-denovo <- read.table('/home/cbl02/Storage/data/denovo-db.non-ssc-samples.variants.v.1.6.1.tsv', skip = 1, sep = '\t', header = TRUE)
+denovo_raw <- read_tsv('/home/cbl02/Storage/data/denovo-db.non-ssc-samples.variants.v.1.6.1.tsv', skip = 1, col_names = TRUE)
 
-denovo <- denovo %>% 
+denovo <- denovo_raw %>% 
   as_tibble() %>%
   select(Chr, Position, Gene, PrimaryPhenotype, StudyName, PubmedID, FunctionClass) %>%
   rename(chrom = Chr)
@@ -1341,9 +1360,16 @@ dbvar <- dbvar %>%
 
 # ------------------------------------------------------------------------------
 # Dataset: ACMG 59 GENES - I guess 100% overlapping with OMIM genes
+# Source: https://www.ncbi.nlm.nih.gov/clinvar/docs/acmg/
 # ------------------------------------------------------------------------------
 
-
+# acmg_genes <- read_tsv('/home/cbl02/Storage/data/acmg_genes.tsv', col_names = FALSE) %>%
+#   rename(disease_name = X1, gene = X3) %>%
+#   select(gene, disease_name) %>%
+#   mutate(MIM_gene = str_extract(gene, '\\(([^\\)]+)\\)')) %>%
+#   mutate(gene = str_remove(gene, '\\(([^\\)]+)\\)')) %>%
+#   filter(disease_name != 'LDLR(MIM 606945)') %>% # field with two genes
+#   bind_rows(tibble(gene = 'LDLR', disease_name = 'Familial hypercholesterolemia (MIM 143890)', MIM_gene = '(MIM 606945)' ))
 # ------------------------------------------------------------------------------
 # HGMD database
 # ------------------------------------------------------------------------------
@@ -1364,10 +1390,31 @@ test_50 <- a %>% as_tibble() %>%  mutate(length = endCoord - startCoord + 1) %>%
 
 # ------------------------------------------------------------------------------
 # Get ontologies (Gene ontology (GO), The Mammalian Phenotype Ontology (mp))
+# https://github.com/obophenotype/upheno
 # ------------------------------------------------------------------------------
 
 mp_ontology <- rols::Ontology('mp')
 hpo_dbs <- ontologyIndex::get_OBO('http://purl.obolibrary.org/obo/hp.obo')
+uberon_dbs <- ontologyIndex::get_OBO('http://purl.obolibrary.org/obo/uberon.obo')
+
+test <- ontologyIndex::get_OBO('https://raw.githubusercontent.com/obophenotype/upheno-dev/master/modules/hp-mp/upheno.obo')
+
+# ------------------------------------------------------------------------------
+# Match HP - MP
+# https://github.com/obophenotype/upheno
+# ------------------------------------------------------------------------------
+
+match_hp_mp <- read_tsv('https://raw.githubusercontent.com/obophenotype/upheno/master/mappings/hp-to-mp-bestmatches.tsv',
+                        col_names = c('hp_term', 'hp_label','mp_term','mp_label', 'equivalence_score', 'subclass_score'))
+
+# ------------------------------------------------------------------------------
+# Dataset: Human Phenotype Ontology
+# Description: Input vector chosen by the user (tab - Phenotypic analysis)
+# ------------------------------------------------------------------------------
+
+vector_total_terms <- hpo_dbs$name %>% as_tibble(rownames = 'term') %>%  mutate(term_desc = paste(value, '-', term))
+
+
 
 # ------------------------------------------------------------------------------
 # AGGREGATE ALL THE INFORMATION

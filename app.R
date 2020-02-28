@@ -31,12 +31,13 @@ library(randomForest) # delete in case of using an alternative model
 library(chromPlot)
 import::from(Gviz, "IdeogramTrack")
 import::from(Gviz, 'plotTracks')
-library(tidyverse)
 library(shiny)
 library(ontologySimilarity)
 library(ontologyIndex)
 library(formattable)
 library(valr)
+library(tidyverse)
+
 
 
 # Files needed to run the app
@@ -57,14 +58,18 @@ library(valr)
 # 14. omim - OMIM information
 # 15. orphanet_raw - ORPHANET
 # 16. dev_raw - DECIPHER (DEVELOPMENTAL DISORDER GENES)
-# 17- 
+# 17- gnomad_sv_raw
+# 18. decipher_control_raw
+# 19. dgv_df_raw
+# 20. vector_total_terms (Dataframe of term - description - term_description)
 source('functions.R')
 load('local_data.RData')
 
 
 # invisible(lapply(paste0('package:', names(sessionInfo()$otherPkgs)), detach, character.only=TRUE, unload=TRUE))
 # file.remove('local_data.RData')
-# save(hgcn_genes, df_enhancers, lncrna_coord, lncrna, tad, gtex, hpa, hpo_genes, vector_hp, vector_term, cnv_df,
+# save(hgcn_genes, df_enhancers, lncrna_coord, lncrna, tad, gtex, hpa, hpo_genes, cnv_df, vector_total_terms,
+#      gnomad_sv_raw, decipher_control_raw, dgv_df_raw,
 #     select, cnv_df, dev_raw, panel_total, omim, orphanet_raw,  hpo_dbs, model1, denovo, clinvar_variants, ridges_home, plot_p100, plot_p46pla, blacklist_encode, mp_ontology, gwas_variants,mgi, syndromes_total, file = "local_data.RData")
 
 
@@ -183,7 +188,7 @@ shiny::shinyApp(
         )
         
         
-        # a("Computation Completed", href="#shiny-tab-tabItem2", "data-toggle" = "tab")
+        # a("Computation Completed", href="#shiny-tab-disease", "data-toggle" = "tab")
         # tablerNavMenuItem(
         #   tabName = "feedback",
         #   icon = "book",
@@ -345,7 +350,7 @@ shiny::shinyApp(
             #     )
             #   )
             # ),
-          
+          tags$hr(),
           fluidRow(
           column(width = 6,
                  tablerCard(width = 12,
@@ -483,6 +488,7 @@ shiny::shinyApp(
                            
                            
                          ))
+
             )
             ),
           
@@ -491,7 +497,28 @@ shiny::shinyApp(
            
             
             
-            column(width = 12
+            column(width = 12,
+                   
+                   tags$hr(),
+                   
+                   tablerCard(
+                     title = "Comparison CNV size with other CNVs databases (gnomAD, DGV and DECIPHER)",
+                     plotOutput('plot_size'),
+                     width = 12,
+                     overflow = TRUE,
+                     collapsible = FALSE,
+                     closable = FALSE,
+                     options = tagList(
+                       
+                       pickerInput(
+                         inputId = "select_density",
+                         width = 'fit',
+                         # label = "sdasda",
+                         choices = c("global", "local")
+                       )
+                       
+                     )
+                   )
 
                    # tablerCard(width = 6,
                    #            collapsible = FALSE,
@@ -991,20 +1018,15 @@ shiny::shinyApp(
         tablerTabItem(
           tabName = "genetic_evidence",
           tablerCard(
-            title = "CNV Syndromes (DECIPHER and Clingen)",
+            title = "CNV Syndromes",
             DTOutput("cnv_syndromes"),
             width = 12,
             collapsible = FALSE,
             closable = FALSE,
             overflow = TRUE,
             options = tagList(
-              # actionBttn(
-              #   inputId = "Id111",
-              #   label = "Reset table",
-              #   style = "minimal",
-              #   color = "primary"
-              # ),
-              downloadButton("downl323rtfgsoad_dgenes", "Download table")
+                uiOutput('ui_select_cnv_syndrome'),
+                downloadButton("downl323rtfgsoad_dgenes", "Download table")
             )
           ),
           tablerCard(
@@ -1020,13 +1042,14 @@ shiny::shinyApp(
             )
           ),
           tablerCard(
-            title = "Overlap with non-pathogenic CNVs (gnomAD, DGV, DECIPHER)",
+            title = "Overlap with non-pathogenic CNVs",
             DTOutput('df_overlap_cnvs_nonpatho'),
             width = 12,
             collapsible = FALSE,
             closable = FALSE,
             overflow = TRUE,
             options = tagList(
+              uiOutput('select_db_no_patho_cnvs'), 
               downloadButton("download_df_overlap_cnvs_nonpatho", "Download table")
               
             )
@@ -1196,17 +1219,17 @@ shiny::shinyApp(
             #   overflow = TRUE
             # ),
             tablerCard(
-              title = "ClinVar variants",
-              DTOutput('df_clinvar'),
+              title = "Disease-associated variants",
+              DTOutput('df_variants'),
               width = 12,
               collapsible = FALSE,
               closable = FALSE,
               overflow = TRUE,
-              options = tagList(
-                downloadButton("download_deas_novos", "Download table")
-                
+                options = tagList(
+                  uiOutput('ui_select_clinvar_gwas'),
+                  downloadButton("downlda323rtfgsoad_dgenes", "Download table")
               )
-            ),
+            )
             # tablerCard(
             #   title = "De novo variants (denovo-db)",
             #   DTOutput('df_de_novo'),
@@ -1219,36 +1242,36 @@ shiny::shinyApp(
             # 
             #   )
             # ),
-            tablerCard(
-              title = "GWAS variants",
-              DTOutput('df_gwas'),
-              width = 12,
-              collapsible = FALSE,
-              closable = FALSE,
-              overflow = TRUE,
-              options = tagList(
-                downloadButton("download_gwas", "Download table")
-                
-              )
-            ),
-            tablerCard(
-              title = "Comparison CNV size with other CNVs databases (gnomAD, DGV and DECIPHER)",
-              plotOutput('plot_size'),
-              width = 12,
-              overflow = TRUE,
-              collapsible = FALSE,
-              closable = FALSE,
-              options = tagList(
-
-                pickerInput(
-                  inputId = "select_density",
-                  width = 'fit',
-                  # label = "sdasda",
-                  choices = c("global", "local")
-                )
-
-              )
-            ),
+            # tablerCard(
+            #   title = "GWAS variants",
+            #   DTOutput('df_asagwas'),
+            #   width = 12,
+            #   collapsible = FALSE,
+            #   closable = FALSE,
+            #   overflow = TRUE,
+            #   options = tagList(
+            #     downloadButton("download_gwas", "Download table")
+            #     
+            #   )
+            # ),
+            # tablerCard(
+            #   title = "Comparison CNV size with other CNVs databases (gnomAD, DGV and DECIPHER)",
+            #   plotOutput('plot_size'),
+            #   width = 12,
+            #   overflow = TRUE,
+            #   collapsible = FALSE,
+            #   closable = FALSE,
+            #   options = tagList(
+            # 
+            #     pickerInput(
+            #       inputId = "select_density",
+            #       width = 'fit',
+            #       # label = "sdasda",
+            #       choices = c("global", "local")
+            #     )
+            # 
+            #   )
+            # ),
 
             # tablerCard(
             #   title = "Barplot ",
@@ -1259,27 +1282,27 @@ shiny::shinyApp(
             #   overflow = TRUE
             # ),
             # column(9,
-            tablerCard(
-              title = "Intersection - CNV and CNV pathogenics",
-              DTOutput('df_intersection'),
-              width = 4,
-              collapsible = FALSE,
-              closable = FALSE,
-              overflow = TRUE,
-              options = tagList(
-                uiOutput('ui_intersect')
-              )
-            ),
+            # tablerCard(
+            #   title = "Intersection - CNV and CNV pathogenics",
+            #   DTOutput('df_intersection'),
+            #   width = 4,
+            #   collapsible = FALSE,
+            #   closable = FALSE,
+            #   overflow = TRUE,
+            #   options = tagList(
+            #     uiOutput('ui_intersect')
+            #   )
+            # ),
             # useShinyjs()
             # ),
-            tablerCard(
-              title = "Plot intersection",
-              plotOutput('plot_intersection'),
-              width = 8,
-              collapsible = FALSE,
-              closable = FALSE,
-              overflow = TRUE
-            )
+            # tablerCard(
+            #   title = "Plot intersection",
+            #   plotOutput('plot_intersection'),
+            #   width = 8,
+            #   collapsible = FALSE,
+            #   closable = FALSE,
+            #   overflow = TRUE
+            # )
             # tablerCard(
             #   title = "Comparison CNV size with other CNVs (gnomAD, DGV and DECIPHER)",
             #   DTOutput('test_reading_snv_file'),
@@ -1496,8 +1519,8 @@ shiny::shinyApp(
               label = "",
               choices = NULL,
               width = '100%',
-              choiceNames = vector_term,
-              choiceValues = vector_hp
+              choiceNames = vector_total_terms$term_desc,
+              choiceValues = vector_total_terms$term
             ),
             options = tagList(
               actionBttn(
@@ -1525,15 +1548,15 @@ shiny::shinyApp(
             uiOutput('n_hp_chosen'),
             tablerCard(title = 'Suggested phenotype terms',
                        width = 12,
-                       print('TBA')
+                       DTOutput('suggest_df')
                        
             )),
             column(width = 12,
             fluidRow(width = 12,
-            tablerCard(title = 'Genes with phenotype terms',
+            tablerCard(title = 'Genes with HPO terms',
                        DTOutput('hpo_filter_genes'),
                        width = 6),
-            tablerCard(title = 'Phenotype terms associated with genes',
+            tablerCard(title = 'HPO terms associated with genes',
                        DTOutput('hpo_assoc_genes'),
                        width = 6)
             )),
@@ -1620,13 +1643,26 @@ shiny::shinyApp(
           ),
           fluidRow(
             tablerCard(
-              title = "Pubmed articles associated with deletions in the region",
+              title = "Pubmed articles associated with the region",
               
               collapsible = FALSE,
               closable = FALSE,
-              DTOutput('del_pubmed'),
+              DTOutput('del_dup_pubmed'),
               overflow = TRUE,
-              width = 12
+              width = 12,
+              options = tagList(
+                uiOutput('ui_select_del_dup')
+                # switchInput(
+                #   inputId = "enable_omim_papers",
+                #   label = "Articles associated with OMIM?",
+                #   value = FALSE,
+                #   onStatus = "success",
+                #   offStatus = "danger",
+                #   width = 'auto',
+                #   size = 'mini'
+                #   
+                # )
+              )
             ),
             tablerCard(
               title = "Abstract",
@@ -1634,23 +1670,23 @@ shiny::shinyApp(
               DTOutput("abstract_del_pubmed"),
               width = 12,
               overflow = TRUE
-            ),
-            tablerCard(
-              title = "Pubmed articles associated with duplications in the region",
-              
-              collapsible = FALSE,
-              closable = FALSE,
-              DTOutput('dup_pubmed'),
-              overflow = TRUE,
-              width = 12
-            ),
-            tablerCard(
-              title = "Abstract",
-              
-              DTOutput("abstract_pubmed"),
-              width = 12,
-              overflow = TRUE
             )
+            # tablerCard(
+            #   title = "Pubmed articles associated with duplications in the region",
+            #   
+            #   collapsible = FALSE,
+            #   closable = FALSE,
+            #   DTOutput('dup_pubmed'),
+            #   overflow = TRUE,
+            #   width = 12
+            # ),
+            # tablerCard(
+            #   title = "Abstract",
+            #   
+            #   DTOutput("abstract_pubmed"),
+            #   width = 12,
+            #   overflow = TRUE
+            # )
             # tablerCard(title = 'Download report (.html)',
             #            downloadButton('button55_download', label = "Download"),                       
             #            width = 6),
@@ -1784,6 +1820,13 @@ shiny::shinyApp(
       shinyjs::reset("enable_path_analysis")
       shinyjs::reset("enable_do_analysis")
       shinyjs::reset("enable_group_go")
+    })
+    
+    observeEvent(input$reset_pheno_analysis, {
+
+
+      shinyjs::reset("run_pheno_analysis")
+
     })
     
     # observe({
@@ -2103,6 +2146,56 @@ shiny::shinyApp(
       
       df_tmp
       test19 <<- df_tmp
+      
+      
+    })
+    
+    
+    suggest_hpo_terms <- reactive({
+      
+      validate(
+        need(length(input$chosen_hp) > 0, "Please, select at least one HPO term.")
+      )
+
+      hp_chosen <- input$chosen_hp # input$chosen_hp
+      hp_descendants <- get_descendants(hpo_dbs, hp_chosen)
+      hp_descendants <- hp_descendants[!hp_descendants %in% hp_chosen] 
+      
+      
+      if (length(hp_descendants) > 5) {
+        
+        hp_descendants <- ontologySimilarity::descendants_IC(hpo_dbs) %>% as_tibble(rownames = 'term') %>%
+        filter(term %in% hp_descendants) %>% 
+          arrange(desc(value)) %>% slice(1:10) %>% select(-value) %>% pull(term)
+
+      }
+      
+       test42141 <<- hp_descendants
+      
+       hp_descendants <- hp_descendants %>% paste(collapse = '|')
+    })
+    
+    output$suggest_df <- renderDT({
+      
+      validate(
+        need(nchar(suggest_hpo_terms()) > 0, "Select more HPO terms")
+      )
+      
+      test0101 <<-suggest_hpo_terms()
+
+      tmp_df <- vector_total_terms %>% 
+        as_tibble() %>% 
+        filter(str_detect(term, suggest_hpo_terms() )) %>% 
+        rename(Term = value) %>%
+        select(-term_desc) %>%
+        mutate(term = paste0("<a href='", paste0('https://hpo.jax.org/app/browse/term/', term),"' target='_blank'>", term,"</a>"))
+        
+      validate(
+        need(nrow(tmp_df) > 0, "Select more HPO terms.")
+      )
+      
+     datatable(tmp_df, escape = FALSE, rownames = FALSE, colnames = c('HPO term', 'Description'), options = list(dom = 't'), class = 'cell-border stripe')
+      
       
       
     })
@@ -2495,7 +2588,7 @@ shiny::shinyApp(
       tmp_n <-  model_genes_phenotype() %>% count(description) %>% filter(description == 'mortality/aging') %>% pull(n)
       
       tablerStatCard(
-        value =  tmp_n,
+        value =  length(tmp_n),
         # status = "primary",
         # icon = 'book',
         title = "Genes associated with mortality/aging phenotype",
@@ -2512,7 +2605,7 @@ shiny::shinyApp(
       
       
       tablerStatCard(
-        value =   tmp_n,
+        value =   length(tmp_n),
         # status = "primary",
         # icon = 'book',
         title = "Genes associated with embryonic phenotype",
@@ -2586,8 +2679,13 @@ shiny::shinyApp(
       
     })
     
-    output$del_pubmed <- renderDataTable({
+    output$del_dup_pubmed <- renderDataTable({
       
+      req(running_pubmed_del())
+      
+      
+      if (input$select_del_dup == 'deletions') {
+        
       
       tmp_df <- running_pubmed_del()
       tmp_df <- tmp_df %>% mutate(pmid = paste0("<a href='", paste0('https://pubmed.ncbi.nlm.nih.gov/', pmid),"' target='_blank'>", pmid,"</a>")) 
@@ -2602,21 +2700,55 @@ shiny::shinyApp(
                   selection = 'single'
                   # columnDefs = list(list(className = 'dt-center', targets = '_all'))
                 ))
-      
+      } else {
+        
+        
+        
+        tmp_df <- running_pubmed_dup()
+        tmp_df <- tmp_df %>% mutate(pmid = paste0("<a href='", paste0('https://pubmed.ncbi.nlm.nih.gov/', pmid),"' target='_blank'>", pmid,"</a>")) 
+        
+        
+        
+        
+        
+        datatable(tmp_df, rownames = FALSE, filter = 'top', selection = 'single', escape = FALSE,
+                  
+                  colnames = c('Title','First author', 'Last author', 'N°cites','Journal', 'Published date', 'PMID' ),
+                  options = list(
+                    pageLength = 5, autoWidth = TRUE, style = 'bootstrap', list(searchHighlight = TRUE),
+                    selection = 'single'
+                    # columnDefs = list(list(className = 'dt-center', targets = '_all'))
+                  ))
+        
+        
+        
+        
+      }
     })
     
     output$abstract_del_pubmed <- renderDataTable({
       
       validate(
-        need(input$del_pubmed_rows_selected != '', "Please, select an article from the datatable.")
+        need(input$del_dup_pubmed_rows_selected != '', "Please, select an article from the datatable.")
       )
       
-      test931 <<- input$dup_pubmed_rows_selected
-      paper_selected <- running_pubmed_del() %>% slice(input$del_pubmed_rows_selected)
+      # test931 <<- input$dup_pubmed_rows_selected
+      # paper_selected <- running_pubmed_del() %>% slice(input$del_pubmed_rows_selected)
+      
+      if (input$select_del_dup == 'deletions') {
+        
+        paper_selected <- running_pubmed_del() %>% slice(input$del_dup_pubmed_rows_selected)
+        
+      } else {
+        
+        paper_selected <- running_pubmed_dup() %>% slice(input$del_dup_pubmed_rows_selected)
+        
+      }
+      
       
       test45 <<- paper_selected
       
-      fetch.pubmed <- entrez_fetch(db = "pubmed", id = test45 %>% pull(pmid), rettype = "xml", parsed = T)
+      fetch.pubmed <- entrez_fetch(db = "pubmed", id = paper_selected %>% pull(pmid), rettype = "xml", parsed = T)
       # Extract the Abstracts for the respective IDS.  
       abstracts = xpathApply(fetch.pubmed, '//PubmedArticle//Article', function(x)
         xmlValue(xmlChildren(x)$Abstract))
@@ -2848,8 +2980,10 @@ shiny::shinyApp(
         bind_rows(data_selected_tads()) %>%
         mutate(source = as.factor(source))
       
-      test2019 <<- table_output
-      table_output
+      # test2019 <<- table_output
+      # table_output
+      # 
+
       
     })
     
@@ -2899,10 +3033,27 @@ shiny::shinyApp(
       # test91311 <<- tmp_df
       get_perc_overlap(tmp_df, chrom_coordinates, start_coordinates, end_coordinates)
       # get_perc_overlap(test91311 %>% ungroup(), '17', test310, test311)
-      
 
       
 
+      
+    })
+    
+    
+    output$ui_select_cnv_syndrome <- renderUI({
+      
+      
+      vector_n_dbs <-    split(c('decipher', 'clingen'), c('DECIPHER', 'ClinGen'))
+      
+      prettyRadioButtons(
+        inputId = "select_cnv_syndrome",
+        label = '', 
+        choices =  vector_n_dbs,
+        inline = TRUE, 
+        status = "primary",
+        fill = TRUE
+      )
+      
       
     })
     
@@ -2911,9 +3062,31 @@ shiny::shinyApp(
       validate(
         need(nrow(running_cnv_syndromes()) != 0, "No CNV syndromes found")
       )
+      
+      
+      
+      
+      if (input$select_cnv_syndrome == 'decipher') {
+        
+        tmp_df <- running_cnv_syndromes() %>% filter(source == 'decipher') %>% select(chrom, start, end, syndrome_name, variant_class, phenotypes,
+                                                                                      p_overlap, source)
+        test09 <<- tmp_df
+        
+        datatable(tmp_df, rownames = FALSE,
+                  colnames = c('Chrom', 'Start', 'End', 'CNV syndrome name', 'Variant class', 'Phenotypes', 'Overlap(%)', 'Source'))
+        
+      } else {
+        
+        tmp_df <- running_cnv_syndromes() %>% filter(source == 'clingen') %>% select(chrom, start, end, syndrome_name, p_overlap, source)
+        test10 <<- tmp_df
+        
+        
+        datatable(tmp_df, rownames = FALSE,
+                  colnames = c('Chrom', 'Start', 'End', 'CNV syndrome name', 'Overlap(%)', 'Source'))
+        
+      }
 
-    datatable(running_cnv_syndromes(), rownames = FALSE,
-              colnames = c('Chrom', 'Start', 'End', 'CNV syndrome name', 'Variant class', 'Phenotypes', 'Source', 'Overlap(%)'))
+
 
     })
     
@@ -2955,6 +3128,10 @@ shiny::shinyApp(
     
     output$dgenes <- renderDataTable({
       
+      
+      
+      
+      
       server <- TRUE
       
       test1341313113113 <<-  data_selected()
@@ -2968,9 +3145,14 @@ shiny::shinyApp(
         # select(band, gene, n_evidences)
       
       data_tmp <- data_input %>% left_join(running_upset_disease() %>% count(gene, value), by = 'gene') %>%
-        select(band, gene, n) %>% arrange(desc(n))
+        select(band, gene, n)
       
-      test0131 <<- data_tmp
+      test011421431 <<- data_tmp
+      
+      
+      validate(
+        need(nrow(data_tmp) > 0, "0 disease genes.")
+      )
    
         tmp_output <- datatable(data_tmp, rownames = FALSE, colnames = c('Band', 'Gene', 'Nº evidences'),
                   filter = list(position = 'top'), 
@@ -3010,6 +3192,8 @@ shiny::shinyApp(
         filter(disease == 'Yes') %>%
         select(gene, dev, fda, omim, fda, orphanet, genomics_england, clingen) %>%
         slice(input$dgenes_rows_selected)
+      
+      test0131444441231 <<- data_input
       
       options_sources <- data_input %>% pivot_longer(cols = -gene) %>% filter(value == 'Yes') %>%
         pull(name)
@@ -3137,8 +3321,14 @@ shiny::shinyApp(
                ncgerp, p_overlap) %>%
         filter(disease == 'No')
       
+      validate(
+        need(nrow(data_input) > 0, "0 no disease genes.")
+      )
+      
       
       tmp_output <- datatable(data_input, rownames = FALSE, 
+                              colnames = c('Band', 'Gene', 'Disease', 'Essential', 'pLI', 'RVIS', 'CCR', 'HI', 'GDI', 'SnIPRE', 'ncRVIS',
+                                           'ncGERP', 'Overlap(%)'),
                               filter = list(position = 'top'), 
                               selection = 'single'
                               # options = list(dom = 't')
@@ -4783,6 +4973,31 @@ output$switch_tads <- renderUI({
     
     output$hpo_filter_genes <- renderDataTable({
       
+
+      
+      hpo_yes <-  data_selected() %>% select(gene) %>% pull()
+      
+      n_genes <- hpo_genes %>% 
+        filter(gene %in% hpo_yes) %>% 
+        select(gene) %>% 
+        distinct() %>%
+        nrow()
+      
+      validate(
+        need(n_genes != 0, "0 genes associated with HPO terms.")
+
+      )
+      
+      validate(
+        need(length(input$chosen_hp) > 0, "Please, select at least one HPO term.")
+      )
+      
+      validate(
+        need(input$run_pheno_analysis, "Click on run analysis.")
+        
+      )
+      
+      
       
       test913 <<- data_selected()
       test914 <<- test_hpo()
@@ -4790,7 +5005,7 @@ output$switch_tads <- renderUI({
       tmp_df <- hpo_filter() 
 
       tmp_df <- tmp_df  %>% count(gene) %>% left_join(test_hpo(), by = 'gene') 
-      datatable(tmp_df, filter = 'top', colnames = c('Gene', 'Nº phenotypic terms', 'similarity score'), option = list(
+      datatable(tmp_df, filter = 'top', colnames = c('Gene', 'Nº HPO terms', 'Similarity score'), option = list(
         selection = 'single'
       ))
       
@@ -4817,11 +5032,29 @@ output$switch_tads <- renderUI({
 
       tmp_df2 <- hpo_filter()
       tmp_df2 <- tmp_df2 %>% filter(gene %in% tmp_df ) %>% select(-entrez_id)
-      tmp_df2 <- tmp_df2 %>% mutate(hp = paste0("<a href='", paste0('https://hpo.jax.org/app/browse/term/', hp),"' target='_blank'>", hp,"</a>")) 
+      tmp_df2 <- tmp_df2 %>% 
+        mutate(hp = paste0("<a href='", paste0('https://hpo.jax.org/app/browse/term/', hp),"' target='_blank'>", hp,"</a>")) %>%
+        select(gene, hp, term)
       test232134 <<- tmp_df2
-      datatable(tmp_df2, escape = FALSE)
+      datatable(tmp_df2, escape = FALSE, rownames = FALSE, colnames = c('Gene', 'HPO term', 'Description'))
 
     })
+    
+    
+    # output$hpo_filter_cnvs <- renderDataTable({
+    #   
+    #   
+    #   test913 <<- data_selected()
+    #   test914 <<- test_hpo()
+    #   
+    #   tmp_df <- hpo_filter() 
+    #   
+    #   tmp_df <- tmp_df  %>% count(gene) %>% left_join(test_hpo(), by = 'gene') 
+    #   datatable(tmp_df, filter = 'top', colnames = c('Gene', 'Nº HPO terms', 'Similarity score'), option = list(
+    #     selection = 'single'
+    #   ))
+    #   
+    # })
     
     
     # output$gene_filter_hp <- renderUI({
@@ -5408,15 +5641,7 @@ output$switch_tads <- renderUI({
       
     })
     
-    
-    # running_do <- reactive({
-    #   
-    #   
-    #   
-    #   
-    #   
-    # })
-    
+
     
     
 
@@ -5498,6 +5723,7 @@ output$switch_tads <- renderUI({
       }
       
       filtered_genes <- df_genes %>% select(entrez_id) %>% pull()  %>% as.character()
+      
       validate(
         need(length(filtered_genes) != 0, "0 enriched diseases found.")
       )
@@ -5662,6 +5888,7 @@ output$func_do  <- renderPlot({
                                   start_coordinates, 
                                   end_coordinates)
       
+      test0012 
       test0012 <<- tmp_df
 
       tmp_df
@@ -5852,22 +6079,127 @@ output$func_do  <- renderPlot({
       )
       
       
-      datatable(tmp_df, colnames = c('ID', 'Chrom', 'Start', 'End', 'Database', 'Pathogenicity', 'Genotype', 'Class', 
+      datatable(tmp_df, escape = FALSE,
+                colnames = c('ID', 'Chrom', 'Start', 'End', 'Database', 'Pathogenicity', 'Genotype', 'Class', 'Phenotype',
                                      'CNV size', 'Overlap (%)'),
                 selection = 'single',
                 options = list(
-                  columnDefs = list(list(className = 'dt-center',  targets = 0:9))),  rownames= FALSE)
+                  columnDefs = list(list(className = 'dt-center',  targets = c(0:7,9,10)))),  rownames= FALSE)
+    })
+    
+    
+    output$select_db_no_patho_cnvs <- renderUI({
+      
+      vector_n_dbs <- df_overlap_cnvs_running()  %>% filter(source != 'decipher') %>%
+        count(source) %>% 
+        mutate(new_one = paste0(source, ' (', n, ")")) %>%
+        pull(new_one)
+      
+      test142412412 <<- vector_n_dbs
+      
+      vector_n_dbs <- vector_n_dbs %>% 
+        str_replace('decipher_control', 'DECIPHER Control') %>% 
+        str_replace('dgv', 'DGV') %>%
+        str_replace('gnomad_v2.1', 'gnomAD v.2.1')
+      
+      vector_n_dbs <-    split(c('dgv', 'decipher_control', 'gnomad_v2.1'), vector_n_dbs)
+      
+      prettyRadioButtons(
+      inputId = "select_no_patho_cnv",
+      label = '', 
+      choices = vector_n_dbs,
+      inline = TRUE, 
+      status = "primary",
+      fill = TRUE
+      )
+    })
+    
+    
+    output$ui_select_del_dup <- renderUI({
+      
+      # vector_n_dbs <- df_overlap_cnvs_running()  %>% filter(source != 'decipher') %>%
+      #   count(source) %>% 
+      #   mutate(new_one = paste0(source, ' (', n, ")")) %>%
+      #   pull(new_one)
+      # 
+      # test142412412 <<- vector_n_dbs
+      # 
+      # vector_n_dbs <- vector_n_dbs %>% 
+      #   str_replace('decipher_control', 'DECIPHER Control') %>% 
+      #   str_replace('dgv', 'DGV') %>%
+      #   str_replace('gnomad_v2.1', 'gnomAD v.2.1')
+      
+      vector_n_dbs <-    split(c('deletions', 'duplications'), c('Deletions', 'Duplications'))
+      
+      prettyRadioButtons(
+        inputId = "select_del_dup",
+        label = '', 
+        choices =  vector_n_dbs,
+        inline = TRUE, 
+        status = "primary",
+        fill = TRUE
+      )
     })
     
     
     output$df_overlap_cnvs_nonpatho <- renderDT({
       
-      tmp_df <- df_overlap_cnvs_running() %>% filter(source != 'decipher') %>% select(-pathogenicity, -genotype, -variant_class)
-      datatable(tmp_df, colnames = c('ID', 'Chrom', 'Start', 'End', 'Database', 'CNV size', 
-                                     'Percentage Overlap (%)'),
-                selection = 'single',
-                options = list(
-                  columnDefs = list(list(className = 'dt-center',  targets = 0:6))),  rownames= FALSE)
+      tmp_df <- df_overlap_cnvs_running()
+      
+      
+      if (input$select_no_patho_cnv == 'dgv') {
+        
+        filter_id <- tmp_df %>% filter(source == 'dgv') %>% pull(id)
+        
+        tmp_df <- dgv_df_raw %>% filter(id %in% filter_id)
+        
+        datatable(tmp_df, 
+                  # colnames = c('ID', 'Chrom', 'Start', 'End', 'Database', 'CNV size', 
+                  #                      'Percentage Overlap (%)'),
+                  selection = 'single',
+                  options = list(
+                    columnDefs = list(list(className = 'dt-center',  targets = 0:6))),  rownames= FALSE)
+        
+        
+        
+      } else if (input$select_no_patho_cnv == 'decipher_control') {
+        
+        filter_id <- tmp_df %>% filter(source == 'decipher_control') %>% pull(id)
+        
+        tmp_df <- decipher_control_raw %>% filter(id %in% filter_id)
+        
+        
+
+        datatable(tmp_df, class = 'cell-border stripe',
+                  # colnames = c('ID', 'Chrom', 'Start', 'End', 'Database', 'CNV size', 
+                  #                      'Percentage Overlap (%)'),
+                  selection = 'single',
+                  options = list(
+                    columnDefs = list(list(className = 'dt-center',  targets = 0:6))),  rownames= FALSE)
+        
+        
+        
+      } else {
+        
+        
+        filter_id <- tmp_df %>% filter(source == 'gnomad_v2.1') %>% pull(id)
+        
+        tmp_df <- gnomad_sv_raw %>% filter(id %in% filter_id)
+        
+        
+        
+        datatable(tmp_df, 
+                  # colnames = c('ID', 'Chrom', 'Start', 'End', 'Database', 'CNV size', 
+                  #                      'Percentage Overlap (%)'),
+                  selection = 'single',
+                  options = list(
+                    columnDefs = list(list(className = 'dt-center',  targets = 0:6))),  rownames= FALSE)
+        
+        
+        
+      }
+      
+
     })
     
     upload_raw <- reactive({
@@ -6038,22 +6370,61 @@ output$func_do  <- renderPlot({
       
     })
     
-    output$df_clinvar <- renderDataTable({
+    
+    output$ui_select_clinvar_gwas <- renderUI({
+      
+       
+      
+      vector_n_dbs <-    split(c('clinvar', 'gwas'), c('ClinVar', 'GWAS'))
+      
+      prettyRadioButtons(
+        inputId = "select_clinvar_gwas",
+        label = '', 
+        choices =  vector_n_dbs,
+        inline = TRUE, 
+        status = "primary",
+        fill = TRUE
+      )
+      
+    })
+    
+    output$df_variants <- renderDataTable({
       
       
-      tmp_df <- running_clinvar() %>% 
-        mutate(id = paste0("<a href='", paste0('https://www.ncbi.nlm.nih.gov/clinvar/variation/', id),"' target='_blank'>", id,"</a>"))
+      if(input$select_clinvar_gwas == 'clinvar') {
+        
+        
+        tmp_df <- running_clinvar() %>% 
+          mutate(id = paste0("<a href='", paste0('https://www.ncbi.nlm.nih.gov/clinvar/variation/', id),"' target='_blank'>", id,"</a>"))
+        
+        
+        
+        datatable(tmp_df, escape = FALSE, colnames = c('Chrom', 'Position','Reference', 'Alternative','Gene','Clinical significance',
+                                                       'Disease Identifier', 
+                                                       'Disease name', 'Clinvar ID'), 
+                  rownames = FALSE
+        )
+        
+        
+        
+      } else {
+        
+        tmp_df <- running_gwas() %>%
+          mutate(pubmed_id = paste0("<a href='", paste0('https://pubmed.ncbi.nlm.nih.gov/', pubmed_id),"' target='_blank'>", pubmed_id,"</a>"))
+        
+        # test0007 <<- tmp_df
+        
+        datatable(tmp_df, 
+                  escape = FALSE,
+                  colnames = c('Chrom', 'Position','Intergenic', 'Disease trait', 'gene', 'Link study'),
+                  rownames = FALSE)
+        
+        
+        
+        
+      }
       
-      
-      
-      datatable(tmp_df, escape = FALSE, colnames = c('Chrom', 'Position','Reference', 'Alternative','Gene','Clinical significance',
-                                                     'Disease Identifier', 
-                                                     'Disease name', 'Clinvar ID'), 
-                rownames = FALSE
-                # options = list(columnDefs = list(list(className = 'dt-center', targets = '_all')))
-                
-                
-                )
+
       
       
     })

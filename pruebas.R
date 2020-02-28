@@ -1,15 +1,59 @@
 
 
 
+library(httr)
 
 
+a <- GET('http://myvariant.info/v1/query?q=chr1:700000-10000000')
 
 #####
 # VENN DIAGRAM 
 #####
 
-test771
 
+test00021 <<- genes_sample
+test00022 <<- hpo_patient
+
+mat_test <- get_profile_sims(ontology = hpo_dbs, profile = test00022, term_sets = test00021,
+                             term_sim_method = 'resnik')
+
+
+information_content <- descendants_IC(hpo_dbs)
+term_sets <- replicate(simplify=FALSE, n=2, expr=minimal_set(hpo_dbs, sample(hpo_dbs$id, size=2)))
+sim_mat <- get_sim_grid(ontology=hpo_dbs, term_sets=term_sets)
+get_sim(sim_mat)
+get_sim_p(mat_test, group=1:2, max_its = 10**7 )
+
+
+
+get_sim_p(pop_sim, group, type, min_its = 1000,
+          max_its = 1e+05, signif = 0.05, log_dismiss = log(1e-06),
+          group_sim = "average")
+
+caca <- function (profile, term_sets, ...) 
+{
+  sims <- get_sym_sim_grid(..., A = term_sets, B = list(profile))
+  setNames(as.numeric(sims), nm = rownames(sims))
+}
+
+caca()
+
+test00021
+test00022
+
+get_profile_sims(ontology = test, profile = test00022, term_sets = test00021,
+                 term_sim_method = 'resnik') 
+
+get_profile_sims(ontology = hpo_dbs, profile = test00022, term_sets = test00021,
+                 term_sim_method = 'resnik') 
+
+for ( i in 1:length(test00021)) {
+
+   get_profile_sims(ontology = hpo_dbs, profile = test00021[[1]], term_sets = list(test00022) ,
+                 term_sim_method = 'resnik') 
+
+print(a)
+}
 get_upset(check_hp_genes())
 
 
