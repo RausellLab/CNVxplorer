@@ -235,10 +235,7 @@ get_sim_score <- function(genes_vector, patient_terms, hpo_list_genes, hpo_dbs) 
   
   
   hpo_patient <- patient_terms[[1]]
-  # names(hpo_patient) <- c('value_patient')  
-  
-  
-  
+
   tmp_df <- hpo_list_genes %>% 
     filter(gene %in% genes_vector) %>%
     select(gene, hp)

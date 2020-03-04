@@ -1157,29 +1157,35 @@ snipre <- snipre %>% select(Gene, SnIPRE.f) %>%
 # ------------------------------------------------------------------------------
 # Dataset: Phenotype terms associated with OMIM diseases
 # Source: https://hpo.jax.org/app/download/annotation
-# Explanation: phenotype_annotation_hpoteam.tab: contains annotations made explicitly 
+# Explanation: phenotype_annotation_hpoteam.tab: contains annotations made explicitly
 # and manually by the HPO-team (mostly referring to OMIM entries)
 # Annotation: https://hpo.jax.org/app/help/annotations
 # ------------------------------------------------------------------------------
 
-# hpo_omim <- read_tsv('/home/cbl02/Storage/data/phenotype_annotation_hpoteam.tab', col_names = FALSE)
-# 
-# hpo_omim <- hpo_omim %>% 
-#   filter(X1 == 'OMIM') %>%
-#   # select(-X2) %>%
-#   select(-X1, -X2, -X10, -X12, -X13, -X14) %>% # remove x1 because all values are omim - change if we include orphanet/omim - the other file
-#   rename(desc = X3, 
-#          pace = X4, 
-#          hpo = X5, 
-#          term = X6, 
-#          evidence = X7, 
-#          onset = X8, 
-#          frequency = X9, 
-#          clinical_modifier = X11) %>%
-#   mutate(desc = str_remove(desc, '[0-9]{6}'),
-#          desc = str_remove(desc, '#'))
 
+# what happens with the evience?
+# what happens with the all frequent - frequent?
+# clinical modifier?
+# onset?
+# make the intersect with the list of omim filtered genes
+# update the list with the account new version from OMIM
+hpo_omim <- read_tsv('/home/cbl02/Storage/data/phenotype_annotation_hpoteam.tab', col_names = FALSE)
 
+hpo_omim <- hpo_omim %>%
+  filter(X1 == 'OMIM') %>%
+  # select(-X2) %>%
+  select(-X1, -X10, -X12, -X13, -X14) %>% # remove x1 because all values are omim - change if we include orphanet/omim - the other file
+  rename(mim_disease = X2,
+         desc = X3,
+         pace = X4,
+         hp = X5,
+         mim_gene = X6,
+         evidence = X7,
+         onset = X8,
+         frequency = X9,
+         clinical_modifier = X11) %>%
+  mutate(desc = str_remove(desc, '[0-9]{6}'),
+         desc = str_remove(desc, '#'))
 # ------------------------------------------------------------------------------
 # Dataset: Gene panel
 # Source: hhttps://panelapp.genomicsengland.co.uk
@@ -1304,13 +1310,16 @@ genes_disgenet <- disgenet %>% select(geneSymbol) %>% distinct() %>% pull()
 # non-SSC Samples	
 # ------------------------------------------------------------------------------
 
-denovo_raw <- read_tsv('/home/cbl02/Storage/data/denovo-db.non-ssc-samples.variants.v.1.6.1.tsv', skip = 1, col_names = TRUE)
+denovo_raw <- read_tsv('/home/cbl02/Storage/data/denovo-db.non-ssc-samples.variants.v.1.6.1.tsv', skip = 1, col_names = TRUE,
+                       col_types = list(Chr = col_character()) )
 
 denovo <- denovo_raw %>% 
   as_tibble() %>%
-  select(Chr, Position, Gene, PrimaryPhenotype, StudyName, PubmedID, FunctionClass) %>%
-  rename(chrom = Chr)
-
+  filter(FunctionClass %in% c('frameshift', 'splice-donor', 'missense', 'stop-gained', 'start-lost', 'splice-acceptor')) %>%
+  select(Chr, Position, Gene, PrimaryPhenotype, StudyName, PubmedID, FunctionClass, CaddScore, LofScore) %>%
+  rename(chrom = Chr) %>%
+  mutate(LofScore = na_if(LofScore, -1)) %>%
+  mutate(CaddScore = na_if(CaddScore, -1))
 
 # ------------------------------------------------------------------------------
 # Dataset: .vcf file
@@ -1412,7 +1421,35 @@ match_hp_mp <- read_tsv('https://raw.githubusercontent.com/obophenotype/upheno/m
 # Description: Input vector chosen by the user (tab - Phenotypic analysis)
 # ------------------------------------------------------------------------------
 
-vector_total_terms <- hpo_dbs$name %>% as_tibble(rownames = 'term') %>%  mutate(term_desc = paste(value, '-', term))
+vector_total_terms <- hpo_dbs$name %>% enframe(name = 'term') %>%  mutate(term_desc = paste(value, '-', term))
+
+# ------------------------------------------------------------------------------
+# Dataset: CiViC
+# Source : https://civicdb.org/releases
+# ------------------------------------------------------------------------------
+
+civic_raw <- read_tsv('https://civicdb.org/downloads/01-Mar-2020/01-Mar-2020-ClinicalEvidenceSummaries.tsv')
+
+civic_raw %>% count(variant_types) %>% arrange(desc(n)) %>% View()
+
+
+variant_summary <- read_tsv('https://civicdb.org/downloads/01-Mar-2020/01-Mar-2020-VariantSummaries.tsv')
+
+
+# ------------------------------------------------------------------------------
+# Dataset: miRNA HGNC
+# Source : https://www.genenames.org/download/statistics-and-files/
+# ------------------------------------------------------------------------------
+
+non_coding_rna <- read_tsv('ftp://ftp.ebi.ac.uk/pub/databases/genenames/new/tsv/locus_types/RNA_micro.txt')
+
+# ------------------------------------------------------------------------------
+# Dataset: COSMIC CNVs
+# ------------------------------------------------------------------------------
+
+non_coding_rna <- read_tsv('ftp://ftp.ebi.ac.uk/pub/databases/genenames/new/tsv/locus_types/RNA_micro.txt')
+
+
 
 
 
