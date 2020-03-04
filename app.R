@@ -1597,7 +1597,7 @@ shiny::shinyApp(
             tablerCard(title = 'Phenotypic similarity score',
                        plotOutput('plot_similarity_genes'),
                        width = 12,
-                       options = tagList(
+                       options = tagList( 
                          
                          prettyRadioButtons(
                            inputId = "select_sim_gene_disease",
