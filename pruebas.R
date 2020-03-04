@@ -11,6 +11,71 @@ a <- GET('http://myvariant.info/v1/query?q=chr1:700000-10000000')
 #####
 
 
+install.packages('pSI')
+
+library(pSI)
+
+################################################
+#read in pSI table from Dougherty lab website. #
+################################################
+
+psi_values<-read.table("http://genetics.wustl.edu/jdlab/files/2015/10/TableS3_NAR_Dougherty_Tissue_gene_pSI_v3.txt",header=T,row.names=1)
+
+##########################################################################################
+#Now you can use the pSI value of a transcript in a tissue to pull out a list of         #  
+#transcripts that are enriched in that tissue. Here I will show an example of how you    #
+#would get a list of transcripts that have a pSI value of less than 0.05 in the brain.   #
+#At 0.05 these will be genes that are enriched in the brain but still might have some    #
+#expression in other tissues as well.                                                    #
+##########################################################################################
+
+brain_genes_0.05<-rownames(psi_values)[which(psi_values$Brain < 0.05)]
+head(brain_genes_0.05)
+
+##########################################################################################
+#If you want a shorter list of genes that are even more specific, simply adjust the      #
+#thresold accordingly.                                                                   #
+##########################################################################################
+
+brain_genes_0.0005<-rownames(psi_values)[which(psi_values$Brain < 0.0005)]
+head(brain_genes_0.0005)
+
+##########################################################################################
+#The new list is shorter, but more specific to the brain.                                #
+##########################################################################################
+
+length(brain_genes_0.05)
+length(brain_genes_0.0005)
+
+##########################################################################################
+#Please reference our work when using this data                                          #
+#http://biorxiv.org/content/early/2015/07/01/021824                                      #
+#Similar lists of transcripts can be derived from cell-type and region specific data in  #
+#the brain using additional data in the pSI.data package, also available on our website  #
+#http://genetics.wustl.edu/jdlab/psi_package/                                            #
+##########################################################################################
+
+
+library(TissueEnrich)
+
+
+gs<-GeneSet(geneIds=inputGenes,organism="Homo Sapiens",geneIdType=SymbolIdentifier())
+output<-teEnrichment(inputGenes = gs)
+
+
+seEnrichmentOutput<-output[[1]]
+enrichmentOutput<-setNames(data.frame(assay(seEnrichmentOutput),row.names = rowData(seEnrichmentOutput)[,1]), colData(seEnrichmentOutput)[,1])
+enrichmentOutput$Tissue<-row.names(enrichmentOutput)
+
+ggplot(enrichmentOutput,aes(x=reorder(Tissue,-Log10PValue),y=Log10PValue,label = Tissue.Specific.Genes,fill = Tissue))+
+  geom_bar(stat = 'identity')+
+  labs(x='', y = '-LOG10(P-Adjusted)')+
+  theme_bw()+
+  theme(legend.position="none")+
+  theme(plot.title = element_text(hjust = 0.5,size = 20),axis.title = element_text(size=15))+
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),panel.grid.major= element_blank(),panel.grid.minor = element_blank())
+
+
 test00021 <<- genes_sample
 test00022 <<- hpo_patient
 
