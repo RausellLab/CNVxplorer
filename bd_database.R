@@ -1098,20 +1098,30 @@ mutate(start = start + 1) %>%
 
 
 # ------------------------------------------------------------------------------
-# Dataset: Essential genes (intersection mgi + invitro (paper: ))
-# Source: Email from Bartha
+# Dataset: Essential genes (mouse model + cell line)
+# Source: https://www.nature.com/articles/s41467-020-14284-2
 # ------------------------------------------------------------------------------
 
-# 3262 genes found it / 3326 total nº genes
-e_mgi <- read.table('/home/cbl02/Storage/data/essential_gene_lists/mgi', header = FALSE,
-                    stringsAsFactors = FALSE) %>% as_tibble()
+# # 3262 genes found it / 3326 total nº genes
+# e_mgi <- read.table('/home/cbl02/Storage/data/essential_gene_lists/mgi', header = FALSE,
+#                     stringsAsFactors = FALSE) %>% as_tibble()
+# 
+# # 1931 genes found it / 2010 total nº genes
+# 
+# e_invitro <- read.table('/home/cbl02/Storage/data/essential_gene_lists/invitro', header = FALSE,
+#                     stringsAsFactors = FALSE) %>% as_tibble()
+# 
+# e_intersect <- e_mgi %>% filter(V1 %in% e_invitro$V1)
 
-# 1931 genes found it / 2010 total nº genes
+# Cellular lethal (CL)
+# Developmental lethal (DL)
+# Subviable (SV)
+# Viable with phenotype (VP)
+# Viable with no phenotype (VN)
 
-e_invitro <- read.table('/home/cbl02/Storage/data/essential_gene_lists/invitro', header = FALSE,
-                    stringsAsFactors = FALSE) %>% as_tibble()
 
-e_intersect <- e_mgi %>% filter(V1 %in% e_invitro$V1)
+
+fusil_score <- read_tsv('https://www.ebi.ac.uk/biostudies/files/S-BSST293/u/SourceDataFile1_FUSIL_bins.txt')
 
 
 
