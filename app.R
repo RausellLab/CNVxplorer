@@ -501,6 +501,7 @@ shiny::shinyApp(
             column(width = 12,
                    
                    tags$hr(),
+                   tags$script(src = "test_script.js"),
                    
                    tablerCard(
                      title = "Comparison CNV size with other CNVs databases (gnomAD, DGV and DECIPHER)",
@@ -546,6 +547,7 @@ shiny::shinyApp(
                    )
                    ),
           fluidRow(
+            
           
             column(width = 12,
                  
@@ -6360,20 +6362,21 @@ output$func_do  <- renderPlot({
       
       test0001 <<- df_overlap_cnvs_running()
       
-      tmp_df <- df_overlap_cnvs_running() %>% filter(source == 'decipher') %>% filter(pathogenicity %in% c('Pathogenic', 'Likely pathogenic'))
+      tmp_df <- df_overlap_cnvs_running() %>% filter(source == 'decipher') %>% 
+        filter(pathogenicity %in% c('Pathogenic', 'Likely pathogenic')) %>%
+        select(id, chrom, start, end, pathogenicity, genotype, variant_class, phenotypes, length_cnv, p_overlap)
       
       
       validate(
         need(nrow(tmp_df) != 0, "No pathogenic CNVs found.")
       )
-      
-      
+
       datatable(tmp_df, escape = FALSE,
-                colnames = c('ID', 'Chrom', 'Start', 'End', 'Database', 'Pathogenicity', 'Genotype', 'Class', 'Phenotype',
+                colnames = c('ID', 'Chrom', 'Start', 'End', 'Pathogenicity', 'Genotype', 'Class', 'Phenotype',
                                      'CNV size', 'Overlap (%)'),
                 selection = 'single',
                 options = list(
-                  columnDefs = list(list(className = 'dt-center',  targets = c(0:7,9,10)))),  rownames= FALSE)
+                  columnDefs = list(list(className = 'dt-center',  targets = c(0:6,8,9)))),  rownames= FALSE)
     })
     
     
