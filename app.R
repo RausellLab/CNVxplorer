@@ -501,7 +501,7 @@ shiny::shinyApp(
             column(width = 12,
                    
                    tags$hr(),
-                   tags$script(src = "test_script.js"),
+                   # tags$script(src = "test_script.js"),
                    
                    tablerCard(
                      title = "Comparison CNV size with other CNVs databases (gnomAD, DGV and DECIPHER)",
@@ -3673,12 +3673,12 @@ shiny::shinyApp(
     
     output$plot_tsea <- renderPlot({
       
-
+      test333 <<- running_tsea() 
+      
       validate(
         need(nrow(running_tsea() %>% filter(Log10PValue > 1.301)) != 0, "0 enriched tissues found.")
       )
       
-      test333 <<- running_tsea() 
     
       
       running_tsea()  %>%
@@ -4717,12 +4717,12 @@ shiny::shinyApp(
       
       df_tmp <- prev_enhancer() 
       df_tmp <- df_tmp %>% select(-score_enh, -score) %>%
-        select(id, gene, everything()) %>%
+        select(id,chrom, start, end, gene, everything()) %>%
         filter(!is.na(inside_cnv))
       test0000 <<- df_tmp
       datatable(df_tmp, rownames = FALSE, filter = 'top', selection = 'single',
-                colnames = c('ID Enhancer', 'Target-gene', 'Chrom',
-                              'Start',  'End', 'Phast100way', 'Phast46way Placental', 'Phast46way Primates','o/e gnomad', 
+                colnames = c('ID Enhancer', 'Chrom',
+                              'Start',  'End','Target-gene', 'Phast100way', 'Phast46way Placental', 'Phast46way Primates','o/e gnomad', 
                              'Gene mapped in CNV'),
                 options = list(
                   pageLength = 5, 
@@ -6179,7 +6179,6 @@ output$func_do  <- renderPlot({
                                   start_coordinates, 
                                   end_coordinates)
       
-      test0012 
       test0012 <<- tmp_df
 
       tmp_df

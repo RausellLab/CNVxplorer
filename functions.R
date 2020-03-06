@@ -1,7 +1,7 @@
 
 # library(GenomicScores)
 select <- dplyr::select
-
+count <- dplyr::count
 # ------------------------------------------------------------------------------
 # Name function: check_tads
 # Description: Check if a specific interval (chrom, start, end) overlap with any TADs limit
