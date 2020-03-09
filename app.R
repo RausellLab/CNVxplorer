@@ -2848,6 +2848,7 @@ shiny::shinyApp(
       tmp_df <- running_pubmed_del()
       tmp_df <- tmp_df %>% 
         left_join(omim_assoc(), by = c('pmid' = 'pubmed_id')) %>%
+        mutate(omim_assoc = paste0("<a href='", paste0('https://www.omim.org/entry/', omim_assoc),"' target='_blank'>", omim_assoc,"</a>")) %>%
         mutate(pmid = paste0("<a href='", paste0('https://pubmed.ncbi.nlm.nih.gov/', pmid),"' target='_blank'>", pmid,"</a>"))
       
       
