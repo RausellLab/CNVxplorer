@@ -1642,7 +1642,7 @@ shiny::shinyApp(
         ),
         tablerTabItem(
           tabName = "model",
-          tablerCard(title = 'Mouse henotypes associated with genes',
+          tablerCard(title = 'Mouse phenotypes associated with genes',
                      plotOutput('agg_model'),
                      width = 12),
           fluidRow(
@@ -1698,7 +1698,9 @@ shiny::shinyApp(
               overflow = TRUE,
               width = 12,
               options = tagList(
+                uiOutput('ui_only_omim'),
                 uiOutput('ui_select_del_dup')
+
                 # switchInput(
                 #   inputId = "enable_omim_papers",
                 #   label = "Articles associated with OMIM?",
@@ -2531,35 +2533,95 @@ shiny::shinyApp(
     })
     
     
-    output$omim_assoc <- renderDataTable({
+    output$ui_only_omim <- renderUI({
       
-      ids_query <- c(query_pubmed_dup()[['ids']], query_pubmed_del()[['ids']])
-      query_link <- entrez_link(db= 'omim', id= ids_query, dbfrom="pubmed")
-      query_link <- query_link$links[['pubmed_omim_calculated']] %>% as.numeric()
       
-      validate(
-        need(query_link != 0, 'No OMIM entries')
+      prettyRadioButtons(
+        inputId = "only_omim",
+        label = "Select one option:", 
+        choices = c("Yes", "No"),
+        inline = TRUE, 
+        status = "primary",
+        fill = TRUE
       )
-      
-      
-      query_tmp <- entrez_summary(db="omim", id= query_link)
-      
-      title <- unname(map_chr(query_tmp, function(x) x[["title"]]))
-      
-
-      
-      
-      tmp_df <- tibble('title' = title,'id_omim' = query_link) %>%
-        mutate(id_omim = paste0("<a href='", paste0('https://www.omim.org/entry/', id_omim),"' target='_blank'>", id_omim,"</a>")) 
-      
-      datatable(tmp_df, escape = FALSE, colnames = c('Title', 'ID OMIM'))
       
       
     })
     
+    
+    
+    # output$omim_assoc <- renderDataTable({
+    #   
+    #   ids_query <- c(query_pubmed_dup()[['ids']], query_pubmed_del()[['ids']])
+    #   test0123456 <<- ids_query
+    #   
+    #   ids_query <- test0123456
+    #   query_link <- entrez_link(db= 'omim', id= ids_query, dbfrom="pubmed", by_id = TRUE)
+    #   query_link <- query_link$links[['pubmed_omim_calculated']] %>% as.numeric()
+    #   
+    #   validate(
+    #     need(query_link != 0, 'No OMIM entries')
+    #   )
+    #   
+    #   
+    #   query_tmp <- entrez_summary(db="omim", id= query_link)
+    #   
+    #   title <- unname(map_chr(query_tmp, function(x) x[["title"]]))
+    #   
+    # 
+    #   
+    #   
+    #   tmp_df <- tibble('title' = title,'id_omim' = query_link) %>%
+    #     mutate(id_omim = paste0("<a href='", paste0('https://www.omim.org/entry/', id_omim),"' target='_blank'>", id_omim,"</a>")) 
+    #   
+    #   datatable(tmp_df, escape = FALSE, colnames = c('Title', 'ID OMIM'))
+    #   
+    #   
+    # })
+    
+    
+    
+    
+    omim_assoc <- reactive({
+      
+      ids_query <- c(query_pubmed_dup()[['ids']], query_pubmed_del()[['ids']])
+
+      query_link <- entrez_link(db= 'omim', id= ids_query, dbfrom="pubmed", by_id = TRUE)
+    
+      test0131311444 <<- query_link
+      # validate(
+      #   need(length(ids_query) != 0, 'No OMIM entries')
+      # )
+      
+      tmp_df <- tibble(pubmed_id = ids_query, omim_assoc = NA)
+      
+      for (i in 1:length(query_link)) {
+        
+        tmp_value <-  query_link[[i]]$links$pubmed_omim_calculated
+        tmp_value <- tmp_value %>% paste(collapse = ' ')
+        
+        if (is.null(tmp_value)) {
+          next
+        } else {
+          
+          tmp_df$omim_assoc[i] <- tmp_value
+          
+        }
+        
+      }
+      
+      tmp_df <- tmp_df %>% separate_rows(omim_assoc, sep = ' ')
+      
+      tmp_df
+    })
+    
+    
+
     output$gene_assoc <- renderDataTable({
       
       ids_query <- c(query_pubmed_del()[['ids']], query_pubmed_dup()[['ids']])
+      
+      test01234 <<- ids_query
       query_link <- entrez_link(db= 'gene', id= ids_query, dbfrom="pubmed")
       test4141 <<- query_link
       query_link <- query_link$links[['pubmed_gene']] %>% as.numeric()
@@ -2775,17 +2837,24 @@ shiny::shinyApp(
       req(running_pubmed_del())
       
       
+      
       if (input$select_del_dup == 'deletions') {
         
+      test1312312321321321312 <<- omim_assoc()
+      test00000000 <<- running_pubmed_del()
+      
+      # test00000000 %>% left_join(test1312312321321321312, by = c('pmid' = 'pubmed_id')) %>% View()
       
       tmp_df <- running_pubmed_del()
-      tmp_df <- tmp_df %>% mutate(pmid = paste0("<a href='", paste0('https://pubmed.ncbi.nlm.nih.gov/', pmid),"' target='_blank'>", pmid,"</a>")) 
+      tmp_df <- tmp_df %>% 
+        left_join(omim_assoc(), by = c('pmid' = 'pubmed_id')) %>%
+        mutate(pmid = paste0("<a href='", paste0('https://pubmed.ncbi.nlm.nih.gov/', pmid),"' target='_blank'>", pmid,"</a>"))
       
       
       
       datatable(tmp_df, rownames = FALSE, filter = 'top', selection = 'single', escape = FALSE,
 
-                colnames = c('Title','First author', 'Last author', 'N°cites','Journal', 'Published date', 'PMID' ),
+                colnames = c('Title','First author', 'Last author', 'N°cites','Journal', 'Published date', 'PMID', 'OMIM entries' ),
                 options = list(
                   pageLength = 5, autoWidth = TRUE, style = 'bootstrap', list(searchHighlight = TRUE),
                   selection = 'single'
@@ -5547,7 +5616,7 @@ output$switch_tads <- renderUI({
       tmp_df <- model_genes_phenotype() %>% 
         count(description) %>% arrange(desc(n))
       
-     if (nrow(test412214214124) > 10) {
+     if (nrow(tmp_df) > 10) {
        
        tmp_df <- tmp_df %>% slice(1:10)
      }
@@ -6429,7 +6498,7 @@ output$func_do  <- renderPlot({
       
       prettyRadioButtons(
         inputId = "select_del_dup",
-        label = '', 
+        label = 'Select one option:', 
         choices =  vector_n_dbs,
         inline = TRUE, 
         status = "primary",

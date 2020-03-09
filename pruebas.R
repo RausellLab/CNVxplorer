@@ -9,7 +9,32 @@ a <- GET('http://myvariant.info/v1/query?q=chr1:700000-10000000')
 #####
 # VENN DIAGRAM 
 #####
+tmp_df <- tibble(pubmed_id = test0123456, omim_assoc = NA)
 
+for (i in 1:length(query_link)) {
+  
+  tmp_value <-  query_link[[i]]$links$pubmed_omim_calculated
+  tmp_value <- tmp_value %>% paste(collapse = ' ')
+  
+  if (is.null(tmp_value)) {
+    next
+  } else {
+    
+    tmp_df$omim_assoc[i] <- tmp_value
+    
+  }
+
+}
+
+tmp_df <- tmp_df %>% separate_rows(omim_assoc, sep = ' ') %>% View()
+
+query_link[[1]]$links$pubmed_omim_calculated
+query_link[[1]]$file
+
+a <- GET("http://mygene.info/v3/gene/6407")
+
+
+fromJSON(a %>% as.character())
 
 install.packages('pSI')
 
