@@ -1668,26 +1668,26 @@ shiny::shinyApp(
         ),
         tablerTabItem(
           tabName = "pubmed",
-          fluidRow(
-          tablerCard(
-            title = "OMIM entries associated with the literature ",
-            
-            collapsible = FALSE,
-            closable = FALSE,
-            DTOutput('omim_assoc'),
-            overflow = TRUE,
-            width = 6
-          ),
-          tablerCard(
-            title = "Gene entries associated with the literature ",
-            
-            collapsible = FALSE,
-            closable = FALSE,
-            DTOutput('medgen_assoc'),
-            overflow = TRUE,
-            width = 6
-          )
-          ),
+          # fluidRow(
+          # tablerCard(
+          #   title = "OMIM entries associated with the literature ",
+          #   
+          #   collapsible = FALSE,
+          #   closable = FALSE,
+          #   DTOutput('omim_assoc'),
+          #   overflow = TRUE,
+          #   width = 6
+          # ),
+          # tablerCard(
+          #   title = "Gene entries associated with the literature ",
+          #   
+          #   collapsible = FALSE,
+          #   closable = FALSE,
+          #   DTOutput('medgen_assoc'),
+          #   overflow = TRUE,
+          #   width = 6
+          # )
+          # ),
           fluidRow(
             tablerCard(
               title = "Pubmed articles associated with the region",
@@ -1837,8 +1837,6 @@ shiny::shinyApp(
     
     observeEvent(input$start_analysis, {
 
-      # proxy <- dataTableProxy('dgenes')
-      # clearSearch(proxy)
       shinyjs::reset("dgenes_rows_selected")
       shinyjs::reset("dgenes_rows_all")
       shinyjs::reset("chosen_hp")
@@ -1852,6 +1850,8 @@ shiny::shinyApp(
       shinyjs::reset("enable_path_analysis")
       shinyjs::reset("enable_do_analysis")
       shinyjs::reset("enable_group_go")
+      #
+      shinyjs::reset('only_omim')
     })
     
     
@@ -2538,8 +2538,8 @@ shiny::shinyApp(
       
       prettyRadioButtons(
         inputId = "only_omim",
-        label = "Select one option:", 
-        choices = c("Yes", "No"),
+        label = tags$b("Select articles associated only with OMIM entries:"), 
+        choices = c("No", "Yes"),
         inline = TRUE, 
         status = "primary",
         fill = TRUE
@@ -2585,10 +2585,12 @@ shiny::shinyApp(
     omim_assoc <- reactive({
       
       ids_query <- c(query_pubmed_dup()[['ids']], query_pubmed_del()[['ids']])
-
+      
+      # TMP REMOVE IN A FUTURE!!!
+      ids_query <- ids_query[1:100]
+      
       query_link <- entrez_link(db= 'omim', id= ids_query, dbfrom="pubmed", by_id = TRUE)
     
-      test0131311444 <<- query_link
       # validate(
       #   need(length(ids_query) != 0, 'No OMIM entries')
       # )
@@ -2611,6 +2613,9 @@ shiny::shinyApp(
       }
       
       tmp_df <- tmp_df %>% separate_rows(omim_assoc, sep = ' ')
+
+        
+        
       
       tmp_df
     })
@@ -2836,55 +2841,60 @@ shiny::shinyApp(
       
       req(running_pubmed_del())
       
-      
-      
-      if (input$select_del_dup == 'deletions') {
-        
       test1312312321321321312 <<- omim_assoc()
       test00000000 <<- running_pubmed_del()
       
-      # test00000000 %>% left_join(test1312312321321321312, by = c('pmid' = 'pubmed_id')) %>% View()
+      if (input$select_del_dup == 'deletions') {
+        
+        tmp_df <- running_pubmed_del()
+        
+      } else {
+
+        tmp_df <- running_pubmed_dup()
+
+      }
       
-      tmp_df <- running_pubmed_del()
-      tmp_df <- tmp_df %>% 
-        left_join(omim_assoc(), by = c('pmid' = 'pubmed_id')) %>%
-        mutate(omim_assoc = paste0("<a href='", paste0('https://www.omim.org/entry/', omim_assoc),"' target='_blank'>", omim_assoc,"</a>")) %>%
-        mutate(pmid = paste0("<a href='", paste0('https://pubmed.ncbi.nlm.nih.gov/', pmid),"' target='_blank'>", pmid,"</a>"))
+      test010 <<- tmp_df
       
+      
+      if(input$only_omim == 'Yes') {
+        
+        
+        
+        tmp_df <- tmp_df %>% 
+          select(pmid, everything()) %>%
+          left_join(omim_assoc(), by = c('pmid' = 'pubmed_id')) %>%
+          filter(omim_assoc != '') %>%
+          mutate(omim_assoc = paste0("<a href='", paste0('https://www.omim.org/entry/', omim_assoc),"' target='_blank'>", omim_assoc,"</a>")) %>%
+          # mutate(tmp_col = 'tmp_cols') %>%
+          # pivot_wider(id_cols = pmid, values_from = omim_assoc, names_from = tmp_col) %>%
+          mutate(pmid = paste0("<a href='", paste0('https://pubmed.ncbi.nlm.nih.gov/', pmid),"' target='_blank'>", pmid,"</a>"))
+
+        
+        vector_colnames <- c('PMID', 'Title','First author', 'Last author', 'N°cites','Journal', 'Published date', 'OMIM entries')
+        
+      } else {
+        
+        tmp_df <- tmp_df %>% 
+          mutate(pmid = paste0("<a href='", paste0('https://pubmed.ncbi.nlm.nih.gov/', pmid),"' target='_blank'>", pmid,"</a>"))
+        
+          
+        vector_colnames <- c('PMID', 'Title','First author', 'Last author', 'N°cites','Journal', 'Published date')
+        
+      }
+      
+      test000000300 <<- tmp_df
       
       
       datatable(tmp_df, rownames = FALSE, filter = 'top', selection = 'single', escape = FALSE,
-
-                colnames = c('Title','First author', 'Last author', 'N°cites','Journal', 'Published date', 'PMID', 'OMIM entries' ),
+                
+                colnames = vector_colnames,
                 options = list(
                   pageLength = 5, autoWidth = TRUE, style = 'bootstrap', list(searchHighlight = TRUE),
                   selection = 'single'
                   # columnDefs = list(list(className = 'dt-center', targets = '_all'))
                 ))
-      } else {
-        
-        
-        
-        tmp_df <- running_pubmed_dup()
-        tmp_df <- tmp_df %>% mutate(pmid = paste0("<a href='", paste0('https://pubmed.ncbi.nlm.nih.gov/', pmid),"' target='_blank'>", pmid,"</a>")) 
-        
-        
-        
-        
-        
-        datatable(tmp_df, rownames = FALSE, filter = 'top', selection = 'single', escape = FALSE,
-                  
-                  colnames = c('Title','First author', 'Last author', 'N°cites','Journal', 'Published date', 'PMID' ),
-                  options = list(
-                    pageLength = 5, autoWidth = TRUE, style = 'bootstrap', list(searchHighlight = TRUE),
-                    selection = 'single'
-                    # columnDefs = list(list(className = 'dt-center', targets = '_all'))
-                  ))
-        
-        
-        
-        
-      }
+      
     })
     
     output$abstract_del_pubmed <- renderDataTable({
@@ -6499,7 +6509,7 @@ output$func_do  <- renderPlot({
       
       prettyRadioButtons(
         inputId = "select_del_dup",
-        label = 'Select one option:', 
+        label = tags$b("Select one option:"),   
         choices =  vector_n_dbs,
         inline = TRUE, 
         status = "primary",
