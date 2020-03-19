@@ -2,6 +2,9 @@
 # library(GenomicScores)
 select <- dplyr::select
 count <- dplyr::count
+rename <- dplyr::rename
+slice <- dplyr::slice
+
 # ------------------------------------------------------------------------------
 # Name function: check_tads
 # Description: Check if a specific interval (chrom, start, end) overlap with any TADs limit
@@ -176,7 +179,7 @@ get_upset <- function(df, gene = FALSE) {
   
 
   # df <- test41114
-  
+  df <- test666
   
   df_tmp <- df %>% 
     dplyr::select(term) %>%
@@ -198,7 +201,8 @@ get_upset <- function(df, gene = FALSE) {
   
   for (i in 1:length(vector_hpo)) {
     
-    list_result[[i]] <- df %>% filter(term == !!vector_hpo[i]) %>% pull(gene) %in% vector_genes %>% which()
+    order_genes <- df %>% filter(term == !!vector_hpo[i]) %>% pull(gene)
+    list_result[[i]] <-vector_genes %in%  order_genes %>% which()
     names(list_result)[i] <- vector_hpo[i]
     
   }

@@ -3267,8 +3267,9 @@ shiny::shinyApp(
     
     running_upset_disease <- reactive({
       
+      test13133334 <<- data_selected()
       
-      test41114 <<- data_selected() %>% 
+      uspset_df <- data_selected() %>% 
         select(-start_position, -end_position, -chrom) %>%
         filter(source == 'CNV') %>%
         filter(disease == 'Yes') %>%
@@ -3283,12 +3284,14 @@ shiny::shinyApp(
                term = str_replace(term, 'omim', 'OMIM'),
                term = str_replace(term, 'clingen', 'CLINGEN'))
 
+      test666 <<- uspset_df
+      uspset_df
     })
     
     
     output$plot_upset_disease <- renderPlot({
       
-      
+      # get_upset(test666, gene = TRUE)
       get_upset(running_upset_disease(), gene = TRUE)
       
       
@@ -3310,7 +3313,7 @@ shiny::shinyApp(
         select(-start_position, -end_position, -chrom) %>%
         filter(source == 'CNV') %>%
         select(-source) %>%
-        select(band, gene, disease, orphanet, dev, fda, omim, fda, gwas, p_overlap) %>%
+        select(band, gene, disease, orphanet, dev, fda, clingen, omim, fda, gwas, p_overlap) %>%
         filter(disease == 'Yes')
         # mutate(n_evidences = sample(1:4, n(), replace = TRUE)) %>%
         # select(band, gene, n_evidences)
