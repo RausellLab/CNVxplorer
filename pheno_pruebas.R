@@ -7,76 +7,24 @@ library(GOSemSim)
 
 
 
-go_test <- ontologyIndex::get_OBO('http://purl.obolibrary.org/obo/go.obo')
-
-get_descendants(go_test, 'GO:0045737')
-
-library(GOSemSim)
-
-hsGO <- godata('org.Hs.eg.db', ont="MF")
-
 ##
 
 
 
 
-
-# Read .obo file
-# Source: http://purl.obolibrary.org/obo/hp.obo
-
-hpo_down <- ontologyIndex::get_OBO('http://purl.obolibrary.org/obo/hp.obo')
-
-genes_sample <- replicate(simplify=FALSE, n= 2, expr=minimal_set(hpo_down, sample(hpo_down$id, size= 5)))
-names(genes_sample) <- paste0('gene', seq(1,2))
-
-hpo_patient <- replicate(simplify=FALSE, n=1, expr=minimal_set(hpo_down, sample(hpo_down$id, size= 10)))
-names(hpo_patient) <- c('patient1')
-
-total_set <- c(genes_sample, hpo_patient)
-
-
-c('HP:0025013', 'HP:0003791')
-
-# Calculate Resnik
-
-anc_1 <- hpo_down$ancestors['HP:0025013'][[1]]
-anc_2 <- hpo_down$ancestors['HP:0003791'][[1]]
-anc_int <- intersect(anc_1, anc_2)
-
-desc_term <- hpo_down$children['HP:0000118'][[1]]
   
-resnik_value <- -log(length(get_descendants(hpo_down, 'HP:0000118')) / length(hpo_down$id))
-  
-# Calculate Lin 
-
-ic_1 <- -log(length(get_descendants(hpo_down, 'HP:0025013')) / length(hpo_down$id))
-ic_2 <- -log(length(get_descendants(hpo_down, 'HP:0003791')) / length(hpo_down$id))
-
-lin_value <- 2 * (resnik_value / (ic_1 + ic_2))
-
-get_sim_grid(ontology = hpo_down, 
-                         term_sets = total_set,
-                         term_sim_method = 'lin',
-                         combine = 'average')
-
-
-get_profile_sims(ontology = hpo_down, profile = hpo_patient, term_sets = genes_sample,
-                 term_sim_method = 'resnik')
-
-ddd <- read_tsv('/home/cbl02/Desktop/ddd169_phenotypes.tsv') %>%
+ddd <- read_tsv('C:/Users/Requena/Desktop/ddd169_phenotypes.tsv') %>%
   mutate(child_hpo = child_hpo %>% str_replace_all('\\|', ', ') %>% str_split(', ')) %>%
   rename(hpo_list = child_hpo)
 
 
-official_symbols_omim <- hgcn_genes %>% select(gene) %>% filter(gene %in% dev_genes) %>% pull()
-
-ddd <- ddd %>% filter(causal_gene %in% official_symbols_omim)
 
 
-hpoa <- hpo_genes %>% filter(gene %in% official_symbols_omim)
 
-total_genes <- base::split(hpoa$hp, hpoa$gene)
+total_genes <- base::split(hpo_genes$hp, hpo_genes$gene)
+
 counter = 0
+
 df_result <- tibble(id_patient = 'NA', rank_resnik_avg = NA, rank_lin_avg = NA)
 
 for (i in 1:nrow(ddd)) {
@@ -85,7 +33,7 @@ for (i in 1:nrow(ddd)) {
   patient_id <- ddd$patient_ID[i]
   hpo_list <- ddd$hpo_list[i]
   
-  not_included <- hpo_list[[1]][!hpo_list[[1]] %in% hpo_down$id]
+  not_included <- hpo_list[[1]][!hpo_list[[1]] %in% hpo_dbs$id]
   any_dup <- hpo_list[duplicated(hpo_list)]
   
   if (length(not_included) > 0) {
@@ -99,19 +47,23 @@ for (i in 1:nrow(ddd)) {
   
 
 
-  tmp_result <- get_profile_sims(ontology = hpo_down, profile = ddd$hpo_list[i], term_sets = total_genes,
+  tmp_result <- get_profile_sims(ontology = hpo_dbs, profile = ddd$hpo_list[i], term_sets = total_genes,
                  term_sim_method = 'resnik')
 
-  output_resnik <- tmp_result %>% as_tibble(rownames = 'gene') %>%
+  output_resnik <- tmp_result %>% 
+    enframe() %>%
+    rename(gene = name) %>%
     arrange(desc(value)) %>%
     mutate(rank = row_number()) %>%
     filter(gene == causal_gene) %>%
     pull(rank)
   
-  tmp_result <- get_profile_sims(ontology = hpo_down, profile = ddd$hpo_list[i], term_sets = total_genes,
+  tmp_result <- get_profile_sims(ontology = hpo_dbs, profile = ddd$hpo_list[i], term_sets = total_genes,
                                  term_sim_method = 'lin')
   
-  output_lin <- tmp_result %>% as_tibble(rownames = 'gene') %>%
+  output_lin <- tmp_result %>% 
+    enframe() %>%
+    rename(gene = name) %>%
     arrange(desc(value)) %>%
     mutate(rank = row_number()) %>%
     filter(gene == causal_gene) %>%
@@ -135,7 +87,7 @@ tmp2 <- df_result %>%
     rank_resnik_avg <= 250 ~ 'top_250',
     rank_resnik_avg <= 300 ~ 'top_300',
     rank_resnik_avg <= 350 ~ 'top_350',
-    rank_lin_avg > 350 ~ 'total'
+    rank_resnik_avg > 350 ~ 'total'
     
 ),
 top_lin = case_when(
@@ -154,7 +106,11 @@ my_order <- c('top_50', 'top_100', 'top_150', 'top_200', 'top_250', 'top_300', '
 
 tmp_resnik <- tmp2 %>%
   count(top_resnik) %>%
-  na.omit() %>%
+  right_join(tibble(top_resnik = my_order, n = rep(0, 8)), by = 'top_resnik') %>%
+  select(-n.y) %>%
+  rename(n = n.x) %>%
+  replace_na(list(n = 0)) %>%
+  arrange(match(top_resnik, my_order)) %>%
   mutate(perc_resnik = n / sum(n) * 100) %>%
   select(top_resnik, perc_resnik) %>%
   mutate(cum_resnik = cumsum(perc_resnik))
@@ -163,14 +119,17 @@ tmp_resnik <- tmp2 %>%
 
 tmp_lin <- tmp2 %>%
   count(top_lin) %>%
+  right_join( tibble(top_lin = my_order, n = rep(0, 8)), by = 'top_lin') %>%
+  select(-n.y) %>%
+  rename(n = n.x) %>%
+  replace_na(list(n = 0)) %>%
+  arrange(match(top_lin, my_order)) %>%
   mutate(perc_lin = n / sum(n) * 100) %>%
   select(top_lin, perc_lin) %>%
   arrange(match(top_lin, my_order)) %>%
   mutate(cum_lin = cumsum(perc_lin))
   
-# resnik method = 1.234995
-# HP:0005289
-# HP:0004438
+
 
 tmp_resnik %>%
   left_join(tmp_lin, by = c('top_resnik' = 'top_lin')) %>%
@@ -183,6 +142,64 @@ tmp_resnik %>%
   ggtitle('Performance with different similarity measures') +
   theme_bw()
   
+
+
+
+jaccard_mp <- read_csv('D:/mp-hp-mappings/upheno_equivalence_model_jaccard.csv')
+
+jaccard_mp <- jaccard_mp %>%
+  mutate(c1 = str_remove(c1, '<http://purl.obolibrary.org/obo/'),
+         c2 = str_remove(c2, '<http://purl.obolibrary.org/obo/')) %>%
+  mutate(c1 = str_remove(c1, '>')) %>%
+  mutate(c2 = str_remove(c2, '>')) %>%
+  mutate(c1 = str_replace(c1,'_', ':')) %>%
+  mutate(c2 = str_replace(c2,'_', ':')) %>%
+  rename(mp = c1, hp = c2) %>%
+  select(-contains('label'))
+
+
+mgi_tmp <-  mgi %>% separate(pheno, into = LETTERS[1:230], sep = ' ') %>%
+  gather('delete', 'mpo_id', -gene, -entrez_id, -gene_mouse, -mgi) %>%
+  filter(mpo_id != '') %>%
+  select(gene, mpo_id) %>%
+  filter(gene %in% (hpo_genes$gene %>% unique()))
+
+
+ddd_mg <- ddd %>% filter(causal_gene %in% (mgi_tmp %>% pull(gene) %>% unique()))
+
+total_genes_mp <- base::split(mgi_tmp$mpo_id, mgi_tmp$gene)
+
+
+
+hpo_list <- hpo_list[[1]]
+
+empty_v <- c()
+
+for (i in 1:length(total_genes_mp)){
+
+tmp_gene <- total_genes_mp[[i]]
+print(i)
+
+jeje <- jaccard_mp %>%
+  filter(hp %in% hpo_list,
+         mp %in% tmp_gene) %>%
+  nrow()
+empty_v <- c(empty_v, jeje)
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 get_sim_score <- function(genes_vector, patient_terms) {

@@ -1,6 +1,237 @@
 
 
 
+#### TO ANTONIO #####
+
+library(tidyverse)
+library(readxl)
+
+# Email 23/03/20
+table_sup <- read_excel('C:/Users/Requena/Desktop/SupTable1.xlsx', col_names = TRUE, skip = 1, 
+                        col_types = c('text'))
+  
+
+# Source: ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh37/archive_2.0/2020/
+# Genome build GRCh37
+clinvar_raw <- read_tsv('C:/Users/Requena/Desktop/clinvar_20200302.vcf', skip = 27, 
+                        col_types = list(`#CHROM` = col_character()))
+
+clinvar_variants <- clinvar_raw %>%
+  mutate(clinical_sign = str_extract(INFO, 'CLNSIG([^;]+)')) %>%
+  mutate(clinical_sign = str_remove(clinical_sign, 'CLNSIG=')) %>%
+  mutate(gene = str_extract(INFO, 'GENEINFO([^:]+)')) %>% 
+  mutate(gene = str_remove(gene, 'GENEINFO=')) %>%
+  mutate(rs_id = str_extract(INFO, 'RS([^:]+)')) %>% 
+  mutate(rs_id = str_remove(rs_id, 'RS=')) %>%
+  mutate(disease_name = str_extract(INFO, 'CLNDN([^;]+)')) %>%
+  mutate(disease_name = str_remove(disease_name, 'CLNDN=')) %>%
+  rename(CHR = `#CHROM`) %>%
+  select(-INFO, -QUAL, -FILTER) %>%
+  mutate(rs_id = paste0('rs', rs_id))  %>%
+  mutate(POS = as.character(POS))
+
+
+output_table <- table_sup %>%
+  # select(CHR, POS, REF, ALT, rsID_ExAC, rsID_GnomAD) %>%
+  left_join(clinvar_variants %>% select(rs_id, clinical_sign) %>% 
+              rename(from_exac_rsid = clinical_sign) , 
+            by = c('rsID_ExAC' = 'rs_id')) %>%
+  left_join(clinvar_variants %>% select(rs_id, clinical_sign) %>% rename(from_gnomad_rsid = clinical_sign) , 
+            by = c('rsID_GnomAD' = 'rs_id')) %>%
+  left_join(clinvar_variants %>% select(CHR, POS, REF, ALT, clinical_sign, disease_name)%>% 
+              rename(from_coord = clinical_sign), by = c('CHR', 'POS', 'REF', 'ALT')
+            )
+
+
+output_table %>% write_tsv('SupTable1_mod.tsv')
+
+library(httr)
+
+
+test_api <- GET(a, )
+#####
+
+
+arules_input <- read_tsv('C:/Users/Requena/Desktop/decipher-cnvs-grch37-2020-01-19.txt', skip = 1) %>%
+  as_tibble() %>%
+  mutate(source = 'decipher') %>%
+  rename(id = `# patient_id`, chrom = chr) %>%
+  mutate(id = as.character(id)) %>%
+  filter(pathogenicity %in% c('Pathogenic')) %>%
+  mutate(phenotypes = str_replace_all(phenotypes, '\\|', '<br>')) %>% 
+  filter(inheritance == 'De novo constitutive') %>%
+  filter(variant_class %in% c('Deletion', 'Duplication'))
+
+
+dup_ids <- arules_input %>% count(id)  %>% filter(n > 1) %>% pull(id)
+
+arules_input <- arules_input %>% filter(!id %in% dup_ids)
+
+arules_result <- tibble()
+hgcn_genes2 <- hgcn_genes %>% rename(start = start_position, end = end_position)
+
+
+for (i in 1:nrow(arules_input)) {
+  
+  
+  print(i)
+  tmp_id <- arules_input %>% slice(i) %>% pull(id)
+  tmp_chrom <- arules_input %>% slice(i) %>% pull(chrom)
+  tmp_start <- arules_input %>% slice(i) %>% pull(start)
+  tmp_end <- arules_input %>% slice(i) %>% pull(end)
+  
+  
+  tmp_cnv <- tibble(chrom = tmp_chrom, start = tmp_start, end = tmp_end)
+  
+  
+  tmp_overlap_genes <- bed_intersect(tmp_cnv,hgcn_genes2 ) %>% pull(gene.y)
+  
+  
+  
+  arules_df_tmp <- tibble(id = tmp_id, value = NA,  genes = hgcn_genes2 %>% pull(gene) ) %>%
+    mutate(value = if_else(genes %in% tmp_overlap_genes, 1, 0)) %>%
+    filter(value > 0)
+  
+  arules_result <- arules_result %>% bind_rows(arules_df_tmp)
+}
+
+
+arules_sparse <- arules_result  %>% pivot_wider(id_cols = id, names_from = genes, values_from = value, 
+                                                values_fill = list(value = 0)) %>%
+  mutate_if(is.double, as.factor)
+
+arules_sparse  <- as(arules_sparse, "transactions") 
+
+
+
+apriori_test <- apriori(arules_sparse, parameter = list(support = 0.1, confidence = 0.5, minlen = 2))
+
+arules_sparse <- arules_sparse %>% left_join(cnv_df %>% select(id, pathogenicity))
+arules_sparse <- arules_sparse %>% mutate(pathogenicity = as.factor(pathogenicity))
+
+model_cba <- arulesCBA::CBA(pathogenicity ~ ., 
+                            data = arules_sparse , minlen
+                            support = 0.001, confidence = 0.8)
+
+inspect(rules(model_cba))
+
+
+# ------------------------------------------------------------------------------
+# mirtarbase
+# version 8
+# ------------------------------------------------------------------------------
+
+
+vector_colnames <- c('id', 'name','specie_mirna', 'gene_symbol', 'gene_entrezid', 'specie_target', 'experiment', 'support_type',
+                     'references')
+
+mirna_raw <- read_excel('C:/Users/Requena/Desktop/miRTarBase_MTI.xlsx', 
+                      col_names = vector_colnames, skip = 1)
+
+
+mirna <- mirna_raw %>%
+  filter(specie_mirna == 'Homo sapiens' & specie_target == 'Homo sapiens') %>%
+  filter(support_type == 'Functional MTI') %>%
+  select(-support_type, -specie_mirna , -specie_target)
+
+mirna_coord <- read_tsv('C:/Users/Requena/Desktop/hsa.gff3', skip = 13, col_names = LETTERS[1:9]) %>% 
+  mutate(name = str_extract(I, 'Name=[^;]*')) %>%
+  mutate(name = str_remove(name, 'Name=')) %>%
+  # mutate(name = tolower(name)) %>%
+  # filter(C == 'miRNA_primary_transcript') %>%
+  select(A, D, E, name) %>%
+  rename(chrom = A, start = D, end = E) %>%
+  mutate(start = start - 1) # Convert to 0-based input liftover
+
+# Failed 7 coordinates
+# Final result: 4794 coordinates
+
+# mirna_coord %>% write_tsv('test_liftover_mirna.tsv', col_names = FALSE)
+from_liftover <- read_tsv('C:/Users/Requena/Desktop/hglft_genome_3633f_8e5a50.bed', 
+                          col_names = c('chrom', 'start', 'end', 'name')) %>%
+  mutate(start = start + 1) %>% distinct()
+
+mirtarbase <- mirna %>% 
+  left_join(from_liftover, by = 'name') %>%
+  # select(chrom, start, end) %>%
+  select(id, name, chrom, start, end, gene_symbol, experiment, references) %>%
+  na.omit()
+
+
+
+# ------------------------------------------------------------------------------
+# GGRADAR
+# ------------------------------------------------------------------------------
+
+library(plotly)
+library(datapasta)
+library(ontologyIndex)
+
+
+vector_main_hpo <- c("Abnormality of the skeletal system", "Abnormality of limbs", "Abnormality of the nervous system", "Abnormality of metabolism/homeostasis", "Abnormality of head or neck", "Abnormality of the cardiovascular system", "Abnormality of the eye", "Abnormality of the genitourinary system", "Abnormality of the integument", "Abnormality of the immune system", "Abnormality of the digestive system", "Abnormality of blood and blood-forming tissues", "Neoplasm", "Abnormality of the musculature", "Abnormality of the respiratory system", "Abnormality of the endocrine system", "Abnormality of the ear", "Abnormal cellular phenotype", "Abnormality of connective tissue", "Abnormality of prenatal development or birth", "Growth abnormality", "Constitutional symptom", "Abnormality of the breast", "Abnormality of the voice", "Abnormality of the thoracic cavity")
+
+
+anato_df <- tibble(value = vector_main_hpo) %>% left_join(enframe(hpo_dbs$name), by = 'value') %>%
+  rowwise() %>%
+                    mutate(value = str_remove(value, 'Abnormality of the '),
+                           value = str_remove(value, 'Abnormality of '),
+                           value = paste(toupper(substring(value, 1,1)), substring(value, 2), 
+                                         sep="", collapse=" ")) %>% ungroup()
+  
+
+hpo_from_gene <- hpo_genes %>% filter(gene == 'GJB3') %>% pull(hp)
+hpo_from_patient <- test1918
+
+from_gene <- unlist(map(hpo_from_gene, function(x) get_ancestors(hpo_dbs, x))) %>% 
+  enframe() %>%
+  filter(value %in% anato_df$name) %>%
+  count(value) %>% 
+  arrange(desc(n)) %>%
+  rename(gene = n, name = value)
+
+
+from_patient <- unlist(map(hpo_from_patient, function(x) get_ancestors(hpo_dbs, x))) %>% 
+  enframe() %>%
+  filter(value %in% anato_df$name) %>%
+  count(value) %>% 
+  arrange(desc(n)) %>%
+  rename(patient = n, name = value)
+
+
+radar_df <- anato_df %>% left_join(from_gene, by = 'name') %>%
+  left_join(from_patient,  by = 'name') %>%
+  replace_na(list("gene" = 0, "patient" = 0)) %>%
+  select(-name) %>%
+  pivot_longer(names_to = 'class', values_to = 'valuae', cols = -value) %>%
+  ggplot(aes(x = value, y = valuae)) +
+  geom_col(aes(fill = class), position = 'dodge', color = 'black') +
+  theme_ipsum() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  ggtitle('Phenotypic abnormalities') +
+  labs( y = 'Number of HPO terms', title = 'Phenotypic abnormalities', x = NULL)
+  
+  
+
+
+
+# ------------------------------------------------------------------------------
+# HGMD database
+# ------------------------------------------------------------------------------
+
+library(RMySQL)
+
+
+test <- DBI::dbConnect(RMySQL::MySQL(),
+                       host = '10.200.27.108',
+                       user = 'cbl',
+                       dbname = 'hgmd_pro-2019.4',
+                       password = 'hgmdcbl')
+
+dbListTables(test)
+a <- dbGetQuery(test, "SELECT * FROM allmut")
+test_50 <- a %>% as_tibble() %>%  mutate(length = endCoord - startCoord + 1) %>% filter(length > 50)
+
+
 library(httr)
 
 

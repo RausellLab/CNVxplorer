@@ -63,14 +63,18 @@ library(tidyverse)
 # 18. decipher_control_raw
 # 19. dgv_df_raw
 # 20. vector_total_terms (Dataframe of term - description - term_description)
+# 21. anato_df (Anatomies entities: description - term)
+# 22. mirtarbase - miRNA database + coordinates from miRbase
+# vector_inheritance - Terms associated with mode of inheritances
 source('functions.R')
-load('local_data.RData')
+# load('local_data.RData')
 
 
 # invisible(lapply(paste0('package:', names(sessionInfo()$otherPkgs)), detach, character.only=TRUE, unload=TRUE))
 # file.remove('local_data.RData')
 # save(hgcn_genes, df_enhancers, lncrna_coord, lncrna, tad, gtex, hpa, hpo_genes, cnv_df, vector_total_terms,
-#      gnomad_sv_raw, decipher_control_raw, dgv_df_raw, hpo_omim,
+#      gnomad_sv_raw, decipher_control_raw, dgv_df_raw, hpo_omim, anato_df, mirtarbase,
+#       vector_inheritance,
 #     select, dev_raw, panel_total, omim, orphanet_raw,  hpo_dbs, model1, denovo, clinvar_variants, ridges_home, plot_p100, plot_p46pla, blacklist_encode, mp_ontology, gwas_variants,mgi, syndromes_total, file = "local_data.RData")
 
 
@@ -96,6 +100,8 @@ theme_fancy <- function() {
 human_chrom <- list('chr1' = 1, 'chr2' = 2,'chr3' = 3,'chr4' = 4,'chr5' = 5,'chr6' = 6,'chr7' = 7,'chr8' = 8,'chr9' = 9,'chr10' = 10,'chr11' = 11,'chr12' = 12,'chr13' = 13,
                             'chr14' = 14,'chr15' = 15,'chr16' = 16,'chr17' = 17,'chr18' = 18,'chr19' = 19, 'chr20' = 20, 'chr21' = 21,  'chr22' = 22,
                             'chrX' = 'X','chrY' = 'Y')
+
+
 
 # hg_cytoBandIdeo <- chromPlot::hg_cytoBandIdeo
 
@@ -504,7 +510,8 @@ shiny::shinyApp(
                    # tags$script(src = "test_script.js"),
                    
                    tablerCard(
-                     title = "Comparison CNV size with other CNVs databases (gnomAD, DGV and DECIPHER)",
+                     title = "Comparison CNV size with other CNVs databases (gnomAD, DGV, 
+                     DECIPHER, DECIPHER Control)",
                      plotOutput('plot_size'),
                      width = 12,
                      overflow = TRUE,
@@ -1369,7 +1376,12 @@ shiny::shinyApp(
                        uiOutput('ui_tad'),
                        uiOutput('switch_tads')
                      )),
-          tablerCard(title = 'Long noncoding RNA (lncRNA) disrupted',
+          tablerCard(title = 'micro-RNAs (miRNAs) disrupted',
+                     DTOutput('df_mirna'),
+                     collapsible = FALSE,
+                     closable = FALSE,
+                     width = 12),
+          tablerCard(title = 'Long noncoding RNAs (lncRNAs) disrupted',
                      DTOutput('lncrna_df'),
                      collapsible = FALSE,
                      closable = FALSE,
@@ -1549,6 +1561,12 @@ shiny::shinyApp(
               choiceValues = vector_total_terms$term
             ),
             options = tagList(
+              selectizeInput(inputId = 'input_in19heritance', 
+                             label = '', 
+                             choices = vector_inheritance,
+                             selected = NULL, 
+                             multiple = FALSE,
+                             options = NULL),
               actionBttn(
                 inputId = "reset_pheno_analysis",
                 label = "Reset",
@@ -1572,11 +1590,24 @@ shiny::shinyApp(
             ), 
             column(width = 4,
             uiOutput('n_hp_chosen'),
+            tablerCard(title = 'Mode of inheritance',
+                       width = 12,
+                       selectizeInput(inputId = 'input_inheritance', 
+                                      label = '', 
+                                      choices = vector_inheritance,
+                                      selected = NULL, 
+                                      multiple = FALSE,
+                                      options = NULL)
+                       
+            ),
             tablerCard(title = 'Suggested phenotype terms',
                        width = 12,
                        DTOutput('suggest_df')
                        
             )),
+            tablerCard(title = 'Phenotypic abnormalities',
+                       plotOutput('plot_anatomy'),
+                       width = 12),
             column(width = 12,
             fluidRow(width = 12,
             tablerCard(title = 'Genes with HPO terms',
@@ -1622,9 +1653,9 @@ shiny::shinyApp(
             # tablerCard(title = 'Genes associated with the phenotype terms',
             #            DTOutput('test_hpo'),
             #            width = 12),
-            tablerCard(title = 'Intersection of phenotype terms',
-                       plotOutput('plot_upset'),
-                       width = 12)
+            # tablerCard(title = 'Intersection of phenotype terms',
+            #            plotOutput('plot_upset'),
+            #            width = 12)
             # width = 6
             # ),
             # tablerCard(title = 'Select a gene:',
@@ -1844,6 +1875,8 @@ shiny::shinyApp(
       shinyjs::reset("start_analysis")
       #
       shinyjs::reset('enhancers_on_off')
+      shinyjs::reset('data_selected_enhancers')
+      
       shinyjs::reset('tads_on_off')
       #
       shinyjs::reset("enable_func_analysis")
@@ -2329,6 +2362,13 @@ shiny::shinyApp(
       disease_genes_selected <- hpo_omim %>% 
         filter(mim_disease %in% input_mim_disease) %>%
         select(mim_disease, hp) 
+      
+      if (input$input_inheritance != 'Any') {
+        
+        disease_genes_selected <- disease_genes_selected %>%
+          filter(!mim_disease %in% input$input_inheritance)
+        test007 <<- disease_genes_selected
+      }
         
       disease_genes_selected <- base::split(disease_genes_selected$hp, disease_genes_selected$mim_disease)
       hpo_selected  <- list(input$chosen_hp)
@@ -2366,13 +2406,13 @@ shiny::shinyApp(
         pageLength = 5))
     })
     
-    output$plot_upset <- renderPlot({
-      
-      test771 <<- check_hp_genes()
-    get_upset(check_hp_genes())
-      
-      
-    })
+    # output$plot_upset <- renderPlot({
+    #   
+    #   test771 <<- check_hp_genes()
+    # get_upset(check_hp_genes())
+    #   
+    #   
+    # })
     
     output$n_hp_chosen <- renderUI({
 
@@ -4566,6 +4606,57 @@ shiny::shinyApp(
     })
     
     
+    mirna_raw <- reactive({
+      
+      req(input$start_analysis > 0)
+      
+      
+      start_coordinates <- as.numeric(coord_user()[1])
+      end_coordinates <- as.numeric(coord_user()[2])
+      chrom_coordinates <- coord_user()[3]
+      
+      
+      # start_coordinates <- 1
+      # end_coordinates <- 36278623
+      # chrom_coordinates <- '1'
+  
+      data_tmp <- mirtarbase %>% 
+        filter(chrom == chrom_coordinates) %>%
+        rowwise() %>%
+        mutate(keep = c(start, end) %overlaps% c(start_coordinates, end_coordinates)) %>%
+        filter(keep == TRUE) %>%
+        select(-keep) %>%
+        ungroup() 
+      
+      
+    })
+    
+    
+    
+    output$df_mirna <- renderDataTable({
+    
+      
+      tmp_df <- mirna_raw() %>%
+        mutate(references = paste0("<a href='", paste0('https://pubmed.ncbi.nlm.nih.gov/', references),
+                                   "' target='_blank'>", references,"</a>")) %>%
+        mutate(name = paste0("<a href='", paste0('http://www.mirbase.org/textsearch.shtml?q=', name),
+                                   "' target='_blank'>", name,"</a>")) %>%
+        mutate(id = paste0("<a href='", paste0('http://mirtarbase.cuhk.edu.cn/php/detail.php?mirtid=', id),
+                             "' target='_blank'>", id,"</a>"))
+        
+
+        
+      
+      
+      datatable(tmp_df, rownames = FALSE, escape = FALSE,
+                colnames = c('ID', 'Name', 'Chrom', 'Start', 'End',
+                                          'Target-gene', 'Validation experiment', 'Reference'))
+      
+      
+      
+    })
+    
+    
     lncrna_raw <- reactive({
       
       req(input$start_analysis > 0)
@@ -4586,6 +4677,8 @@ shiny::shinyApp(
       
       
     })
+    
+
     
     output$lncrna_df <- renderDataTable({
       
@@ -5427,6 +5520,64 @@ output$switch_tads <- renderUI({
     #   
     #   
     # })
+    
+    output$plot_anatomy <- renderPlot({
+      
+      
+      validate(
+        need(input$hpo_filter_genes_rows_selected != '', "Please, select a gene.")
+      )
+      
+      
+      selected_gene <- hpo_filter() %>%
+        count(gene) %>%
+        slice(input$hpo_filter_genes_rows_selected) %>%
+        select(gene) %>%
+        pull(gene)
+      
+      
+      
+      hpo_from_gene <- hpo_genes %>% filter(gene == selected_gene) %>% pull(hp)
+      hpo_from_patient <- input$chosen_hp
+      
+      from_gene <- unlist(map(hpo_from_gene, function(x) get_ancestors(hpo_dbs, x))) %>% 
+        enframe() %>%
+        filter(value %in% anato_df$name) %>%
+        count(value) %>% 
+        arrange(desc(n)) %>%
+        rename(gene = n, name = value) %>%
+        mutate(name = as.character(name))
+      
+      
+      from_patient <- unlist(map(hpo_from_patient, function(x) get_ancestors(hpo_dbs, x))) %>% 
+        enframe() %>%
+        filter(value %in% anato_df$name) %>%
+        count(value) %>% 
+        arrange(desc(n)) %>%
+        rename(patient = n, name = value) %>%
+        mutate(name = as.character(name))
+      
+      
+      radar_df <- anato_df %>% 
+        left_join(from_gene, by = 'name') %>%
+        left_join(from_patient,  by = 'name') %>%
+        replace_na(list("gene" = 0, "patient" = 0)) %>%
+        select(-name) %>%
+        pivot_longer(names_to = 'class', values_to = 'valuae', cols = -value) %>%
+        ggplot(aes(x = value, y = valuae)) +
+        geom_col(aes(fill = class), position = 'dodge', color = 'black') +
+        theme_ipsum() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+        labs( y = 'Number of HPO terms', 
+              # title = 'Phenotypic abnormalities', 
+              x = NULL)
+      
+      
+      radar_df
+      
+      
+      
+    })
     
     
     output$plot_similarity_genes <- renderPlot({

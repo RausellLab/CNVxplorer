@@ -8,6 +8,8 @@ library(tidyverse)
 library(clusterProfiler)
 library(data.table)
 select <- dplyr::select
+rename <- dplyr::rename
+
 
 
 # TODO
@@ -138,6 +140,10 @@ ref_scores <- tibble(score = c('gwas', # we could filter out by number of hits (
 
 
 # Load datasets
+
+## ADDED IN MADRID
+
+# mirtarbase
 
 # ------------------------------------------------------------------------------
 # Dataset: Protein-coding genes with HGCN symbol 
@@ -395,6 +401,7 @@ omim_filtered <- read_tsv('/home/cbl02/Storage/data/matched_genes_all_pheno.tsv'
 omim <- omim_filtered %>%
   filter(quality == 3,
          somatic == 0,
+         cancer == 0,
          complexity == 0) %>%
   rename(gene = Gene_symbols) %>%
   separate_rows(gene, sep = ', ')
@@ -403,6 +410,7 @@ omim <- omim_filtered %>%
 omim_genes <- omim_filtered %>%
   filter(quality == 3,
          somatic == 0,
+         cancer == 0,
          complexity == 0) %>%
   rename(gene = Gene_symbols) %>%
   select(gene) %>% 
@@ -442,10 +450,14 @@ rvis <- rvis %>% select(GENE, X.ExAC_0.05.popn) %>%
 # Access: 
 # ------------------------------------------------------------------------------
 
-clinvar_raw <- read.table('/home/cbl02/Storage/data/clinvar_20191219.vcf', skip = 28)
+
+
+
+# MAYBE INCLUDE RS_REFERENCE (dbSNP)
+clinvar_raw <- read_tsv('/home/cbl02/Storage/data/clinvar_20191219.vcf', skip = 28, 
+         col_types = list(`#CHROM` = col_character()))
 
 clinvar_genes <- clinvar_raw %>% 
-  as_tibble() %>%
   filter(str_detect(V8, 'CLNSIG=Pathogenic') | str_detect(V8, 'CLNSIG=Likely_pathogenic')) %>%
   select(V8) %>%
   mutate(gene = str_extract(V8, pattern =  'GENEINFO[^;]*')) %>%
@@ -458,7 +470,6 @@ clinvar_genes <- clinvar_raw %>%
 
 
 clinvar_variants <- clinvar_raw %>%
-  as_tibble() %>%
   filter(str_detect(V8, 'CLNSIG=Pathogenic') | str_detect(V8, 'CLNSIG=Likely_pathogenic')) %>%
   mutate(V8 = as.character(V8)) %>%
   mutate(disease_identifier = str_extract(V8, 'CLNDISDB([^;]+)')) %>%
@@ -470,7 +481,10 @@ clinvar_variants <- clinvar_raw %>%
   mutate(gene = str_extract(V8, 'GENEINFO([^:]+)')) %>% 
   mutate(gene = str_remove(gene, 'GENEINFO=')) %>%
   rename(chrom = V1, pos = V2, id = V3, reference = V4, alternative = V5) %>%
-  select(chrom, pos, reference, alternative, gene, clinical_sign, disease_identifier, disease_name, id)
+  select(chrom, pos, reference, alternative, gene, clinical_sign, disease_identifier, disease_name, id) %>%
+  mutate(chrom = as.character(chrom))
+
+
 
 
 # ------------------------------------------------------------------------------
@@ -745,13 +759,17 @@ decipher_control <- decipher_control_raw %>%
 
 decipher_sv_raw <- read_tsv('/home/cbl02/Storage/data/daa_decipher/decipher-cnvs-grch37-2020-01-19.txt', skip = 1) %>%
   as_tibble() %>%
+  mutate(length = end - start + 1) %>%
+  filter(length >= 50) %>%
+  mutate(-length) %>%
   mutate(source = 'decipher') %>%
   rename(id = `# patient_id`, chrom = chr) %>%
   mutate(id = as.character(id)) %>%
+  # DE NOVO CONSTITUTIVE!!! 
   filter(pathogenicity %in% c('Pathogenic', 'Likely pathogenic')) %>%
   mutate(phenotypes = str_replace_all(phenotypes, '\\|', '<br>')) %>%
+  # add
   select(id, chrom, start, end, source, pathogenicity, genotype, variant_class, phenotypes)
-
 
 
 
@@ -824,15 +842,17 @@ ridges_home <- cnv_df %>%
 
 # ERROR - 10 ROWS MISSING!!
 
-url <- 'http://compbio.charite.de/jenkins/job/hpo.annotations.monthly/lastSuccessfulBuild/artifact/annotation/ALL_SOURCES_FREQUENT_FEATURES_genes_to_phenotype.txt'
-# url <- 'http://compbio.charite.de/jenkins/job/hpo.annotations.monthly/lastStableBuild/artifact/annotation/ALL_SOURCES_ALL_FREQUENCIES_genes_to_phenotype.txt'
+# url <- 'http://compbio.charite.de/jenkins/job/hpo.annotations.monthly/lastSuccessfulBuild/artifact/annotation/ALL_SOURCES_FREQUENT_FEATURES_genes_to_phenotype.txt'
+# # url <- 'http://compbio.charite.de/jenkins/job/hpo.annotations.monthly/lastStableBuild/artifact/annotation/ALL_SOURCES_ALL_FREQUENCIES_genes_to_phenotype.txt'
+# 
+# hpo_genes <- read_tsv(url, col_names = c('entrez_id', 'gene', 'term', 'hp'), skip = 1)
+# 
+# hpo_to_vector <- hpo_genes %>% select(term, hp) %>% distinct() %>% mutate(term = paste(term, '-', hp))
+# 
+# vector_hp <- hpo_to_vector %>% pull(hp)
+# vector_term <- hpo_to_vector %>% pull(term)
 
-hpo_genes <- read_tsv(url, col_names = c('entrez_id', 'gene', 'term', 'hp'), skip = 1)
 
-hpo_to_vector <- hpo_genes %>% select(term, hp) %>% distinct() %>% mutate(term = paste(term, '-', hp))
-
-vector_hp <- hpo_to_vector %>% pull(hp)
-vector_term <- hpo_to_vector %>% pull(term)
 
 
 
@@ -1389,22 +1409,7 @@ dbvar <- dbvar %>%
 #   mutate(gene = str_remove(gene, '\\(([^\\)]+)\\)')) %>%
 #   filter(disease_name != 'LDLR(MIM 606945)') %>% # field with two genes
 #   bind_rows(tibble(gene = 'LDLR', disease_name = 'Familial hypercholesterolemia (MIM 143890)', MIM_gene = '(MIM 606945)' ))
-# ------------------------------------------------------------------------------
-# HGMD database
-# ------------------------------------------------------------------------------
 
-library(RMySQL)
-
-
-test <- DBI::dbConnect(RMySQL::MySQL(),
-                       host = '10.200.27.108',
-                       user = 'cbl',
-                       dbname = 'hgmd_pro-2019.4',
-                       password = 'hgmdcbl')
-
-dbListTables(test)
-a <- dbGetQuery(test, "SELECT * FROM allmut")
-test_50 <- a %>% as_tibble() %>%  mutate(length = endCoord - startCoord + 1) %>% filter(length > 50)
 
 
 # ------------------------------------------------------------------------------
@@ -1412,7 +1417,7 @@ test_50 <- a %>% as_tibble() %>%  mutate(length = endCoord - startCoord + 1) %>%
 # https://github.com/obophenotype/upheno
 # ------------------------------------------------------------------------------
 
-mp_ontology <- rols::Ontology('mp')
+mp_ontology <- 'http://purl.obolibrary.org/obo/mp.obo'
 hpo_dbs <- ontologyIndex::get_OBO('http://purl.obolibrary.org/obo/hp.obo')
 uberon_dbs <- ontologyIndex::get_OBO('http://purl.obolibrary.org/obo/uberon.obo')
 
@@ -1431,7 +1436,31 @@ match_hp_mp <- read_tsv('https://raw.githubusercontent.com/obophenotype/upheno/m
 # Description: Input vector chosen by the user (tab - Phenotypic analysis)
 # ------------------------------------------------------------------------------
 
-vector_total_terms <- hpo_dbs$name %>% enframe(name = 'term') %>%  mutate(term_desc = paste(value, '-', term))
+vector_total_terms <- hpo_dbs$name %>% 
+  enframe(name = 'term') %>%  
+  mutate(term_desc = paste(value, '-', term)) %>%
+  filter(!term %in% 'HP:0000005')
+
+mode_inheritance <- c("Autosomal dominant inheritance", "Gonosomal inheritance", "Multifactorial inheritance", "Uniparental disomy", "Contiguous gene syndrome", "Genetic anticipation", "Somatic mutation", "Autosomal recessive inheritance", "Heterogeneous", "Sporadic", "Mitochondrial inheritance", "Semidominant mode of inheritance")
+
+
+vector_inheritance <- vector_total_terms %>% filter(value %in% mode_inheritance) %>% select(-term_desc)
+
+vector_inheritance <- split(c('Any', vector_inheritance$term), c('Any', vector_inheritance$value))
+
+# ------------------------------------------------------------------------------
+# Dataset: Anatomy entities from HPO database
+# ------------------------------------------------------------------------------
+
+vector_main_hpo <- c("Abnormality of the skeletal system", "Abnormality of limbs", "Abnormality of the nervous system", "Abnormality of metabolism/homeostasis", "Abnormality of head or neck", "Abnormality of the cardiovascular system", "Abnormality of the eye", "Abnormality of the genitourinary system", "Abnormality of the integument", "Abnormality of the immune system", "Abnormality of the digestive system", "Abnormality of blood and blood-forming tissues", "Neoplasm", "Abnormality of the musculature", "Abnormality of the respiratory system", "Abnormality of the endocrine system", "Abnormality of the ear", "Abnormal cellular phenotype", "Abnormality of connective tissue", "Abnormality of prenatal development or birth", "Growth abnormality", "Constitutional symptom", "Abnormality of the breast", "Abnormality of the voice", "Abnormality of the thoracic cavity")
+
+
+anato_df <- tibble(value = vector_main_hpo) %>% left_join(enframe(hpo_dbs$name), by = 'value') %>%
+  rowwise() %>%
+  mutate(value = str_remove(value, 'Abnormality of the '),
+         value = str_remove(value, 'Abnormality of '),
+         value = paste(toupper(substring(value, 1,1)), substring(value, 2), 
+                       sep="", collapse=" ")) %>% ungroup()
 
 # ------------------------------------------------------------------------------
 # Dataset: CiViC
@@ -1445,13 +1474,50 @@ civic_raw %>% count(variant_types) %>% arrange(desc(n)) %>% View()
 
 variant_summary <- read_tsv('https://civicdb.org/downloads/01-Mar-2020/01-Mar-2020-VariantSummaries.tsv')
 
-
 # ------------------------------------------------------------------------------
-# Dataset: miRNA HGNC
-# Source : https://www.genenames.org/download/statistics-and-files/
+# mirtarbase
+# version 8
 # ------------------------------------------------------------------------------
 
-non_coding_rna <- read_tsv('ftp://ftp.ebi.ac.uk/pub/databases/genenames/new/tsv/locus_types/RNA_micro.txt')
+
+vector_colnames <- c('id', 'name','specie_mirna', 'gene_symbol', 'gene_entrezid', 'specie_target', 'experiment', 'support_type',
+                     'references')
+
+mirna_raw <- read_excel('C:/Users/Requena/Desktop/miRTarBase_MTI.xlsx', 
+                        col_names = vector_colnames, skip = 1)
+
+
+mirna <- mirna_raw %>%
+  filter(specie_mirna == 'Homo sapiens' & specie_target == 'Homo sapiens') %>%
+  filter(support_type == 'Functional MTI') %>%
+  select(-support_type, -specie_mirna , -specie_target)
+
+mirna_coord <- read_tsv('C:/Users/Requena/Desktop/hsa.gff3', skip = 13, col_names = LETTERS[1:9]) %>% 
+  mutate(name = str_extract(I, 'Name=[^;]*')) %>%
+  mutate(name = str_remove(name, 'Name=')) %>%
+  # mutate(name = tolower(name)) %>%
+  # filter(C == 'miRNA_primary_transcript') %>%
+  select(A, D, E, name) %>%
+  rename(chrom = A, start = D, end = E) %>%
+  mutate(start = start - 1) # Convert to 0-based input liftover
+
+# Failed 7 coordinates
+# Final result: 4794 coordinates
+
+from_liftover <- read_tsv('C:/Users/Requena/Desktop/hglft_genome_3633f_8e5a50.bed', 
+                          col_names = c('chrom', 'start', 'end', 'name')) %>%
+  mutate(start = start + 1) %>% distinct()
+
+mirtarbase <- mirna %>% 
+  left_join(from_liftover, by = 'name') %>%
+  # select(chrom, start, end) %>%
+  select(id, name, chrom, start, end, gene_symbol, experiment, references) %>%
+  na.omit() %>%
+  mutate(chrom = str_remove(chrom, 'chr'))
+
+
+
+
 
 # ------------------------------------------------------------------------------
 # Dataset: COSMIC CNVs
