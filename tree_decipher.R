@@ -2,11 +2,12 @@
 # library(DOSE)
 # library(ReactomePA)
 # library(clusterProfiler)
+# library(UpSetR)
+
 library(valr)
 library(future)
 library(tictoc)
 library(furrr)
-# library(UpSetR)
 library(grid)
 library(tidyverse)
 library(tictoc)
@@ -23,7 +24,14 @@ slice <- dplyr::slice
 #     select, dev_raw, panel_total, omim, orphanet_raw,  hpo_dbs, model1, denovo, clinvar_variants, ridges_home, plot_p100, plot_p46pla, blacklist_encode, mpo_dbs, gwas_variants,mgi, syndromes_total,
 # file = "env_annot_cnvs.RData")
 
-load('env_annot_cnvs.RData')
+# load('env_annot_cnvs.RData')
+
+theme_fancy <- function() {
+  theme_minimal(base_family = "Asap Condensed") +
+    theme(panel.grid.minor = element_blank()) +
+    theme(plot.title = element_text(size=22))
+  
+}
 
 input_check_cnv <-  read_tsv('/data-cbl/frequena_data/from_workstation/daa_decipher/decipher-cnvs-grch37-2020-01-19.txt', skip = 1) %>%
   as_tibble() %>%
@@ -515,6 +523,8 @@ result_tmp <- tibble(
   'recomb_rate' = result_recomb,
   'dist_cent' = dist_cent,
   'dist_tel' = dist_tel,
+  'pubmed_del' = result_max_del,
+  'pubmed_dup' = result_max_dup,
   'essent_cl' = result_n_essent_genes_cl,
   'essent_dl' = result_n_essent_genes_dl
 )
@@ -526,20 +536,20 @@ return(result_tmp)
 plan("multiprocess", workers = 60)
 
 
-test_before <- input_check_cnv %>% slice(sample(1:nrow(.), 100)) 
+# test_before <- input_check_cnv %>% slice(sample(1:nrow(.), 100)) 
 
 
 
 
 tic()
 
-output_list <- pmap(list(test_before$id, 
-                         test_before$pathogenicity, 
-                         test_before$variant_class,
-                         test_before$inheritance,
-                         test_before$chrom, 
-                         test_before$start, 
-                         test_before$end), 
+output_list <- future_pmap(list(input_check_cnv$id, 
+                         input_check_cnv$pathogenicity, 
+                         input_check_cnv$variant_class,
+                         input_check_cnv$inheritance,
+                         input_check_cnv$chrom, 
+                         input_check_cnv$start, 
+                         input_check_cnv$end), 
                        check_cnv)
 
 output_df <- bind_rows(lapply(output_list, as.data.frame.list)) %>% as_tibble()
@@ -573,35 +583,36 @@ toc()
 #                             confidence = 0.7)
 # 
 # 
-# output_df %>% 
+# output_df %>%
 #   # mutate(n_systems = if_else(n_systems > 1, 'Yes', 'No')) %>%
-#   
 #   mutate(max_pli = if_else(max_pli >= 90, 'Yes', 'No')) %>%
 #   mutate(max_hi = if_else(max_hi >= 90, 'Yes', 'No')) %>%
 #   mutate_if(is.integer, ~ if_else(. > 0, 'Yes', 'No')) %>%
 #   mutate_if(is.double, ~ if_else(. > 0, 'Yes', 'No')) %>%
 #   mutate(clinical = if_else(clinical == 'Likely benign', 'Benign', clinical)) %>%
 #   mutate(clinical = if_else(clinical == 'Likely pathogenic', 'Pathogenic', clinical)) %>%
-#   
-#   count(clinical, 
-#         n_cnv_syndromes, 
-#         disease_genes, 
-#         patho_cnv, 
+# 
+#   count(clinical,
+#         n_cnv_syndromes,
+#         disease_genes,
+#         patho_cnv,
 #         n_ohno,
 #         n_tf,
 #         n_target_drugs,
 #         n_prot_complex,
 #         n_tfbs,
 #         n_ctcf,
+#         pubmed_del,
+#         pubmed_dup,
 #         n_open,
-#         max_pli, 
+#         max_pli,
 #         max_ccr,
 #         max_hi,
-#         disease_variants, 
-#         nonpatho_cnv, 
+#         disease_variants,
+#         nonpatho_cnv,
 #         essent_cl,
 #         essent_dl,
-#         n_genes_hpo, 
+#         n_genes_hpo,
 #         n_blacklist) %>%
 #   mutate(clinical = factor(clinical,levels = c("Pathogenic", "Unknown", "Uncertain", "Benign"))) %>%
 #   group_by(clinical) %>%
@@ -615,6 +626,10 @@ toc()
 #   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
 #   xlab('Clinical significance') +
 #   ylab('Percentage (%)')
+# 
+# 
+
+
 # 
 # 
 # 

@@ -64,7 +64,7 @@ COPY cnvxplorer /srv/shiny-server/
 
 # Unzip local data
 
-RUN gunzip /srv/shiny-server/cnvxplorer/local_data.RData.gz 
+RUN gunzip /srv/shiny-server/local_data.RData.gz 
 
 
 # Make all app files readable
