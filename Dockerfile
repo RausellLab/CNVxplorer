@@ -14,7 +14,6 @@ liblzma-dev  -y &&\
 mkdir -p /var/lib/shiny-server/bookmarks/shiny
 	
 
-
 RUN R -e "devtools::install_github('thomasp85/patchwork')"
 RUN R -e "devtools::install_github('glin/reactable')"
 RUN R -e "devtools::install_github('rnabioco/valr')"
@@ -56,12 +55,16 @@ RUN Rscript -e "BiocManager::install('rols')"
 RUN Rscript -e "BiocManager::install('ReactomePA')"
 RUN Rscript -e "BiocManager::install('Gviz')"
 RUN Rscript -e "BiocManager::install('TissueEnrich')"
-RUN Rscript -e "BiocManager::install(c('karyoploteR', 'Rhtslib', 'ReactomePA', 'clusterProfiler', 'org.Hs.eg.db', 'DOSE', 'enrichplo', 'chromPlot'))"
+RUN Rscript -e "BiocManager::install(c('karyoploteR', 'Rhtslib', 'ReactomePA', 'clusterProfiler', 'org.Hs.eg.db', 'DOSE', 'chromPlot'))"
 
 
 
 # Copy the app to the image
 COPY cnvxplorer /srv/shiny-server/
+
+# Unzip local data
+
+RUN gunzip /srv/shiny-server/cnvxplorer/local_data.RData.gz 
 
 
 # Make all app files readable

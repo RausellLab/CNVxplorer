@@ -14,10 +14,10 @@ library(ontologyIndex)
 
 
 rename <- dplyr::rename
-
+slice <- dplyr::slice
 
 # save(hgcn_genes, df_enhancers, lncrna_coord, lncrna, tad, gtex, hpa, hpo_genes, cnv_df, vector_total_terms,
-#      gnomad_sv_raw, decipher_control_raw, dgv_df_raw, hpo_omim, anato_df, mirtarbase,
+#      gnomad_sv_raw, decipher_control_raw, dgv_df_raw, hpo_omim, anato_df, mirtarbase, pubmed_df,
 #       vector_inheritance, trrust, tf_genes, drugbank,prot_complex,ohno_genes,recomb,
 #       genes_promoter,para_genes,string_db,region_gaps, fusil_score,ensembl_reg,
 #     select, dev_raw, panel_total, omim, orphanet_raw,  hpo_dbs, model1, denovo, clinvar_variants, ridges_home, plot_p100, plot_p46pla, blacklist_encode, mpo_dbs, gwas_variants,mgi, syndromes_total,
@@ -50,8 +50,6 @@ input_check_overlap <- input_check_cnv %>% select(id,pathogenicity,variant_class
 
 check_cnv <- function(input_id, input_clinical, input_variant, input_inheritance,
                       input_chrom, input_start, input_end) {
-
-
 
   id_tmp <- input_id
   clinical_tmp <- input_clinical
@@ -525,18 +523,23 @@ return(result_tmp)
 
 }
 
-# plan("multiprocess", workers = 60)
+plan("multiprocess", workers = 60)
+
+
+test_before <- input_check_cnv %>% slice(sample(1:nrow(.), 100)) 
+
+
 
 
 tic()
 
-output_list <- future_pmap(list(input_check_overlap$id, 
-                                input_check_overlap$pathogenicity, 
-                                input_check_overlap$variant_class,
-                                input_check_overlap$inheritance,
-                                input_check_overlap$chrom, 
-                                input_check_overlap$start, 
-                                input_check_overlap$end), 
+output_list <- pmap(list(test_before$id, 
+                         test_before$pathogenicity, 
+                         test_before$variant_class,
+                         test_before$inheritance,
+                         test_before$chrom, 
+                         test_before$start, 
+                         test_before$end), 
                        check_cnv)
 
 output_df <- bind_rows(lapply(output_list, as.data.frame.list)) %>% as_tibble()
