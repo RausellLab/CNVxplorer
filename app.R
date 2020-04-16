@@ -101,7 +101,7 @@ library(tidyverse)
 #   user = c("necker"),
 #   password = c("jacques"),
 #   stringsAsFactors = FALSE
-# )
+# ) 
 
 
 source('functions.R')
