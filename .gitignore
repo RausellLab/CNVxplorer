@@ -12,3 +12,8 @@ ask_by_antonio.R
 :memory
 cnvscore.R
 arules.R
+PSets
+local_data.RData
+env_annot_cnvs.RData
+tree_decipher.R
+global.R

@@ -144,6 +144,8 @@ ref_scores <- tibble(score = c('gwas', # we could filter out by number of hits (
 ## ADDED IN MADRID
 
 # mirtarbase
+# List TFs
+# drugbank curl -Lfv -o filename.zip -u francisco.requena@institutimagine.org:BElerofonte93-- https://www.drugbank.ca/releases/5-1-5/downloads/target-approved-polypeptide-ids
 
 # ------------------------------------------------------------------------------
 # Dataset: Protein-coding genes with HGCN symbol 
@@ -244,6 +246,217 @@ vg <- vg_raw %>% left_join(test, by = c('gene' = 'ENSEMBL')) %>%
   mutate(ENTREZID = as.numeric(ENTREZID)) %>% 
   rename(entrez_id = ENTREZID) %>%
   filter(!entrez_id %in% c(3117, 5414, 64788, 148753, 100652739))
+
+
+
+# Expression variance
+
+# url <- 'https://storage.googleapis.com/gtex_analysis_v7/rna_seq_data/GTEx_Analysis_2016-01-15_v7_RNASeQCv1.1.8_gene_median_tpm.gct.gz'
+# 
+# download.file(url, 'GTEx_Analysis_2016-01-15_v7_RNASeQCv1.1.8_gene_median_tpm.gct.gz')
+# 
+# system('gunzip GTEx_Analysis_2016-01-15_v7_RNASeQCv1.1.8_gene_median_tpm.gct.gz')
+# 
+# sd_gtex <- read_tsv('GTEx_Analysis_2016-01-15_v7_RNASeQCv1.1.8_gene_median_tpm.gct', skip = 2)
+
+
+
+# ------------------------------------------------------------------------------
+# Dataset: Pubmed articles associated with G-bands and "deletion" "duplication" keywords
+# ------------------------------------------------------------------------------
+
+pubmed_bands <- chromPlot::hg_cytoBandIdeo %>% as_tibble() %>%
+            # mutate(Name = paste0(Chrom, Name)) %>%
+            select(Name, Chrom)
+
+get_band <- function(band_input, chrom_input) {
+
+  
+  print(band_input)
+
+#   band_input <- 'q11'
+#   chrom_input <- '9'
+
+  band_tmp <- band_input
+  chrom_tmp <- paste('chromosome', chrom_input)
+
+  result_del <- length(entrez_search(db="pubmed", 
+                                     term= paste(chrom_tmp,'AND', band_tmp, 'AND deletion AND homo sapiens'), retmax = 1000 )$ids)
+  result_dup <- length(entrez_search(db="pubmed", 
+                                     term= paste(chrom_tmp,'AND', band_tmp, 'AND duplication  AND homo sapiens'), retmax = 1000 )$ids)
+  
+  result <- tibble(band = band_tmp, chrom = chrom_input, hits_del = result_del, hits_dup = result_dup)
+  
+  return(result)
+}
+
+tic()
+pubmed_lists <- pmap(list(pubmed_bands$Name, 
+                     pubmed_bands$Chrom),
+                                  get_band)
+
+pubmed_df <- bind_rows(lapply(pubmed_lists, as.data.frame.list)) %>% as_tibble()
+
+toc()
+
+pubmed_df <- pubmed_df %>% left_join( chromPlot::hg_cytoBandIdeo %>% select(Chrom, Start, End, Name), by =
+                           c('band' = 'Name', 'chrom' = 'Chrom')) %>%
+  rename(start = Start, end = End)
+
+# ------------------------------------------------------------------------------
+# Annotation promoter region (-2kbs - TSS - + 2kbs)
+# ------------------------------------------------------------------------------
+
+library(BSgenome.Hsapiens.UCSC.hg19)
+library(GenomicScores)
+library(Biostrings)
+phast46pla <- getGScores("phastCons46wayPlacental.UCSC.hg19")
+plan("multiprocess", workers = 40)
+
+
+genomic_ranges <- tibble(chrom = '1', start = 1000000, end = )
+
+
+
+
+  
+
+  get_annot_promoter <- function(gene, chrom, tss) {
+    
+    # gene <- 'A'
+    # chrom <- '1'
+    # tss <- 58856544
+    
+    tmp_granges <- GRanges(seqnames= paste0('chr', chrom), 
+                           IRanges(start=(tss-2000):(tss+2000), width=1))
+    
+    # Calculation mean PhastCons46
+    phast_temp <- gscores(phast46pla, tmp_granges)
+    phast_temp <- phast_temp$default %>% mean(na.rm = TRUE)
+ 
+    
+    seqs <- getSeq(Hsapiens, paste0('chr', chrom), (tss-2000), (tss+2000))
+    
+    cpg_temp <- length(seqs)*dinucleotideFrequency(seqs)["CG"]/
+      (letterFrequency(seqs, "C")*letterFrequency(seqs, "G"))
+  
+    
+    result_temp <- tibble(gene = gene, mean_phast = phast_temp, cpg_density = cpg_temp )
+    return(result_temp)
+  }
+  
+  
+  tic()
+  
+  output_temp <- future_pmap(list(hgcn_genes$gene, 
+                                  hgcn_genes$chrom, 
+                                  hgcn_genes$start_position), 
+                             get_annot_promoter)
+  
+  genes_promoter <- bind_rows(lapply(output_temp, as.data.frame.list)) %>% as_tibble()
+  
+  toc()
+  
+
+  # hgcn_genes %>% select(gene, pLI) %>%
+  #   mutate(pLI = ifelse(pLI >= 90, 'yes', 'no')) %>%
+  #   left_join(genes_promoter) %>%
+  #   mutate(mean_phast = ntile(mean_phast, 10)) %>%
+  #   mutate(cpg_density = ntile(cpg_density, 10)) %>%
+  #   pivot_longer(names_to = 'score', values_to = 'value', -c(gene, pLI)) %>%
+  #   mutate(value = as.factor(value)) %>%
+  #   na.omit() %>%
+  #   count(pLI, score, value) %>%
+  #   group_by(score, value) %>%
+  #   mutate(perc = 100*(n / sum(n))) %>%
+  #   ggplot(aes(value, perc)) +
+  #   geom_col(aes(fill = pLI)) +
+  #   facet_wrap(~score)
+  # 
+  # hgcn_genes %>% select(gene, disease) %>%
+  #   left_join(genes_promoter) %>%
+  #   mutate(mean_phast = ntile(mean_phast, 10)) %>%
+  #   mutate(cpg_density = ntile(cpg_density, 10)) %>%
+  #   pivot_longer(names_to = 'score', values_to = 'value', -c(gene, disease)) %>%
+  #   mutate(value = as.factor(value)) %>%
+  #   na.omit() %>%
+  #   count(disease, score, value) %>%
+  #   group_by(score, value) %>%
+  #   mutate(perc = 100*(n / sum(n))) %>%
+  #   ggplot(aes(value, perc)) +
+  #   geom_col(aes(fill = disease)) +
+  #   facet_wrap(~score)
+  
+  
+  # ------------------------------------------------------------------------------
+  # Centromeric and telomeric regions
+  # ------------------------------------------------------------------------------  
+  
+  
+  session <- browserSession("UCSC")
+  genome(session) <- "hg19"
+  
+  
+  region_gaps <- getTable(ucscTableQuery(session, "Gap"))
+
+
+  region_gaps <- region_gaps %>%
+    as_tibble() %>%
+    filter(type %in% c('telomere', 'centromere')) %>%
+    mutate(chrom = str_remove(as.character(chrom), 'chr')) %>%
+    rename(start = chromStart, end = chromEnd ) %>%
+    select(chrom, start, end, type)
+  
+  
+  
+  
+# ------------------------------------------------------------------------------
+# DNAse peaks 
+# ------------------------------------------------------------------------------
+# 
+# session <- browserSession("UCSC")
+# genome(session) <- "hg19"
+# 
+# 
+# 
+# 
+# query <- ucscTableQuery(session, "DNase Clusters")
+# tableName(query) <- "wgEncodeRegDnaseClusteredV3"
+# dhs_df <- getTable(query) %>% as_tibble()
+# 
+# dhs_df <- dhs_df %>%
+#   rename(start = chromStart,
+#          end = chromEnd) %>%
+#   select(chrom, start, end, name) %>%
+#   mutate(chrom = str_remove(chrom, 'chr')) %>%
+#   rename(n_cells = name)
+
+
+# ------------------------------------------------------------------------------
+# Ensembl Regulatory Build
+# Aggregation from ENCODE, Roadmap Epigenomics and Blueprint
+# Version: Ensembl 95
+# ------------------------------------------------------------------------------
+
+download.file('ftp://ftp.ensembl.org/pub/grch37/release-95/regulation/homo_sapiens/homo_sapiens.GRCh37.Regulatory_Build.regulatory_features.20180925.gff.gz',
+              'homo_sapiens.GRCh37.Regulatory_Build.regulatory_features.20180925.gff.gz')
+  
+system('gunzip homo_sapiens.GRCh37.Regulatory_Build.regulatory_features.20180925.gff.gz')
+  
+ensembl_reg <- read_tsv('homo_sapiens.GRCh37.Regulatory_Build.regulatory_features.20180925.gff', 
+                        col_names = FALSE)
+
+file.remove('homo_sapiens.GRCh37.Regulatory_Build.regulatory_features.20180925.gff')  
+
+ensembl_reg <- ensembl_reg %>% 
+  select(X1, X3, X4, X5) %>%
+  filter(nchar(X1) <= 2) %>%
+  rename(chrom = X1,
+         type = X3,
+         start = X4,
+         end = X5)
+
+
 
 # ------------------------------------------------------------------------------
 # Dataset: Clingen
@@ -614,7 +827,8 @@ hpa <- read_tsv('/home/cbl02/Storage/data/normal_tissue.tsv')
 
 hpa <- hpa %>%
   rename(gene = `Gene name`, tissue = Tissue, cell_type = `Cell type`) %>%
-  select(-Gene)
+  select(-Gene) %>%
+  filter(Level != 'Not detected')
 
 # ------------------------------------------------------------------------------
 # Dataset: Mouse phenotype
@@ -672,20 +886,55 @@ mgi <- mgi %>%
 # Source: biomart
 # ------------------------------------------------------------------------------
 
-# 
-# human  <- useMart("ensembl", dataset = "hsapiens_gene_ensembl",
-#                   host    = "grch37.ensembl.org",
-#                   path    = "/biomart/martservice")
-# 
-# 
-# para_genes <- getBM(attributes = c('external_gene_name', 'hsapiens_paralog_ensembl_gene'), 
-#                         mart = human )
-# 
-# para_genes %>% as_tibble() %>%
-#   rename(gene = external_gene_name, para = hsapiens_paralog_ensembl_gene) %>%
-#   filter(para != '') %>%
-#   count(gene) %>%
-#   filter(gene == 'DMD')
+
+human  <- useMart("ensembl", dataset = "hsapiens_gene_ensembl",
+                  host    = "grch37.ensembl.org",
+                  path    = "/biomart/martservice")
+
+
+para_genes <- getBM(attributes = c('external_gene_name', 'hsapiens_paralog_ensembl_gene'),
+                        mart = human )
+
+para_genes <- para_genes %>% 
+  as_tibble() %>%
+  rename(gene = external_gene_name, para = hsapiens_paralog_ensembl_gene) %>%
+  filter(para != '') %>%
+  count(gene)
+
+
+# ------------------------------------------------------------------------------
+# LiftOver
+# Instructions: https://www.bioconductor.org/packages/release/workflows/vignettes/liftOver/inst/doc/liftov.html
+# ------------------------------------------------------------------------------
+
+
+library(rtracklayer)
+library(liftOver)
+path = system.file(package="liftOver", "extdata", "hg38ToHg19.over.chain")
+from_hg38_to_hg19 = import.chain(path)
+
+# ------------------------------------------------------------------------------
+# Dataset: Recombination rates
+# Source: https://science.sciencemag.org/content/suppl/2019/01/23/363.6425.eaau1043.DC1
+# Genome assembly: hg38
+# ------------------------------------------------------------------------------
+
+
+
+url <- "https://science.sciencemag.org/highwire/filestream/721792/field_highwire_adjunct_files/4/aau1043_DataS3.gz"
+download.file(url, 'aau1043_DataS3.gz')
+system("gunzip  aau1043_DataS3.gz")  
+ recomb <- read_tsv('aau1043_DataS3', skip = 8, col_names = c('chrom', 'start', 'end', 'cm_mb', 'cm'))
+
+file.remove('aau1043_DataS3')
+
+tmp_granges_recomb <- recomb %>% GRanges()
+
+seqlevelsStyle(tmp_granges_recomb) = "UCSC"  # necessary
+tmp_granges_recomb = liftOver(tmp_granges_recomb, from_hg38_to_hg19)
+
+recomb <- tmp_granges_recomb %>% as_tibble() %>% select(seqnames, start, end, cm_mb, cm) %>%
+  rename(chrom = seqnames) %>% mutate(chrom = str_remove(as.character(chrom), 'chr'))
 
 
 # ------------------------------------------------------------------------------
@@ -712,8 +961,7 @@ mgi <- mgi %>%
 # EAS (East Asian)
 
 # ------------------------------------------------------------------------------
-# PCRPLUS_DEPLETED I don't know what it is....
-# PESR_GT_OVERDISPERSION this neither...
+
 
 
 
@@ -726,7 +974,9 @@ gnomad_sv_raw <-  read_tsv('/home/cbl02/Storage/data/gnomad_v2.1_sv.sites.bed', 
   mutate(source = 'gnomad_v2.1') %>%
   rename(chrom = `#chrom`) %>%
   mutate(chrom = as.character(chrom)) %>%
-  mutate(start = start + 1)
+  mutate(start = start + 1) %>%
+  select(id, chrom, start, end, svtype, AF)
+
 
 
 gnomad_sv <- gnomad_sv_raw %>%
@@ -786,7 +1036,11 @@ dgv_df_raw <- read_tsv('/home/cbl02/Storage/data/GRCh37_hg19_variants_2016-05-15
   rename(id = variantaccession, chrom = chr) %>%
   mutate(source = 'dgv',
          chrom = as.character(chrom))  %>%
-  mutate(start = as.numeric(start), end = as.numeric(end))
+  mutate(start = as.numeric(start), end = as.numeric(end)) %>%
+  select( -source, -varianttype, -mergedorsample,
+         -mergedvariants, -supportingvariants, -samples, -platform, -cohortdescription, 
+         -frequency)
+  
 
 dgv_df <- dgv_df_raw %>%
   select(id, chrom, start, end, source)
@@ -810,6 +1064,13 @@ cnv_df <- decipher_sv_raw %>%
 # ------------------------------------------------------------------------------
 
 ridges_home <- cnv_df %>%
+  mutate(source =
+           case_when(
+             source == 'dgv' ~ 'DGV',
+             source == 'decipher' ~ 'DECIPHER',
+             source == 'gnomad_v2.1' ~ 'gnomAD v2.1',
+             source == 'decipher_control' ~ 'DECIPHER Control'
+           )) %>%
   ggplot(aes(length_cnv, y = source)) +
   stat_density_ridges(quantile_lines = TRUE, quantiles = 2, aes(fill = source), alpha = 0.6, show.legend = FALSE, size = 1.25) +
   # geom_vline(aes(xintercept = size_cnv_query), linetype = 2, color = 'red', size = 1.5) +
@@ -842,15 +1103,9 @@ ridges_home <- cnv_df %>%
 
 # ERROR - 10 ROWS MISSING!!
 
-# url <- 'http://compbio.charite.de/jenkins/job/hpo.annotations.monthly/lastSuccessfulBuild/artifact/annotation/ALL_SOURCES_FREQUENT_FEATURES_genes_to_phenotype.txt'
-# # url <- 'http://compbio.charite.de/jenkins/job/hpo.annotations.monthly/lastStableBuild/artifact/annotation/ALL_SOURCES_ALL_FREQUENCIES_genes_to_phenotype.txt'
-# 
-# hpo_genes <- read_tsv(url, col_names = c('entrez_id', 'gene', 'term', 'hp'), skip = 1)
-# 
-# hpo_to_vector <- hpo_genes %>% select(term, hp) %>% distinct() %>% mutate(term = paste(term, '-', hp))
-# 
-# vector_hp <- hpo_to_vector %>% pull(hp)
-# vector_term <- hpo_to_vector %>% pull(term)
+url <- 'http://compbio.charite.de/jenkins/job/hpo.annotations/lastStableBuild/artifact/util/annotation/genes_to_phenotype.txt'
+hpo_genes <- read_tsv(url, col_names = c('entrez_id', 'gene', 'term', 'hp'), skip = 1)
+
 
 
 
@@ -1019,6 +1274,48 @@ plot_p46pla <-  df_enhancers %>%
 #   ungroup() %>%
 #   mutate(pos = round((end + start) /2, 0))
 
+
+# ------------------------------------------------------------------------------
+# Dataset: STRING
+# Source: https://stringdb-static.org/download/protein.links.v11.0/9606.protein.links.v11.0.txt.gz
+# Version: 11
+# ------------------------------------------------------------------------------
+
+
+library(tidygraph)
+
+download.file('https://stringdb-static.org/download/protein.links.v11.0/9606.protein.links.v11.0.txt.gz', 
+              '9606.protein.links.v11.0.txt.gz')
+system('gunzip 9606.protein.links.v11.0.txt.gz')
+string_db <- read_delim('9606.protein.links.v11.0.txt', delim = ' ', skip = 1, col_names = c('p1', 'p2', 'score'))
+file.remove('9606.protein.links.v11.0.txt')
+
+
+string_db <- string_db %>%
+  filter(score >= 700) %>%
+  mutate(p1 = str_remove(p1, '9606.'),
+         p2 = str_remove(p2, '9606.')) %>%
+          select(-score)
+
+human  <- useMart("ensembl", dataset = "hsapiens_gene_ensembl",
+                  host    = "grch37.ensembl.org",
+                  path    = "/biomart/martservice")
+
+interval_genes <- getBM(attributes = c('hgnc_symbol', 'ensembl_peptide_id'),
+                        mart = human ) %>% 
+  as_tibble()
+
+
+string_db <- as_tbl_graph(string_db, directed = FALSE) %>%
+  mutate(page_rank = centrality_pagerank(),
+         degree = centrality_degree()) %>%
+  activate(nodes) %>%
+  as_tibble()
+
+string_db <- string_db %>% left_join(interval_genes, by = c('name' = 'ensembl_peptide_id')) %>%
+  select(hgnc_symbol, page_rank, degree, -name) %>%
+  rename(gene = hgnc_symbol)
+
 # ------------------------------------------------------------------------------
 # Dataset: lncRNA
 # Source: Filtered data (species == 'Human') - https://apps.kaessmannlab.org/lncRNA_app/
@@ -1139,10 +1436,24 @@ mutate(start = start + 1) %>%
 # Viable with phenotype (VP)
 # Viable with no phenotype (VN)
 
+human  <- useMart("ensembl", dataset = "hsapiens_gene_ensembl",
+                  host    = "grch37.ensembl.org",
+                  path    = "/biomart/martservice")
 
+interval_genes <- getBM(attributes = c('hgnc_symbol', 'hgnc_id'),
+                        mart = human ) %>% 
+  as_tibble() %>% 
+  na.omit()
+
+listAttributes(human)
 
 fusil_score <- read_tsv('https://www.ebi.ac.uk/biostudies/files/S-BSST293/u/SourceDataFile1_FUSIL_bins.txt')
 
+
+fusil_score <- fusil_score %>% select(HGNC_ID, FUSIL) %>%
+  mutate(HGNC_ID = as.integer(str_remove(HGNC_ID, 'HGNC:'))) %>%
+  left_join(interval_genes, by = c('HGNC_ID' = 'hgnc_id')) %>%
+  filter(FUSIL != '-')
 
 
 # ------------------------------------------------------------------------------
@@ -1178,17 +1489,11 @@ snipre <- snipre %>% select(Gene, SnIPRE.f) %>%
 
 
 # ------------------------------------------------------------------------------
-# Dataset: Paralogous genes
-# Source: http://ogee.medgenius.info/downloads/
-# ------------------------------------------------------------------------------
-
-# para_genes <- read_tsv('/home/cbl02/Storage/data/dup_genes/dupgenes_ogee.txt')
-
-# ------------------------------------------------------------------------------
 # Dataset: Phenotype terms associated with OMIM diseases
 # Source: https://hpo.jax.org/app/download/annotation
 # Explanation: phenotype_annotation_hpoteam.tab: contains annotations made explicitly
 # and manually by the HPO-team (mostly referring to OMIM entries)
+# https://hpo-annotation-qc.readthedocs.io/en/latest/annotationFormat.html#phenotype-hpoa-format
 # Annotation: https://hpo.jax.org/app/help/annotations
 # ------------------------------------------------------------------------------
 
@@ -1199,23 +1504,37 @@ snipre <- snipre %>% select(Gene, SnIPRE.f) %>%
 # onset?
 # make the intersect with the list of omim filtered genes
 # update the list with the account new version from OMIM
-hpo_omim <- read_tsv('/home/cbl02/Storage/data/phenotype_annotation_hpoteam.tab', col_names = FALSE)
 
-hpo_omim <- hpo_omim %>%
-  filter(X1 == 'OMIM') %>%
-  # select(-X2) %>%
-  select(-X1, -X10, -X12, -X13, -X14) %>% # remove x1 because all values are omim - change if we include orphanet/omim - the other file
-  rename(mim_disease = X2,
-         desc = X3,
-         pace = X4,
-         hp = X5,
-         mim_gene = X6,
-         evidence = X7,
-         onset = X8,
-         frequency = X9,
-         clinical_modifier = X11) %>%
-  mutate(desc = str_remove(desc, '[0-9]{6}'),
-         desc = str_remove(desc, '#'))
+url <- 'http://compbio.charite.de/jenkins/job/hpo.annotations.current/lastSuccessfulBuild/artifact/current/phenotype.hpoa'
+
+hpo_omim <- read_tsv(url, col_names = TRUE, skip = 4) %>%
+  rename(mim_disease = DatabaseID,
+         desc = DiseaseName,
+         hp = HPO_ID) %>%
+  filter(str_detect(mim_disease, 'OMIM')) %>%
+  mutate(mim_disease = str_remove(mim_disease, 'OMIM:')) %>%
+    mutate(desc = str_remove(desc, '[0-9]{6}'),
+           desc = str_remove(desc, '#')) %>%
+  mutate(mim_disease = as.numeric(mim_disease))
+
+  
+
+
+# hpo_omim <- hpo_omim %>%
+#   filter(X1 == 'OMIM') %>%
+#   # select(-X2) %>%
+#   select(-X1, -X10, -X12, -X13, -X14) %>% # remove x1 because all values are omim - change if we include orphanet/omim - the other file
+#   rename(mim_disease = X2,
+#          desc = X3,
+#          pace = X4,
+#          hp = X5,
+#          mim_gene = X6,
+#          evidence = X7,
+#          onset = X8,
+#          frequency = X9,
+#          clinical_modifier = X11) %>%
+#   mutate(desc = str_remove(desc, '[0-9]{6}'),
+#          desc = str_remove(desc, '#'))
 # ------------------------------------------------------------------------------
 # Dataset: Gene panel
 # Source: hhttps://panelapp.genomicsengland.co.uk
@@ -1417,7 +1736,8 @@ dbvar <- dbvar %>%
 # https://github.com/obophenotype/upheno
 # ------------------------------------------------------------------------------
 
-mp_ontology <- 'http://purl.obolibrary.org/obo/mp.obo'
+mpo_dbs <- ontologyIndex::get_OBO('http://purl.obolibrary.org/obo/mp.obo')
+mpo_dbs <- mpo_dbs$name %>% as_tibble(rownames = 'term') %>% rename(description = value)
 hpo_dbs <- ontologyIndex::get_OBO('http://purl.obolibrary.org/obo/hp.obo')
 uberon_dbs <- ontologyIndex::get_OBO('http://purl.obolibrary.org/obo/uberon.obo')
 
@@ -1448,6 +1768,8 @@ vector_inheritance <- vector_total_terms %>% filter(value %in% mode_inheritance)
 
 vector_inheritance <- split(c('Any', vector_inheritance$term), c('Any', vector_inheritance$value))
 
+vector_total_terms <- vector_total_terms %>% filter(!value %in% c(mode_inheritance, 'All'))
+
 # ------------------------------------------------------------------------------
 # Dataset: Anatomy entities from HPO database
 # ------------------------------------------------------------------------------
@@ -1458,6 +1780,7 @@ vector_main_hpo <- c("Abnormality of the skeletal system", "Abnormality of limbs
 anato_df <- tibble(value = vector_main_hpo) %>% left_join(enframe(hpo_dbs$name), by = 'value') %>%
   rowwise() %>%
   mutate(value = str_remove(value, 'Abnormality of the '),
+         value = str_remove(value, 'Abnormal of '),
          value = str_remove(value, 'Abnormality of '),
          value = paste(toupper(substring(value, 1,1)), substring(value, 2), 
                        sep="", collapse=" ")) %>% ungroup()
@@ -1517,8 +1840,6 @@ mirtarbase <- mirna %>%
 
 
 
-
-
 # ------------------------------------------------------------------------------
 # Dataset: COSMIC CNVs
 # ------------------------------------------------------------------------------
@@ -1526,9 +1847,91 @@ mirtarbase <- mirna %>%
 non_coding_rna <- read_tsv('ftp://ftp.ebi.ac.uk/pub/databases/genenames/new/tsv/locus_types/RNA_micro.txt')
 
 
+# ------------------------------------------------------------------------------
+# Dataset: List TFs human
+# ------------------------------------------------------------------------------
+library(httr)
+
+url1 <- 'https://static-content.springer.com/esm/art%3A10.1038%2Fnature13182/MediaObjects/41586_2014_BFnature13182_MOESM86_ESM.xlsx'
+
+GET(url1, write_disk(tf <- tempfile(fileext = ".xlsx")))
+
+tf_genes <- read_excel(tf, sheet = 8) %>% select(SYMBOL) %>% distinct() %>% pull()
 
 
 
+# ------------------------------------------------------------------------------
+# Dataset: DrugBank
+# Source:https://www.drugbank.ca/releases/latest#protein-identifiers - Approved - Pharma. active
+# Version: 2020-01-03	
+# ------------------------------------------------------------------------------
+
+drugbank <- read_csv('pharmacologically_active.csv')
+
+drugbank <- drugbank %>% 
+  filter(Species == 'Humans') %>%
+  select(`Gene Name`, Name, `UniProt ID`, `Drug IDs`) %>%
+  rename(gene = `Gene Name`, 
+         uniprot_id = `UniProt ID`,
+         # pdb_id = `PDB ID`,
+         drug_id = `Drug IDs`) %>%
+  separate_rows(drug_id, sep = ';') %>%
+  mutate(drug_id = str_replace(drug_id, ' ', ''))
+
+download.file('https://www.drugbank.ca/releases/5-1-5/downloads/all-drugbank-vocabulary', 'drugbank_all_drugbank_vocabulary.csv.zip')
+file.remove('drugbank_all_drugbank_vocabulary.csv.zip')
+names_drugs <- read_csv('drugbank_all_drugbank_vocabulary.csv.zip')
+names_drugs <- names_drugs %>%
+  select(`DrugBank ID`, `Common name`, Synonyms) %>%
+  rename(drug_id = `DrugBank ID`,
+         name = `Common name`,
+         syn = Synonyms)
+
+
+drugbank <- drugbank %>% left_join(names_drugs, by = 'drug_id')
+
+# ------------------------------------------------------------------------------
+# geno2MP database
+# Version  January 06, 2020
+# hg19
+# ------------------------------------------------------------------------------
+
+geno2mp <- read_tsv("http://geno2mp.gs.washington.edu/download/Geno2MP.variants.vcf.gz", 
+                    skip = 14,  col_types = list(`#CHROM` = col_character()))
+
+
+# ------------------------------------------------------------------------------
+# Protein complex genes
+# CORUM - Mammals Protein complexes 
+# ------------------------------------------------------------------------------
+
+
+download.file('http://mips.helmholtz-muenchen.de/corum/download/allComplexes.txt.zip', 'allComplexes.txt.zip')
+prot_complex <- read_tsv('allComplexes.txt.zip')
+
+prot_complex <- prot_complex %>% 
+  filter(Organism == 'Human') %>%
+  select(ComplexID, ComplexName, `subunits(Gene name)`) %>%
+  rename(id = ComplexID, name = ComplexName, gene =  `subunits(Gene name)`) %>%
+  separate_rows(gene, sep = ';')
+  
+
+file.remove('allComplexes.txt.zip')
+
+
+# ------------------------------------------------------------------------------
+# Ohnologs genes
+# CORUM - Mammals Protein complexes 
+# ------------------------------------------------------------------------------
+
+
+ohno <- read_tsv('http://ohnologs.curie.fr/cgi-bin/DownloadBrowse.cgi?crit=[0]&org=hsapiens&opt=pairs&wgd=2R')
+
+
+ohno_genes <- ohno %>% select(Symbol1, Symbol2) %>% 
+  pivot_longer(values_to = 'gene', names_to = 'delete', cols = c(Symbol1, Symbol2)) %>% 
+  select(gene) %>%
+  distinct()
 # ------------------------------------------------------------------------------
 # AGGREGATE ALL THE INFORMATION
 # ------------------------------------------------------------------------------
@@ -1571,4 +1974,27 @@ hgcn_genes <- hgcn_genes %>%
   mutate(gdi = ntile(-(gdi), 100)) %>% # low gdi = Likely Pathogenic
   mutate(hi = ntile(-(hi), 100)) %>% # low hi = Likely Pathogenic
   mutate(snipre = ntile(-(snipre), 100)) # low snipre = Likely Pathogenic
+
+# ------------------------------------------------------------------------------
+# Dataset: TRRUST v.2
+# ------------------------------------------------------------------------------
+
+trrust <- read_tsv('https://www.grnpedia.org/trrust/data/trrust_rawdata.human.tsv', 
+                   col_names = c('tf', 'target', 'mechanism', 'reference'))
+
+trrust <- trrust %>% separate_rows(reference, sep = ';')
+
+trrust <- trrust %>% 
+  left_join(hgcn_genes %>% select(gene, chrom, start_position, end_position) %>% 
+              rename(tf_chrom = chrom, tf_start = start_position, tf_end = end_position)
+  , by = c('tf' = 'gene')) %>%
+  left_join(hgcn_genes %>% select(gene, chrom, start_position, end_position) %>% 
+              rename(target_chrom = chrom, 
+                     target_start = start_position, 
+                     target_end = end_position)
+            , by = c('target' = 'gene')) %>%
+  na.omit() %>%
+  select(tf, tf_chrom, tf_start, tf_end, target, mechanism, everything())
+
+
 

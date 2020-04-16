@@ -1,21 +1,31 @@
-
-
+# library(enrichR)
+# library(DOSE)
+# library(ReactomePA)
+# library(clusterProfiler)
 library(valr)
 library(future)
 library(tictoc)
 library(furrr)
-library(UpSetR)
+# library(UpSetR)
 library(grid)
 library(tidyverse)
 library(tictoc)
+library(ontologyIndex)
 
 
-load('local_data.RData')
-
-result_df <- tibble()
+rename <- dplyr::rename
 
 
-input_check_cnv <-  read_tsv('C:/Users/Requena/Desktop/decipher-cnvs-grch37-2020-01-19.txt', skip = 1) %>%
+# save(hgcn_genes, df_enhancers, lncrna_coord, lncrna, tad, gtex, hpa, hpo_genes, cnv_df, vector_total_terms,
+#      gnomad_sv_raw, decipher_control_raw, dgv_df_raw, hpo_omim, anato_df, mirtarbase,
+#       vector_inheritance, trrust, tf_genes, drugbank,prot_complex,ohno_genes,recomb,
+#       genes_promoter,para_genes,string_db,region_gaps, fusil_score,ensembl_reg,
+#     select, dev_raw, panel_total, omim, orphanet_raw,  hpo_dbs, model1, denovo, clinvar_variants, ridges_home, plot_p100, plot_p46pla, blacklist_encode, mpo_dbs, gwas_variants,mgi, syndromes_total,
+# file = "env_annot_cnvs.RData")
+
+load('env_annot_cnvs.RData')
+
+input_check_cnv <-  read_tsv('/data-cbl/frequena_data/from_workstation/daa_decipher/decipher-cnvs-grch37-2020-01-19.txt', skip = 1) %>%
   as_tibble() %>%
   mutate(length = end - start + 1) %>%
   filter(length >= 50) %>%
@@ -27,6 +37,15 @@ input_check_cnv <-  read_tsv('C:/Users/Requena/Desktop/decipher-cnvs-grch37-2020
   mutate(phenotypes = str_replace_all(phenotypes, '\\|', '<br>')) %>% 
   # filter(inheritance == 'De novo constitutive') %>% 
   filter(variant_class %in% c('Deletion', 'Duplication'))
+
+
+input_check_overlap <- input_check_cnv %>% select(id,pathogenicity,variant_class, 
+                                                  inheritance,chrom,start, end) %>%
+  bind_rows(gnomad_sv_raw %>% mutate(pathogenicity = 'benign_gnomad',
+                                     inheritance = NA) %>%
+              rename(variant_class = svtype) %>%
+              select(id,pathogenicity,
+                     chrom, start, end))
 
 
 check_cnv <- function(input_id, input_clinical, input_variant, input_inheritance,
@@ -42,38 +61,63 @@ check_cnv <- function(input_id, input_clinical, input_variant, input_inheritance
   start_tmp <- input_start
   end_tmp <- input_end
   length_tmp <- end_tmp - start_tmp + 1
-  threshold_30_tmp <- round((length_tmp / 100)*30,0)
+  # threshold_30_tmp <- round((length_tmp / 100)*30,0)
+  threshold_30_tmp <- 0
 
-
-  # id_tmp <- only_patho$id[1]
-  # clinical_tmp <-  only_patho$pathogenicity[1]
-  # type_variant_tmp <-  only_patho$variant_class[1]
-  # type_inheritance_tmp <-  only_patho$inheritance[1]
-  # chrom_tmp <-  only_patho$chrom[1]
-  # start_tmp <-  only_patho$start[1]
-  # end_tmp <-  only_patho$end[1]
+  # just_test <- input_check_cnv %>% filter(id == '1621')
+  # id_tmp <- just_test$id
+  # clinical_tmp <-  just_test$pathogenicity
+  # type_variant_tmp <-  just_test$variant_class
+  # type_inheritance_tmp <-  just_test$inheritance
+  # chrom_tmp <-  just_test$chrom
+  # start_tmp <-  just_test$start
+  # end_tmp <-  just_test$end
   # length_tmp <- end_tmp - start_tmp + 1
+  # threshold_30_tmp <- round((length_tmp / 100)*30,0)
 
   tmp_cnv <- tibble(chrom = chrom_tmp, start = start_tmp, end = end_tmp)
 
+  # 0. Basic information
+  # # N.N Number of genes
+  # # N.N Length
   # 1. CNV databases
-  # # 1.1 RULE - OVERLAP CNV SYNDROMES
-  # # 1.2 RULE - OVERLAP ANNOTATED PATHOGENIC
-  # # 1.3 RULE - OVERLAP NON-PATHOGENIC CNVs
+  # # 1.1 OVERLAP CNV SYNDROMES
+  # # 1.2 OVERLAP ANNOTATED PATHOGENIC
+  # # 1.3 OVERLAP NON-PATHOGENIC CNVs
+  # # 1.4 BLACKLIST REGION
   # 2. Disease annotation
-  # # 2.1 RULE - OVERLAP DISEASE GENES
-  # # 2.2 RULE - OVERLAP DISEASE VARIANTS
+  # # 2.1 OVERLAP DISEASE GENES
+  # # 2.2 OVERLAP DISEASE VARIANTS
   # 3. Model mouse information
   # # 3.1 RULE - OVERLAP WITH ORTHOLOGS GENES ASSOCIATED WITH LETHALITY
   # 4. Biological categories
+  ## 4.1 RULE - SIGNIFICATIVE FUNCTIONAL SIMILARITY
+  ## 4.2 RULE - SIGNIFICATIVE HITS - GENE ONTOLOGY
+  ## 4.3 RULE - SIGNIFICATIVE HITS - PATHWAYS
+  # 
 
   vector_genes <- hgcn_genes %>%
     rename(start = start_position, end = end_position) %>%
     bed_intersect(tmp_cnv ) %>%
+    mutate(length_gene = end.x - start.x + 1) %>% 
+    # mutate(perc_overlap = .overlap / length_gene)
+    # filter(perc_overlap >= 0.3) %>%
+    pull(gene.x)
+  
+  vector_entrez <- hgcn_genes %>%
+    rename(start = start_position, end = end_position) %>%
+    bed_intersect(tmp_cnv) %>%
     mutate(length_gene = end.x - start.x + 1) %>%
-    mutate(perc_overlap = .overlap / length_gene) %>%
-    filter(perc_overlap >= 0.3) %>% pull(gene.x)
+    # mutate(perc_overlap = .overlap / length_gene) %>%
+    # filter(perc_overlap >= 0.3) %>% 
+    pull(entrez_id.x)
+  
+ 
+  
 
+# # NUMBER OF GENES
+  
+result_n_genes <- length(vector_genes)
 
 # # 1º RULE - OVERLAP CNV SYNDROMES
 
@@ -81,7 +125,7 @@ check_cnv <- function(input_id, input_clinical, input_variant, input_inheritance
     filter(chrom == chrom_tmp)
 
 
-  result_n_overlap_cnv_syndrome <- bed_intersect(tmp_cnv, tmp_df) %>%
+  result_n_overlap_cnv_syndrome <- bed_intersect(tmp_df, tmp_cnv) %>%
     filter(.overlap > threshold_30_tmp) %>%
     nrow()
 
@@ -93,7 +137,7 @@ tmp_df <- cnv_df %>%
   filter(pathogenicity == 'Pathogenic') %>%
   filter(chrom == chrom_tmp)
 
-result_n_overlap_patho <- bed_intersect(tmp_cnv, tmp_df) %>%
+result_n_overlap_patho <- bed_intersect(tmp_df, tmp_cnv) %>%
   filter(.overlap > threshold_30_tmp) %>%
   nrow()
 
@@ -103,9 +147,18 @@ tmp_df <- cnv_df %>% filter(! id %in% id_tmp) %>%
   filter(source != 'decipher') %>%
   filter(chrom == chrom_tmp)
 
-result_n_overlap_nonpatho <- bed_intersect(tmp_cnv, tmp_df) %>%
+result_n_overlap_nonpatho <- bed_intersect(tmp_df, tmp_cnv) %>%
   filter(.overlap > threshold_30_tmp) %>%
   nrow()
+
+
+# Nº RULE - OVERLAP BLACKLIST REGIONS
+
+
+result_n_blacklist <- bed_intersect(tmp_cnv, blacklist_encode) %>%
+  filter(.overlap > threshold_30_tmp) %>%
+  nrow()
+
 
 
 # 4º RULE - OVERLAP DISEASE GENES
@@ -152,17 +205,280 @@ result_n_variants_genes <- n_clinvar + n_gwas
 # MP:0010768 - mortality/aging
 # MP:0005380 - embryo
 
-result_n_mouse_embryo <- mgi %>% filter(gene %in% vector_genes, str_detect(pheno, 'MP:0005380')) %>% nrow()
+result_n_mouse_embryo <- mgi %>% filter(gene %in% vector_genes, str_detect(pheno, 'MP:0010768')) %>% nrow()
 
 # # MAXIMUM pLI score
+temporal_df <- hgcn_genes %>% filter(gene %in% vector_genes) %>%  
+  select(pLI) %>%
+  na.omit() %>%
+  arrange(desc(pLI)) %>%
+  slice(1) %>% 
+  pull(pLI)
 
-temporal_df <- hgcn_genes %>% filter(gene %in% vector_genes) %>% select(pLI) %>% na.omit() 
-n_rows <- temporal_df %>% nrow()
-
-maximum_pli <- if_else(n_rows == 0, 0, as.double(max(temporal_df$pLI)))
+maximum_pli <- ifelse(length(temporal_df) == 0, 0, temporal_df)
 
 
+# # MAXIMUM CCR score
 
+temporal_df <- hgcn_genes %>% filter(gene %in% vector_genes) %>%  
+  select(ccr) %>%
+  na.omit() %>%
+  arrange(desc(ccr)) %>%
+  slice(1) %>% 
+  pull(ccr)
+
+maximum_ccr <- ifelse(length(temporal_df) == 0, 0, temporal_df)
+
+
+
+# # MAXIMUM HI score
+
+temporal_df <- hgcn_genes %>% filter(gene %in% vector_genes) %>%  
+  select(hi) %>%
+  na.omit() %>%
+  arrange(desc(hi)) %>%
+  slice(1) %>% 
+  pull(hi)
+
+maximum_hi <- ifelse(length(temporal_df) == 0, 0, temporal_df)
+
+
+# # Min Vg score
+
+temporal_df <- hgcn_genes %>% 
+  mutate(p_vg = ntile(vg, 100)) %>% 
+  filter(gene %in% vector_genes) %>%  
+  select(p_vg) %>%
+  na.omit() %>%
+  arrange(p_vg) %>%
+  slice(1) %>% 
+  pull(p_vg)
+
+minimum_vg <- ifelse(length(temporal_df) == 0, 0, temporal_df)
+
+
+# Number of genes associated with at least 1 HPO term
+
+
+n_genes_one_hpo <- vector_genes %in% hpo_genes$gene %>% sum()
+
+# N Number of genes identified as Cellular letal (FUSIL score)
+
+
+# result_n_genes_cl <- vector_genes %in% fusil_scoregene %>% sum()
+
+
+# Protein complex gene
+
+
+result_n_prot_complex <- vector_genes %in% prot_complex$gene %>% sum()
+
+
+# Number ohnologs genes
+
+
+result_n_ohno <- vector_genes %in% ohno_genes$gene %>% sum()
+
+
+# Number of genes associated with target genes of approved drugs
+
+
+result_n_target_drugs <- vector_genes %in% drugbank$gene %>% sum()
+
+
+# Number of physiological systems affected
+
+hpo_from_gene <- hpo_genes %>% filter(gene %in% vector_genes) %>% pull(hp)
+
+result_n_systems <- unlist(map(hpo_from_gene, function(x) get_ancestors(hpo_dbs, x))) %>% 
+  enframe() %>%
+  filter(value %in% anato_df$name) %>%
+  count(value) %>% 
+  nrow()
+
+# Maximum recombination rate
+
+result_recomb = valr::bed_closest(tmp_cnv, recomb) %>% pull(cm_mb.y) %>% max()
+
+
+# Distance (Mb) closest centromeric and telomeric region
+
+
+
+dist_cent <- bed_closest(tmp_cnv, region_gaps %>% 
+              filter(type == 'centromere')) %>%
+  pull(.dist) %>% abs()
+
+
+dist_tel <- bed_closest(tmp_cnv, region_gaps %>% 
+              filter(type == 'telomere')) %>%
+  pull(.dist) %>% abs()
+
+dist_cent <- dist_cent / 10**6
+dist_tel <- dist_tel / 10**6
+
+if (length(dist_tel) == 0) dist_tel <- NA
+
+
+
+# Pubmed 
+
+result_max_del <- bed_intersect(tmp_cnv, pubmed_df) %>% pull(hits_del.y)
+if (length(result_max_del) == 0) {
+  result_max_del <- NA
+} else {
+  
+  result_max_del <- result_max_del %>% max()
+  
+}
+
+result_max_dup <- bed_intersect(tmp_cnv, pubmed_df) %>% pull(hits_dup.y)
+if (length(result_max_dup) == 0) {
+  result_max_dup <- NA
+} else {
+  
+  result_max_dup <- result_max_dup %>% max()
+  
+}
+
+# if (websiteLive) {
+# 
+# 
+# if (length(vector_genes) == 0) {
+# 
+#   result_n_hits_go_bp <- 0
+# 
+# } else  {
+# 
+#   Sys.sleep(sample(1:2,1))
+# 
+#   enriched <- enrichr(vector_genes, dbs)
+# 
+#   Sys.sleep(sample(1:2,1))
+#   
+# 
+#   enriched_n_row <- enriched$GO_Biological_Process_2018 %>% as_tibble() %>% nrow()
+# 
+#     if (enriched_n_row == 0) {
+# 
+#     result_n_hits_go_bp <- 0
+#   } else {
+# 
+#   result_n_hits_go_bp <- enriched$GO_Biological_Process_2018 %>%
+#     as_tibble() %>%
+#     filter(P.value <= 0.05) %>%
+#     rowwise() %>%
+#     mutate(n_genes = as.integer(str_split(Overlap, pattern = '/')[[1]][1])) %>%
+#     ungroup() %>%
+#     filter(n_genes > 1) %>%
+#     nrow()
+# 
+# }
+# }
+#   
+# } else {
+#   
+#   result_n_hits_go_bp <- 9999
+#   
+# }
+
+# result_n_hits_go_bp <- 0
+
+# if (length(vector_entrez) == 0) {
+#   
+#   result_n_hits_go_bp <- 0
+# } else {
+#   Sys.sleep(sample(1:3,1))
+# result_n_hits_go_bp <- enrichGO(gene = vector_entrez,
+#                 # universe      = names(geneList),
+#                 OrgDb         = org.Hs.eg.db,
+#                 ont           = "BP",
+#                 pAdjustMethod = "BH",
+#                 pvalueCutoff  = 0.01,
+#                 qvalueCutoff  = 0.05,
+#                 readable      = TRUE) %>%
+#       
+#       as_tibble() %>% 
+#       filter(Count > 1) %>%
+#       nrow()
+# 
+# }
+
+
+# Maximum PhastCons46 score promoter region
+
+result_max_phast <- genes_promoter %>% filter(gene %in% vector_genes) %>% arrange(desc(mean_phast)) %>%
+  slice(1) %>% pull(mean_phast)
+
+
+if (length(result_max_phast) == 0) result_max_phast <- 0
+
+# Maximum CpG density
+
+result_max_cpg <- genes_promoter %>% filter(gene %in% vector_genes) %>% arrange(desc(cpg_density)) %>%
+  slice(1) %>% pull(cpg_density)
+
+
+if (length(result_max_cpg) == 0) result_max_cpg <- 0
+
+
+# Maximum degree
+result_max_degree <- string_db %>% filter(gene %in% vector_genes) %>% arrange(desc(degree)) %>%
+  slice(1) %>% pull(degree)
+
+if (length(result_max_degree) == 0) result_max_degree <- 0
+
+
+# Maximum page_rank
+
+result_max_page_rank <- string_db %>% filter(gene %in% vector_genes) %>% arrange(desc(page_rank)) %>%
+  slice(1) %>% pull(page_rank)
+
+if (length(result_max_page_rank) == 0) result_max_page_rank <- 0
+
+
+# Paralogous genes
+
+result_max_par <- para_genes %>% filter(gene %in% vector_genes) %>% arrange(desc(n)) %>%
+  slice(1) %>% pull(n)
+
+if (length(result_max_par) == 0) result_max_par <- 0
+
+# TFs
+
+
+
+result_n_tf <- length(vector_genes[vector_genes %in% tf_genes])
+
+
+# Number open chromatin regions overlapping
+
+result_n_open <- bed_intersect(tmp_cnv, ensembl_reg %>% filter(type == 'open_chromatin_region')) %>% nrow()
+
+# Number TFBs overlapping
+
+result_n_tfbs <- bed_intersect(tmp_cnv, ensembl_reg %>% filter(type == 'TF_binding_site')) %>% nrow()
+
+# Number CTCF regions overlapping
+
+result_n_ctcf <- bed_intersect(tmp_cnv, ensembl_reg %>% filter(type == 'CTCF_binding_site')) %>% nrow()
+
+# Number essential genes
+
+
+result_n_essent_genes_cl <- length(vector_genes[vector_genes %in% 
+                                               (fusil_score %>% filter(FUSIL == 'CL') %>% pull(hgnc_symbol))]) 
+  
+  
+result_n_essent_genes_dl <- length(vector_genes[vector_genes %in% 
+                                                  (fusil_score %>% filter(FUSIL == 'DL') %>% pull(hgnc_symbol))]) 
+
+# # FUNCTIONAL SIMILARITY OF GENES
+# 
+# g1 <- hgcn_genes %>% filter(gene %in% vector_genes) %>% pull(entrez_id) %>% as.character()
+# 
+# result_similarity_wang <- ifelse(length(g1) == 0, NA, 
+#                                  geneSim(g1, g1, measure="Wang", combine="BMA") %>% mean(na.rm = TRUE))
 
 # AGGREGATION
 
@@ -177,44 +493,140 @@ result_tmp <- tibble(
   'disease_genes' = result_n_disease_genes,
   'disease_variants' = result_n_variants_genes,
   'embryo_mouse' = result_n_mouse_embryo,
-  'maximum_pli' = maximum_pli,
-  'length_cnv' = length_tmp
+  'max_pli' = maximum_pli,
+  'max_hi' = maximum_hi,
+  'max_ccr' = maximum_ccr,
+  'length_cnv' = length_tmp,
+  'n_genes_hpo' = n_genes_one_hpo,
+  'n_genes' = result_n_genes,
+  'n_ohno' = result_n_ohno,
+  'n_tf' = result_n_tf,
+  'n_target_drugs' = result_n_target_drugs,
+  'n_blacklist' = result_n_blacklist,
+  'n_prot_complex' = result_n_prot_complex,
+  'min_vg' = minimum_vg,
+  'max_par' = result_max_par,
+  'max_degree' = result_max_degree,
+  'max_page_rank' = result_max_page_rank,
+  'max_phast' = result_max_phast,
+  'max_cpg' = result_max_cpg,
+  'n_systems' = result_n_systems,
+  'n_open' = result_n_open,
+  'n_tfbs' = result_n_tfbs,
+  'n_ctcf' = result_n_ctcf,
+  'recomb_rate' = result_recomb,
+  'dist_cent' = dist_cent,
+  'dist_tel' = dist_tel,
+  'essent_cl' = result_n_essent_genes_cl,
+  'essent_dl' = result_n_essent_genes_dl
 )
 
 return(result_tmp)
 
 }
 
-plan("multiprocess", workers = 2)
+# plan("multiprocess", workers = 60)
 
-
-
-only_patho <- input_check_cnv %>% slice(1:100)
 
 tic()
 
-
-output_check <- pmap(list(only_patho$id, only_patho$pathogenicity, only_patho$variant_class,
-                            only_patho$inheritance,
-                            only_patho$chrom, only_patho$start, only_patho$end), 
+output_list <- future_pmap(list(input_check_overlap$id, 
+                                input_check_overlap$pathogenicity, 
+                                input_check_overlap$variant_class,
+                                input_check_overlap$inheritance,
+                                input_check_overlap$chrom, 
+                                input_check_overlap$start, 
+                                input_check_overlap$end), 
                        check_cnv)
+
+output_df <- bind_rows(lapply(output_list, as.data.frame.list)) %>% as_tibble()
+
 toc()
 
-output_check <- bind_rows(lapply(output_check, as.data.frame.list)) %>% as_tibble()
-
-write_tsv(output_check, 'output_check.tsv')
-
-
-
-
-
-
-
-
-
-
-
-
+# 
+# output_df %>%
+# 
+# to_cba <- output_df %>% 
+#   # mutate(clinical = if_else(clinical == 'Likely benign', 'Benign', clinical)) %>%
+#   filter(clinical %in% c('Pathogenic', 'Benign', 'Likely benign', 'Likely pathogenic')) %>%
+#   mutate(clinical = as.factor(clinical)) %>%
+#   mutate(type_variant = if_else(type_variant == 'Deletion', 1, 0)) %>%
+#   mutate(type_inheritance = if_else(type_inheritance == 'De novo constitutive', 1, 0))
+#   # mutate(max_pli = if_else(maximum_pli >= 90, 1, 0)) %>%
+#   # mutate(embryo_mouse = if_else(embryo_mouse >= 1, 1, 0))
+# 
+# 
+# # to_cba[,-c(1:2,12)] <- map_df(to_cba[,-c(1:2,12 )], function(x) if_else(x > 0, 1, 0))
+# 
+# 
+# 
+# 
+# model_cba <- arulesCBA::CBA(clinical ~ n_cnv_syndromes + type_variant + embryo_mouse + 
+#                               maximum_pli + n_genes_hpo + n_genes + n_tf + n_blacklist + n_target_drugs +
+#                               type_inheritance + patho_cnv + nonpatho_cnv + disease_genes + disease_variants, 
+#                             data = to_cba %>% select(-length_cnv) ,
+#                             # method = 'first',
+#                             support = 0.005, 
+#                             confidence = 0.7)
+# 
+# 
+# output_df %>% 
+#   # mutate(n_systems = if_else(n_systems > 1, 'Yes', 'No')) %>%
+#   
+#   mutate(max_pli = if_else(max_pli >= 90, 'Yes', 'No')) %>%
+#   mutate(max_hi = if_else(max_hi >= 90, 'Yes', 'No')) %>%
+#   mutate_if(is.integer, ~ if_else(. > 0, 'Yes', 'No')) %>%
+#   mutate_if(is.double, ~ if_else(. > 0, 'Yes', 'No')) %>%
+#   mutate(clinical = if_else(clinical == 'Likely benign', 'Benign', clinical)) %>%
+#   mutate(clinical = if_else(clinical == 'Likely pathogenic', 'Pathogenic', clinical)) %>%
+#   
+#   count(clinical, 
+#         n_cnv_syndromes, 
+#         disease_genes, 
+#         patho_cnv, 
+#         n_ohno,
+#         n_tf,
+#         n_target_drugs,
+#         n_prot_complex,
+#         n_tfbs,
+#         n_ctcf,
+#         n_open,
+#         max_pli, 
+#         max_ccr,
+#         max_hi,
+#         disease_variants, 
+#         nonpatho_cnv, 
+#         essent_cl,
+#         essent_dl,
+#         n_genes_hpo, 
+#         n_blacklist) %>%
+#   mutate(clinical = factor(clinical,levels = c("Pathogenic", "Unknown", "Uncertain", "Benign"))) %>%
+#   group_by(clinical) %>%
+#   mutate(perc = n / sum(n)*100) %>%
+#   select(-n) %>%
+#   pivot_longer(-c(clinical,perc),  names_to = 'rule', values_to = 'yes_no') %>%
+#   ggplot(aes(clinical, perc)) +
+#   geom_col(aes(fill = yes_no)) +
+#   theme_fancy() +
+#   facet_wrap(~ rule) +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+#   xlab('Clinical significance') +
+#   ylab('Percentage (%)')
+# 
+# 
+# 
+# 
+# output_df %>% 
+#   mutate(max_pli = if_else(max_pli >= 90, 'Yes', 'No')) %>%
+#   mutate(max_hi = if_else(max_hi >= 90, 'Yes', 'No')) %>%
+#   mutate_if(is.integer, ~ if_else(. > 0, 'Yes', 'No')) %>%
+#   mutate_if(is.double, ~ if_else(. > 0, 'Yes', 'No')) %>%
+#   mutate(clinical = if_else(clinical == 'Likely benign', 'Benign', clinical)) %>%
+#   mutate(clinical = if_else(clinical == 'Likely pathogenic', 'Pathogenic', clinical)) %>%
+#   filter(clinical == 'Benign') %>%
+#   count(n_cnv_syndromes, patho_cnv, disease_genes, disease_variants)
+# 
+#   
 
 # result_df <- first_df %>%
 #   mutate(patho_cnv = patho_cnv + n_cnv_syndromes) %>%
@@ -223,7 +635,7 @@ write_tsv(output_check, 'output_check.tsv')
 # 
 # result_df[,-c(1:2)] <- map_df(result_df[,-c(1:2)], function(x) if_else(x > 0, 1, 0))
 # 
-# 
+
 # 
 # 
 # tmp_plot <- result_df %>% filter(clinical %in% c('Pathogenic', 'Likely pathogenic')) %>% select(-clinical )

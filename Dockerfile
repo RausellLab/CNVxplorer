@@ -22,6 +22,7 @@ RUN R -e "devtools::install_github('rnabioco/valr')"
 
 RUN R -e "install.packages(c('shinydashboard', \
 'shinyjs', \
+'arulesCBA', \
 'prettydoc', \
 'ontologySimilarity', \
 'ontologyIndex', \
@@ -45,6 +46,7 @@ RUN R -e "install.packages(c('shinydashboard', \
 'ggridges', \
 'UpSetR', \
 'randomForest', \
+'shinyalert', \
 'XML', \
 'shiny'))"
 

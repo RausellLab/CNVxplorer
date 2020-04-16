@@ -104,65 +104,46 @@ check_regions <- function(chrom = NULL, start = NULL, end = NULL) {
 
 
 
-get_perc_overlap <- function(df, chrom_cnv, start_cnv, end_cnv, is_a_gene = FALSE) {
-  
-  # df <- test1521 %>% rename(start = start_position, end = end_position)
-  # chrom_cnv <- '6'
-  # start_cnv <- 34813719
-  # end_cnv <- 36278623
+get_perc_overlap <- function(df, chrom_cnv, start_cnv, end_cnv, 
+                             is_a_gene = FALSE) {
 
 
+  # df <- test666
+  # start_cnv <- 10152
+  # end_cnv <- 415585
+  # chrom_cnv <- '17'
+
+  df <- df %>%
+    mutate(id_tmp = row_number())
   
-  tmp_df <- df %>% dplyr::select(chrom, start, end)
   
-  if (is_a_gene == FALSE) {
+  tmp_df <- df %>% dplyr::select(chrom, start, end, id_tmp)
+  
+  if (is_a_gene == TRUE) {
     
-  df <- bed_intersect(tibble(chrom = chrom_cnv, start = start_cnv, end = end_cnv ), tmp_df ) %>%
-    mutate(p_overlap = (.overlap /(end.x - start.x + 1))*100) %>% arrange(p_overlap) %>%
+  df <- bed_intersect(tmp_df %>% select(-id_tmp), tibble(chrom = chrom_cnv, start = start_cnv, end = end_cnv ) ) %>%
+    mutate(p_overlap = ((.overlap + 1)  /(end.x - start.x + 1))*100) %>% 
     mutate(p_overlap = round(p_overlap, 2)) %>%
-    select(start.y, end.y, p_overlap) %>%
-    right_join(df, by = c('start.y' = 'start', 'end.y' = 'end')) %>%
-    rename(start = start.y, end = end.y) %>%
-    select(-p_overlap, p_overlap)
-  
+    select(start.x, end.x, p_overlap) %>%
+    right_join(df, by = c('start.x' = 'start', 'end.x' = 'end')) %>%
+    rename(start = start.x, end = end.x) %>%
+    select(-p_overlap, p_overlap) %>%
+    arrange(desc(p_overlap))
+
   } else {
     
     df <- bed_intersect(tmp_df, tibble(chrom = chrom_cnv, start = start_cnv, end = end_cnv)) %>%
-      mutate(p_overlap = (.overlap /(end.x - start.x + 1))*100) %>% 
+      mutate(p_overlap = ((.overlap + 1) /(end.x - start.x + 1))*100) %>% 
       arrange(p_overlap) %>%
       mutate(p_overlap = round(p_overlap, 2)) %>%
-      select(start.x, end.x, p_overlap) %>%
-      right_join(df, by = c('start.x' = 'start', 'end.x' = 'end')) %>%
+      select(start.x, end.x, id_tmp.x, p_overlap) %>%
+      right_join(df, by = c('start.x' = 'start', 'end.x' = 'end', 'id_tmp.x' = 'id_tmp')) %>%
       rename(start = start.x, end = end.x) %>%
-      select(-p_overlap, p_overlap)
-    
-    
-    
-    
+      select(-p_overlap, p_overlap, -id_tmp.x) %>%
+      arrange(desc(p_overlap))
     
   }
-  
-  # df <- df %>%
-  #   rename(start_gene = start_position, end_gene = end_position) %>%
-  #   mutate(type_overlap = case_when(
-  #     start_cnv <  start_gene & end_cnv > start_gene ~ "left",
-  #     start_cnv > start_gene & end_cnv < end_gene  ~ "center",
-  #     start_cnv <  end_gene & end_cnv > end_gene ~ "right",
-  #     start_cnv < start_gene & end_cnv > end_gene ~ 'all'
-  #   )) %>%
-  #   mutate(p_overlap = case_when(
-  #     type_overlap ==  'center' ~ 1,
-  #     type_overlap ==  'all' ~ (end_gene - start_gene + 1) / (end_cnv - start_cnv + 1) ,
-  #     type_overlap ==  'right'  ~ (end_gene - start_cnv + 1) / (end_cnv - start_cnv + 1) ,
-  #     type_overlap ==  'left'  ~ (end_cnv - start_gene + 1) / (end_cnv - start_cnv + 1)
-  #   )) %>%
-  #   mutate(p_overlap = round(p_overlap * 100, 0)) %>%
-  #   rename(start_position = start_gene, end_position = end_gene)
-  # select(-type_overlap)
-  
-  
 
-  
   return(df)
 }
 
@@ -179,7 +160,7 @@ get_upset <- function(df, gene = FALSE) {
   
 
   # df <- test41114
-  df <- test666
+  # df <- test666
   
   df_tmp <- df %>% 
     dplyr::select(term) %>%
@@ -187,7 +168,7 @@ get_upset <- function(df, gene = FALSE) {
     mutate(id_row = row_number())
   
   
-  vector_hpo <- df %>% select(term) %>% distinct() %>% pull()
+  vector_hpo <- df %>% dplyr::select(term) %>% distinct() %>% pull()
   
   
   validate(
@@ -230,13 +211,11 @@ get_sim_score <- function(genes_vector, patient_terms, hpo_list_genes, hpo_dbs) 
   # genes_vector <- c('KIAA0319L', 'GJB3', 'GJB4')
   # patient_terms <- replicate(simplify=FALSE, n=1, expr=minimal_set(hpo_down, sample(hpo_down$id, size=10)))
   
-  # genes_vector <- test001
-  # patient_terms <- test002
-  # hpo_list_genes <- test003
-  # hpo_dbs <- test004
+  genes_vector <- test001
+  patient_terms <- test002
+  hpo_list_genes <- test003
 
-  # patient_terms[[1]] <- c(patient_terms[[1]] , 'HP:0001166' )
-  
+
   
   hpo_patient <- patient_terms[[1]]
 
@@ -251,11 +230,19 @@ get_sim_score <- function(genes_vector, patient_terms, hpo_list_genes, hpo_dbs) 
   test00021 <<- genes_sample
   test00022 <<- hpo_patient
 
-  mat_test <- get_profile_sims(ontology = hpo_dbs, profile = hpo_patient, term_sets = genes_sample,
-                   term_sim_method = 'resnik') %>%
+  # mat_test <- get_profile_sims(ontology = hpo_dbs, profile = hpo_patient, term_sets = genes_sample,
+  #                  term_sim_method = 'resnik') %>%
+  #   as_tibble(rownames = 'gene') %>%
+  #   mutate(p_value = NA) %>%
+  #   # mutate(patient_terms = hpo_patient) %>%
+  #   left_join(to_p_value, by = "gene")
+  
+  mat_test <- get_sim_grid(ontology=hpo_dbs, 
+                                term_sets= list('patient' = hpo_patient),
+                                term_sets2 = genes_sample,
+                                term_sim_method = 'resnik') %>%
     as_tibble(rownames = 'gene') %>%
     mutate(p_value = NA) %>%
-    # mutate(patient_terms = hpo_patient) %>%
     left_join(to_p_value, by = "gene")
   
 
@@ -284,39 +271,39 @@ get_sim_score <- function(genes_vector, patient_terms, hpo_list_genes, hpo_dbs) 
 # ------------------------------------------------------------------------------
 
 
-
-get_p <- function(patient_terms, value_patient, n_freq) {
-  
-  
-  # patient_terms <- mat_test$patient_terms[i]
-  # value_patient <- mat_test$value_patient[i]
-  # n_freq <- mat_test$n_freq[i] 
-  # 
-  
-  # print(n_freq)
-
-  fake_gene <- replicate(simplify=FALSE, n= 100, expr=minimal_set(hpo_down, sample(hpo_down$id, size= n_freq)))
-  hpo_patient <-  patient_terms
-  names(hpo_patient) <- 'patient'
-
-  total_set <- c(fake_gene, hpo_patient)
-
-  mat_test <- get_sim_grid(ontology = hpo_down,
-                           term_sets = total_set,
-                           term_sim_method = 'resnik',
-                           combine = 'average')
-
-  p_value <- mat_test %>%
-    as_tibble() %>%
-    select(patient) %>%
-    filter(patient >= value_patient) %>%
-    nrow()
-
-  p_value <- p_value / 100
-
-  return(p_value)
-
-}
+# 
+# get_p <- function(patient_terms, value_patient, n_freq) {
+#   
+#   
+#   # patient_terms <- mat_test$patient_terms[i]
+#   # value_patient <- mat_test$value_patient[i]
+#   # n_freq <- mat_test$n_freq[i] 
+#   # 
+#   
+#   # print(n_freq)
+# 
+#   fake_gene <- replicate(simplify=FALSE, n= 100, expr=minimal_set(hpo_down, sample(hpo_down$id, size= n_freq)))
+#   hpo_patient <-  patient_terms
+#   names(hpo_patient) <- 'patient'
+# 
+#   total_set <- c(fake_gene, hpo_patient)
+# 
+#   mat_test <- get_sim_grid(ontology = hpo_down,
+#                            term_sets = total_set,
+#                            term_sim_method = 'resnik',
+#                            combine = 'average')
+# 
+#   p_value <- mat_test %>%
+#     as_tibble() %>%
+#     select(patient) %>%
+#     filter(patient >= value_patient) %>%
+#     nrow()
+# 
+#   p_value <- p_value / 100
+# 
+#   return(p_value)
+# 
+# }
 
 
 # ------------------------------------------------------------------------------
@@ -415,4 +402,239 @@ mgeneSim_mod <- function (genes, semData, measure = "Wang", drop = "IEA", combin
 # }
 # 
 
+
+
+# ------------------------------------------------------------------------------
+# Name: check_app_cnv
+# Description: CNV annotation -> arules model
+# ------------------------------------------------------------------------------
+
+
+check_app_cnv <- function(input_id, input_clinical, input_variant, input_inheritance,
+                      input_chrom, input_start, input_end) {
+  
+  
+  
+  id_tmp <- input_id
+  clinical_tmp <- input_clinical
+  type_variant_tmp <- input_variant
+  type_inheritance_tmp <- input_inheritance
+  chrom_tmp <- input_chrom
+  start_tmp <- input_start
+  end_tmp <- input_end
+  length_tmp <- end_tmp - start_tmp + 1
+  threshold_30_tmp <- round((length_tmp / 100)*30,0)
+  
+  # just_test <- input_check_cnv %>% filter(id == '1621')
+  # id_tmp <- just_test$id
+  # clinical_tmp <-  just_test$pathogenicity
+  # type_variant_tmp <-  just_test$variant_class
+  # type_inheritance_tmp <-  just_test$inheritance
+  # chrom_tmp <-  just_test$chrom
+  # start_tmp <-  just_test$start
+  # end_tmp <-  just_test$end
+  # length_tmp <- end_tmp - start_tmp + 1
+  # threshold_30_tmp <- round((length_tmp / 100)*30,0)
+  
+  tmp_cnv <- tibble(chrom = chrom_tmp, start = start_tmp, end = end_tmp)
+  
+  # 0. Basic information
+  # # N.N Number of genes
+  # # N.N Length
+  # 1. CNV databases
+  # # 1.1 OVERLAP CNV SYNDROMES
+  # # 1.2 OVERLAP ANNOTATED PATHOGENIC
+  # # 1.3 OVERLAP NON-PATHOGENIC CNVs
+  # # 1.4 BLACKLIST REGION
+  # 2. Disease annotation
+  # # 2.1 OVERLAP DISEASE GENES
+  # # 2.2 OVERLAP DISEASE VARIANTS
+  # 3. Model mouse information
+  # # 3.1 RULE - OVERLAP WITH ORTHOLOGS GENES ASSOCIATED WITH LETHALITY
+  # 4. Biological categories
+  ## 4.1 RULE - SIGNIFICATIVE FUNCTIONAL SIMILARITY
+  ## 4.2 RULE - SIGNIFICATIVE HITS - GENE ONTOLOGY
+  ## 4.3 RULE - SIGNIFICATIVE HITS - PATHWAYS
+  # 
+  
+  vector_genes <- hgcn_genes %>%
+    rename(start = start_position, end = end_position) %>%
+    bed_intersect(tmp_cnv ) %>%
+    mutate(length_gene = end.x - start.x + 1) %>%
+    mutate(perc_overlap = .overlap / length_gene) %>%
+    filter(perc_overlap >= 0.3) %>% pull(gene.x)
+  
+  vector_entrez <- hgcn_genes %>%
+    rename(start = start_position, end = end_position) %>%
+    bed_intersect(tmp_cnv ) %>%
+    mutate(length_gene = end.x - start.x + 1) %>%
+    mutate(perc_overlap = .overlap / length_gene) %>%
+    filter(perc_overlap >= 0.3) %>% 
+    pull(entrez_id.x)
+  
+  
+  
+  
+  # # NUMBER OF GENES
+  
+  result_n_genes <- length(vector_genes)
+  
+  # # 1º RULE - OVERLAP CNV SYNDROMES
+  
+  tmp_df <- syndromes_total %>%
+    filter(chrom == chrom_tmp)
+  
+  
+  result_n_overlap_cnv_syndrome <- bed_intersect(tmp_df, tmp_cnv) %>%
+    filter(.overlap > threshold_30_tmp) %>%
+    nrow()
+  
+  
+  
+  # 2º RULE - OVERLAP ANNOTATED PATHOGENIC
+  tmp_df <- cnv_df %>%
+    filter(! id %in% id_tmp) %>%
+    filter(pathogenicity == 'Pathogenic') %>%
+    filter(chrom == chrom_tmp)
+  
+  result_n_overlap_patho <- bed_intersect(tmp_df, tmp_cnv) %>%
+    filter(.overlap > threshold_30_tmp) %>%
+    nrow()
+  
+  
+  # 3º RULE - OVERLAP NON-PATHOGENIC CNVs
+  tmp_df <- cnv_df %>% filter(! id %in% id_tmp) %>%
+    filter(source != 'decipher') %>%
+    filter(chrom == chrom_tmp)
+  
+  result_n_overlap_nonpatho <- bed_intersect(tmp_df, tmp_cnv) %>%
+    filter(.overlap > threshold_30_tmp) %>%
+    nrow()
+  
+  
+  # Nº RULE - OVERLAP BLACKLIST REGIONS
+  
+  
+  result_n_blacklist <- bed_intersect(tmp_cnv, blacklist_encode) %>%
+    filter(.overlap > threshold_30_tmp) %>%
+    nrow()
+  
+  
+  
+  # 4º RULE - OVERLAP DISEASE GENES
+  
+  result_n_disease_genes <- hgcn_genes %>%
+    filter(gene %in% vector_genes) %>%
+    filter(disease == 'Yes') %>%
+    filter(chrom == chrom_tmp) %>%
+    rename(start = start_position, end = end_position) %>%
+    nrow()
+  
+  
+  # 5º RULE - OVERLAP DISEASE VARIANTS
+  
+  tmp_df <- clinvar_variants %>%
+    filter(clinical_sign == "Pathogenic") %>%
+    filter(chrom == chrom_tmp) %>%
+    mutate(start = pos, end = pos) %>%
+    select(chrom, start, end) %>%
+    mutate(chrom = as.character(chrom))
+  
+  
+  
+  n_clinvar <- bed_intersect(tmp_cnv, tmp_df) %>% nrow()
+  
+  
+  tmp_df <- gwas_variants %>%
+    filter(INTERGENIC == "No") %>%
+    filter(CHR_ID == chrom_tmp) %>%
+    mutate(start = CHR_POS, end = CHR_POS) %>%
+    rename(chrom = CHR_ID) %>%
+    select(chrom, start, end)
+  
+  
+  n_gwas <- bed_intersect(tmp_cnv, tmp_df) %>% nrow()
+  
+  
+  result_n_variants_genes <- n_clinvar + n_gwas
+  
+  
+  # # 3.1 RULE - OVERLAP WITH ORTHOLOGS GENES ASSOCIATED WITH EMBRYONIC 
+  # PHENOTYPE IN MOUSE MODEL
+  
+  # MP:0010768 - mortality/aging
+  # MP:0005380 - embryo
+  
+  result_n_mouse_embryo <- mgi %>% filter(gene %in% vector_genes, str_detect(pheno, 'MP:0010768')) %>% nrow()
+  
+  # # MAXIMUM pLI score
+  temporal_df <- hgcn_genes %>% filter(gene %in% vector_genes) %>%  
+    select(pLI) %>%
+    na.omit() %>%
+    arrange(desc(pLI)) %>%
+    slice(1) %>% 
+    pull(pLI)
+  
+  maximum_pli <- ifelse(length(temporal_df) == 0, 0, temporal_df)
+
+  
+
+  
+  
+  # Number of genes associated with at least 1 HPO term
+  
+  
+  n_genes_one_hpo <- vector_genes %in% hpo_genes$gene %>% sum()
+
+  
+  # Number ohnologs genes
+  
+  
+  result_n_ohno <- vector_genes %in% ohno_genes$gene %>% sum()
+
+  
+  # TFs
+  
+  result_n_tf <- length(vector_genes[vector_genes %in% tf_genes])
+  
+  
+  # Number of genes associated with target genes of approved drugs
+  
+  
+  result_n_target_drugs <- vector_genes %in% drugbank$gene %>% sum()
+  
+  
+  # Nº RULE - OVERLAP BLACKLIST REGIONS
+  
+  
+  result_n_blacklist <- bed_intersect(tmp_cnv, blacklist_encode) %>%
+    filter(.overlap > threshold_30_tmp) %>%
+    nrow()
+
+  # AGGREGATION
+  
+  result_tmp <- tibble(
+    'id' = id_tmp,
+    'clinical' = clinical_tmp,
+    'type_variant' = type_variant_tmp, #
+    'type_inheritance' =   type_inheritance_tmp, #
+    'n_cnv_syndromes' = result_n_overlap_cnv_syndrome, #
+    'patho_cnv' = result_n_overlap_patho, #
+    'nonpatho_cnv' = result_n_overlap_nonpatho, #
+    'disease_genes' = result_n_disease_genes, #
+    'disease_variants' = result_n_variants_genes, #
+    'embryo_mouse' = result_n_mouse_embryo, #
+    'max_pli' = maximum_pli, #
+    'n_genes_hpo' = n_genes_one_hpo, #
+    'n_genes' = result_n_genes, #
+    # 'n_ohno' = result_n_ohno,
+    'n_tf' = result_n_tf, #
+    'n_target_drugs' = result_n_target_drugs, #
+    'n_blacklist' = result_n_blacklist, #
+
+  )
+  
+  return(result_tmp)
+  
+}
 
