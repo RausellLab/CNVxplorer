@@ -2942,30 +2942,30 @@ shiny::shinyApp(
     })
     
     
-    output$medgen_assoc <- renderDataTable({
-      
-      ids_query <- c(query_pubmed_del()[['ids']], query_pubmed_dup()[['ids']])
-      query_link <- entrez_link(db= 'medgen', id= ids_query, dbfrom="pubmed")
-      test4141 <<- query_link
-      query_link <- query_link$links[['pubmed_medgen']] %>% as.numeric()
-      
-      validate(
-        need(FALSE, 'TBA')
-      )
-      
-      test1311111 <<- query_link
-      query_tmp <- entrez_summary(db="medgen", id= test1311111)
-      
-      title <- unname(map_chr(query_tmp, function(x) x[["name"]]))
-      id_medgen <- unname(map_chr(query_tmp, function(x) x[["uid"]]))
-    
-      
-      tmp_df <- tibble('title' = title, 'id_gene' = id_medgen)
-      
-      datatable(tmp_df, escape = FALSE, colnames = c('Title', 'id'))
-      
-      
-    })
+    # output$medgen_assoc <- renderDataTable({
+    #   
+    #   ids_query <- c(query_pubmed_del()[['ids']], query_pubmed_dup()[['ids']])
+    #   query_link <- entrez_link(db= 'medgen', id= ids_query, dbfrom="pubmed")
+    #   test4141 <<- query_link
+    #   query_link <- query_link$links[['pubmed_medgen']] %>% as.numeric()
+    #   
+    #   validate(
+    #     need(FALSE, 'TBA')
+    #   )
+    #   
+    #   test1311111 <<- query_link
+    #   query_tmp <- entrez_summary(db="medgen", id= test1311111)
+    #   
+    #   title <- unname(map_chr(query_tmp, function(x) x[["name"]]))
+    #   id_medgen <- unname(map_chr(query_tmp, function(x) x[["uid"]]))
+    # 
+    #   
+    #   tmp_df <- tibble('title' = title, 'id_gene' = id_medgen)
+    #   
+    #   datatable(tmp_df, escape = FALSE, colnames = c('Title', 'id'))
+    #   
+    #   
+    # })
     
     query_pubmed_dup <- reactive({
       
@@ -3229,7 +3229,9 @@ shiny::shinyApp(
                           n_cites = n_cites, journal = journal_id, date_release = date_release, 
                           pmid = pmid_id)
       
-      df_output <- df_output %>% mutate(n_cites = as.integer(ifelse(n_cites == '', 0, n_cites)))
+      df_output <- df_output %>% 
+        mutate(n_cites = as.integer(ifelse(n_cites == '', 0, n_cites)))
+      
       df_output
       
       
@@ -3305,6 +3307,7 @@ shiny::shinyApp(
       } else {
         
         tmp_df <- tmp_df %>% 
+          select(pmid, everything()) %>%
           mutate(pmid = paste0("<a href='", paste0('https://pubmed.ncbi.nlm.nih.gov/', pmid),"' target='_blank'>", pmid,"</a>"))
         
           
@@ -4081,14 +4084,7 @@ shiny::shinyApp(
 
       datatable(data_input, rownames = FALSE, filter = 'top',
                 colnames = c('Band', 'Gene', 'Disease', 'Essential', 'pLI', 'RVIS', 'CCR', 'HI', 'GDI', 'SnIPRE', 'ncRVIS',
-                             'ncGERP', 'Overlap(%)'),
-                selection = 'single',
-                options = list(
-                  pageLength = 5,
-                  style = 'bootstrap',
-                  list(searchHighlight = TRUE),
-                  stateSave = FALSE
-                )) %>%
+                             'ncGERP', 'Overlap(%)')) %>%
         formatStyle(c('pLI', 'rvis', 'hi', 'gdi', 'snipre', 'ncrvis', 'ncgerp'), color = styleInterval(94, c('weight', '#ff7f7f'))) %>%
         formatStyle(c('ccr'), color = styleInterval(1, c('weight', '#ff7f7f'))) %>%
         formatStyle(c('disease', 'haplo', 'triplo', 'omim', 'dev', 'fda', 'gwas'), color = styleEqual(c('No', 'Yes'), c('weight', '#ff7f7f')))

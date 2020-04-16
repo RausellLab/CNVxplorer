@@ -533,7 +533,7 @@ return(result_tmp)
 
 }
 
-plan("multiprocess", workers = 60)
+plan("multiprocess", workers = 40)
 
 
 # test_before <- input_check_cnv %>% slice(sample(1:nrow(.), 100)) 
