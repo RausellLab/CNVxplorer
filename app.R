@@ -1525,13 +1525,13 @@ shiny::shinyApp(
                      width = 12,
                      options = tagList(
                        uiOutput('switch_tfs')
-                     ))
-          # tablerCard(title = 'Long noncoding RNAs (lncRNAs) disrupted',
-          #            DTOutput('lncrna_df'),
-          #            collapsible = FALSE,
-          #            closable = FALSE,
-          #            width = 12)
-          
+                     )),
+          tablerCard(title = 'Long noncoding RNAs (lncRNAs) disrupted',
+                     DTOutput('lncrna_df'),
+                     collapsible = FALSE,
+                     closable = FALSE,
+                     width = 12)
+
         ),
         
         tablerTabItem(
