@@ -37,7 +37,7 @@ input_check_cnv <-  read_tsv('/data-cbl/frequena_data/from_workstation/daa_decip
   as_tibble() %>%
   mutate(length = end - start + 1) %>%
   filter(length >= 50) %>%
-  mutate(-length) %>%
+  select(-length) %>%
   mutate(source = 'decipher') %>%
   rename(id = `# patient_id`, chrom = chr) %>%
   mutate(id = as.character(id)) %>%
@@ -45,6 +45,7 @@ input_check_cnv <-  read_tsv('/data-cbl/frequena_data/from_workstation/daa_decip
   mutate(phenotypes = str_replace_all(phenotypes, '\\|', '<br>')) %>% 
   # filter(inheritance == 'De novo constitutive') %>% 
   filter(variant_class %in% c('Deletion', 'Duplication'))
+  # mutate(id_tmp = row_number())
 
 
 input_check_overlap <- input_check_cnv %>% select(id,pathogenicity,variant_class, 
@@ -70,16 +71,16 @@ check_cnv <- function(input_id, input_clinical, input_variant, input_inheritance
   # threshold_30_tmp <- round((length_tmp / 100)*30,0)
   threshold_30_tmp <- 0
 
-  # just_test <- input_check_cnv %>% filter(id == '112')
-  # id_tmp <- just_test$id
-  # clinical_tmp <-  just_test$pathogenicity
-  # type_variant_tmp <-  just_test$variant_class
-  # type_inheritance_tmp <-  just_test$inheritance
-  # chrom_tmp <-  just_test$chrom
-  # start_tmp <-  just_test$start
-  # end_tmp <-  just_test$end
-  # length_tmp <- end_tmp - start_tmp + 1
-  # threshold_30_tmp  <- 0
+  just_test <- input_check_cnv %>% filter(id == '131') %>% slice(1)
+  id_tmp <- just_test$id
+  clinical_tmp <-  just_test$pathogenicity
+  type_variant_tmp <-  just_test$variant_class
+  type_inheritance_tmp <-  just_test$inheritance
+  chrom_tmp <-  just_test$chrom
+  start_tmp <-  just_test$start
+  end_tmp <-  just_test$end
+  length_tmp <- end_tmp - start_tmp + 1
+  threshold_30_tmp  <- 0
 
   tmp_cnv <- tibble(chrom = chrom_tmp, start = start_tmp, end = end_tmp)
 
@@ -318,12 +319,12 @@ dist_cent <- bed_closest(tmp_cnv, region_gaps %>%
 
 dist_tel <- bed_closest(tmp_cnv, region_gaps %>% 
               filter(type == 'telomere')) %>%
-  pull(.dist) %>% abs()
+  pull(.dist) %>% abs() %>% min()
 
 dist_cent <- dist_cent / 10**6
 dist_tel <- dist_tel / 10**6
 
-if (length(dist_tel) == 0) dist_tel <- NA
+if (dist_tel == Inf) dist_tel <- NA
 
 
 
@@ -657,6 +658,7 @@ output_df %>%
         essent_dl,
         enh_gene_disease,
         mirna_gene_disease,
+        tf_gene_disease,
         n_genes_hpo,
         n_blacklist) %>%
   mutate(clinical = factor(clinical,levels = c("Pathogenic", "Unknown", "Uncertain", "Benign"))) %>%
