@@ -23,7 +23,7 @@ slice <- dplyr::slice
 #       genes_promoter,para_genes,string_db,region_gaps, fusil_score,ensembl_reg,
 #     select, dev_raw, panel_total, omim, orphanet_raw,  hpo_dbs, model1, denovo, clinvar_variants, ridges_home, plot_p100, plot_p46pla, blacklist_encode, mpo_dbs, gwas_variants,mgi, syndromes_total,
 # file = "env_annot_cnvs.RData")
-
+# 
 # load('env_annot_cnvs.RData')
 
 theme_fancy <- function() {
@@ -70,7 +70,7 @@ check_cnv <- function(input_id, input_clinical, input_variant, input_inheritance
   # threshold_30_tmp <- round((length_tmp / 100)*30,0)
   threshold_30_tmp <- 0
 
-  # just_test <- input_check_cnv %>% filter(id == '1621')
+  # just_test <- input_check_cnv %>% filter(id == '112')
   # id_tmp <- just_test$id
   # clinical_tmp <-  just_test$pathogenicity
   # type_variant_tmp <-  just_test$variant_class
@@ -79,7 +79,7 @@ check_cnv <- function(input_id, input_clinical, input_variant, input_inheritance
   # start_tmp <-  just_test$start
   # end_tmp <-  just_test$end
   # length_tmp <- end_tmp - start_tmp + 1
-  # threshold_30_tmp <- round((length_tmp / 100)*30,0)
+  # threshold_30_tmp  <- 0
 
   tmp_cnv <- tibble(chrom = chrom_tmp, start = start_tmp, end = end_tmp)
 
@@ -452,9 +452,15 @@ if (length(result_max_par) == 0) result_max_par <- 0
 
 # TFs
 
-
-
 result_n_tf <- length(vector_genes[vector_genes %in% tf_genes])
+
+
+# TFs - disease genes
+
+result_tfs_gene_disease <-  bed_intersect(trrust, tmp_cnv) %>%
+  filter(.overlap > threshold_30_tmp) %>%
+  select(target.x) %>% rename(gene = target.x) %>% distinct() %>% filter(!gene %in% vector_genes) %>%
+  filter(gene %in% (hgcn_genes %>% filter(disease == 'Yes') %>% pull(gene))) %>% nrow()
 
 
 # Number open chromatin regions overlapping
@@ -478,6 +484,38 @@ result_n_essent_genes_cl <- length(vector_genes[vector_genes %in%
   
 result_n_essent_genes_dl <- length(vector_genes[vector_genes %in% 
                                                   (fusil_score %>% filter(FUSIL == 'DL') %>% pull(hgnc_symbol))]) 
+
+
+
+# Number enhancers
+
+
+result_n_enhancers <- bed_intersect(df_enhancers, tmp_cnv) %>%
+  filter(.overlap > threshold_30_tmp) %>%
+  select(id.x) %>% distinct() %>% nrow()
+
+
+result_enhancer_gene_disease <-  bed_intersect(df_enhancers, tmp_cnv) %>%
+  filter(.overlap > threshold_30_tmp) %>%
+  select(gene.x) %>% rename(gene = gene.x) %>% distinct() %>% filter(!gene %in% vector_genes) %>%
+  filter(gene %in% (hgcn_genes %>% filter(disease == 'Yes') %>% pull(gene))) %>% nrow()
+  
+# Number miRNAs
+
+result_n_mirna <-bed_intersect(mirtarbase, tmp_cnv) %>%
+  filter(.overlap > threshold_30_tmp) %>%
+  select(id.x) %>% distinct() %>% nrow()
+
+result_mirnas_gene_disease <-  bed_intersect(mirtarbase, tmp_cnv) %>%
+  filter(.overlap > threshold_30_tmp) %>%
+  select(gene_symbol.x) %>% rename(gene = gene_symbol.x) %>% distinct() %>% filter(!gene %in% vector_genes) %>%
+  filter(gene %in% (hgcn_genes %>% filter(disease == 'Yes') %>% pull(gene))) %>% nrow()
+
+
+
+
+
+
 
 # # FUNCTIONAL SIMILARITY OF GENES
 # 
@@ -526,7 +564,12 @@ result_tmp <- tibble(
   'pubmed_del' = result_max_del,
   'pubmed_dup' = result_max_dup,
   'essent_cl' = result_n_essent_genes_cl,
-  'essent_dl' = result_n_essent_genes_dl
+  'essent_dl' = result_n_essent_genes_dl,
+  'n_enhancers' = result_n_enhancers,
+  'n_mirnas' = result_n_mirna,
+  'enh_gene_disease' = result_enhancer_gene_disease,
+  'mirna_gene_disease' = result_mirnas_gene_disease,
+  'tf_gene_disease' = result_tfs_gene_disease
 )
 
 return(result_tmp)
@@ -583,49 +626,51 @@ toc()
 #                             confidence = 0.7)
 # 
 # 
-# output_df %>%
-#   # mutate(n_systems = if_else(n_systems > 1, 'Yes', 'No')) %>%
-#   mutate(max_pli = if_else(max_pli >= 90, 'Yes', 'No')) %>%
-#   mutate(max_hi = if_else(max_hi >= 90, 'Yes', 'No')) %>%
-#   mutate_if(is.integer, ~ if_else(. > 0, 'Yes', 'No')) %>%
-#   mutate_if(is.double, ~ if_else(. > 0, 'Yes', 'No')) %>%
-#   mutate(clinical = if_else(clinical == 'Likely benign', 'Benign', clinical)) %>%
-#   mutate(clinical = if_else(clinical == 'Likely pathogenic', 'Pathogenic', clinical)) %>%
-# 
-#   count(clinical,
-#         n_cnv_syndromes,
-#         disease_genes,
-#         patho_cnv,
-#         n_ohno,
-#         n_tf,
-#         n_target_drugs,
-#         n_prot_complex,
-#         n_tfbs,
-#         n_ctcf,
-#         pubmed_del,
-#         pubmed_dup,
-#         n_open,
-#         max_pli,
-#         max_ccr,
-#         max_hi,
-#         disease_variants,
-#         nonpatho_cnv,
-#         essent_cl,
-#         essent_dl,
-#         n_genes_hpo,
-#         n_blacklist) %>%
-#   mutate(clinical = factor(clinical,levels = c("Pathogenic", "Unknown", "Uncertain", "Benign"))) %>%
-#   group_by(clinical) %>%
-#   mutate(perc = n / sum(n)*100) %>%
-#   select(-n) %>%
-#   pivot_longer(-c(clinical,perc),  names_to = 'rule', values_to = 'yes_no') %>%
-#   ggplot(aes(clinical, perc)) +
-#   geom_col(aes(fill = yes_no)) +
-#   theme_fancy() +
-#   facet_wrap(~ rule) +
-#   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-#   xlab('Clinical significance') +
-#   ylab('Percentage (%)')
+output_df %>%
+  # mutate(n_systems = if_else(n_systems > 1, 'Yes', 'No')) %>%
+  mutate(max_pli = if_else(max_pli >= 90, 'Yes', 'No')) %>%
+  mutate(max_hi = if_else(max_hi >= 90, 'Yes', 'No')) %>%
+  mutate_if(is.integer, ~ if_else(. > 0, 'Yes', 'No')) %>%
+  mutate_if(is.double, ~ if_else(. > 0, 'Yes', 'No')) %>%
+  mutate(clinical = if_else(clinical == 'Likely benign', 'Benign', clinical)) %>%
+  mutate(clinical = if_else(clinical == 'Likely pathogenic', 'Pathogenic', clinical)) %>%
+
+  count(clinical,
+        n_cnv_syndromes,
+        disease_genes,
+        patho_cnv,
+        n_ohno,
+        n_tf,
+        n_target_drugs,
+        n_prot_complex,
+        n_tfbs,
+        n_ctcf,
+        pubmed_del,
+        pubmed_dup,
+        n_open,
+        max_pli,
+        max_ccr,
+        max_hi,
+        disease_variants,
+        nonpatho_cnv,
+        essent_cl,
+        essent_dl,
+        enh_gene_disease,
+        mirna_gene_disease,
+        n_genes_hpo,
+        n_blacklist) %>%
+  mutate(clinical = factor(clinical,levels = c("Pathogenic", "Unknown", "Uncertain", "Benign"))) %>%
+  group_by(clinical) %>%
+  mutate(perc = n / sum(n)*100) %>%
+  select(-n) %>%
+  pivot_longer(-c(clinical,perc),  names_to = 'rule', values_to = 'yes_no') %>%
+  ggplot(aes(clinical, perc)) +
+  geom_col(aes(fill = yes_no)) +
+  theme_fancy() +
+  facet_wrap(~ rule) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  xlab('Clinical significance') +
+  ylab('Percentage (%)')
 # 
 # 
 
