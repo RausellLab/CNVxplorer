@@ -2,7 +2,6 @@
 
 # Load libraries
 library(tablerDash)
-library(rols)
 library(shinyEffects)
 library(echarts4r)
 library(shinyWidgets)

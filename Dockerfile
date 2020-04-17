@@ -50,8 +50,6 @@ RUN R -e "install.packages(c('shinydashboard', \
 'shiny'))"
 
 
-
-RUN Rscript -e "BiocManager::install('rols')"
 RUN Rscript -e "BiocManager::install('ReactomePA')"
 RUN Rscript -e "BiocManager::install('Gviz')"
 RUN Rscript -e "BiocManager::install('TissueEnrich')"
