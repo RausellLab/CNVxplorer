@@ -107,30 +107,37 @@ check_regions <- function(chrom = NULL, start = NULL, end = NULL) {
 get_perc_overlap <- function(df, chrom_cnv, start_cnv, end_cnv, 
                              is_a_gene = FALSE) {
 
-
-  # df <- test666
-  # start_cnv <- 10152
-  # end_cnv <- 415585
-  # chrom_cnv <- '17'
+  # test002 <<- data_raw
+  # test003 <<- start_coordinates
+  # test004 <<- end_coordinates
+  # 
+  # df <- test23100101 %>% rename(start = start_position, end = end_position)
+  # start_cnv <- 34813719
+  # end_cnv <- 36278623
+  # chrom_cnv <- '1'
 
   df <- df %>%
     mutate(id_tmp = row_number())
-  
-  
-  tmp_df <- df %>% dplyr::select(chrom, start, end, id_tmp)
+
   
   if (is_a_gene == TRUE) {
     
-  df <- bed_intersect(tmp_df %>% select(-id_tmp), tibble(chrom = chrom_cnv, start = start_cnv, end = end_cnv ) ) %>%
+    tmp_df <- df %>%
+      dplyr::select(chrom, start, end, id_tmp) 
+    
+  df <- bed_intersect(tmp_df, tibble(chrom = chrom_cnv, start = start_cnv, end = end_cnv ) ) %>%
     mutate(p_overlap = ((.overlap + 1)  /(end.x - start.x + 1))*100) %>% 
     mutate(p_overlap = round(p_overlap, 2)) %>%
-    select(start.x, end.x, p_overlap) %>%
-    right_join(df, by = c('start.x' = 'start', 'end.x' = 'end')) %>%
+    select(start.x, end.x, p_overlap, id_tmp.x) %>%
+    right_join(df, by = c('start.x' = 'start', 'end.x' = 'end',
+                           'id_tmp.x' = 'id_tmp')) %>%
     rename(start = start.x, end = end.x) %>%
-    select(-p_overlap, p_overlap) %>%
+    select(-p_overlap, p_overlap, -id_tmp.x) %>%
     arrange(desc(p_overlap))
 
   } else {
+    
+    tmp_df <- df %>% dplyr::select(chrom, start, end, id_tmp)
     
     df <- bed_intersect(tmp_df, tibble(chrom = chrom_cnv, start = start_cnv, end = end_cnv)) %>%
       mutate(p_overlap = ((.overlap + 1) /(end.x - start.x + 1))*100) %>% 

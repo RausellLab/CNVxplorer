@@ -86,7 +86,7 @@ library(tidyverse)
 
 
 # invisible(lapply(paste0('package:', names(sessionInfo()$otherPkgs)), detach, character.only=TRUE, unload=TRUE))
-# file.remove('local_data.RData')
+# file.remove('local_data.RData.gz')
 # save(hgcn_genes, df_enhancers, tad, gtex, hpa, hpo_genes, cnv_df, vector_total_terms,
 #      gnomad_sv_raw, decipher_control_raw, dgv_df_raw, hpo_omim, anato_df, mirtarbase,
 #       vector_inheritance, trrust, tf_genes, drugbank,prot_complex,ohno_genes,
@@ -94,7 +94,6 @@ library(tidyverse)
 #     select, dev_raw, panel_total, omim, orphanet_raw,  hpo_dbs, model1,
 #     denovo, clinvar_variants, plot_p100, plot_p46pla,lncrna_coord,
 #     blacklist_encode, mpo_dbs, gwas_variants,mgi, syndromes_total, file = "local_data.RData")
-# file.remove('local_data.RData.gz')
 # system("gzip local_data.RData")
 
 # credentials <- data.frame(
@@ -1919,7 +1918,7 @@ shiny::shinyApp(
               
               collapsible = FALSE,
               closable = FALSE,
-              DTOutput('del_dup_pubmed'),
+              DTOutput('del_dup_pubmed') %>% withSpinner(),
               overflow = TRUE,
               width = 12,
               options = tagList(
@@ -2279,13 +2278,13 @@ shiny::shinyApp(
     
     output$gtex_gene <- renderUI({
       
-      if (is.null(input$dgenes_rows_all)) {
-        df_genes <- data_selected()
-      } else {
-        df_genes <- data_selected()[input$dgenes_rows_all,]
-      }
+      # if (is.null(input$dgenes_rows_all)) {
+      #   df_genes <- data_selected()
+      # } else {
+      #   df_genes <- data_selected()[input$dgenes_rows_all,]
+      # }
       
-      input_data <- df_genes %>% select(gene) %>% pull()
+      input_data <- data_selected() %>% select(gene) %>% pull()
       
       pickerInput(
         inputId = "input_gtex_gene",
@@ -2839,32 +2838,32 @@ shiny::shinyApp(
     
     
     # output$omim_assoc <- renderDataTable({
-    #   
+    # 
     #   ids_query <- c(query_pubmed_dup()[['ids']], query_pubmed_del()[['ids']])
     #   test0123456 <<- ids_query
-    #   
+    # 
     #   ids_query <- test0123456
     #   query_link <- entrez_link(db= 'omim', id= ids_query, dbfrom="pubmed", by_id = TRUE)
     #   query_link <- query_link$links[['pubmed_omim_calculated']] %>% as.numeric()
-    #   
+    # 
     #   validate(
     #     need(query_link != 0, 'No OMIM entries')
     #   )
-    #   
-    #   
-    #   query_tmp <- entrez_summary(db="omim", id= query_link)
-    #   
-    #   title <- unname(map_chr(query_tmp, function(x) x[["title"]]))
-    #   
     # 
-    #   
-    #   
+    # 
+    #   query_tmp <- entrez_summary(db="omim", id= query_link)
+    # 
+    #   title <- unname(map_chr(query_tmp, function(x) x[["title"]]))
+    # 
+    # 
+    # 
+    # 
     #   tmp_df <- tibble('title' = title,'id_omim' = query_link) %>%
-    #     mutate(id_omim = paste0("<a href='", paste0('https://www.omim.org/entry/', id_omim),"' target='_blank'>", id_omim,"</a>")) 
-    #   
+    #     mutate(id_omim = paste0("<a href='", paste0('https://www.omim.org/entry/', id_omim),"' target='_blank'>", id_omim,"</a>"))
+    # 
     #   datatable(tmp_df, escape = FALSE, colnames = c('Title', 'ID OMIM'))
-    #   
-    #   
+    # 
+    # 
     # })
     
     
@@ -2879,9 +2878,9 @@ shiny::shinyApp(
       
       query_link <- entrez_link(db= 'omim', id= ids_query, dbfrom="pubmed", by_id = TRUE)
     
-      # validate(
-      #   need(length(ids_query) != 0, 'No OMIM entries')
-      # )
+      validate(
+        need(length(ids_query) != 0, 'No articles associated with OMIM entries.')
+      )
       
       tmp_df <- tibble(pubmed_id = ids_query, omim_assoc = NA)
       
@@ -3302,6 +3301,10 @@ shiny::shinyApp(
           mutate(pmid = paste0("<a href='", paste0('https://pubmed.ncbi.nlm.nih.gov/', pmid),"' target='_blank'>", pmid,"</a>"))
 
         
+        
+        
+        
+        
         vector_colnames <- c('PMID', 'Title','First author', 'Last author', 'N°cites','Journal', 'Published date', 'OMIM entries')
         
       } else {
@@ -3425,7 +3428,7 @@ shiny::shinyApp(
       
       if (input$input_geno_karyo == 'Genomic coordinates') {
         
-        data_raw <- data_raw  %>% mutate(keep = NA) %>%
+        data_raw <- data_raw  %>%
           rowwise() %>%
           mutate(keep = c(start_position, end_position) %overlaps% c(start_coordinates, end_coordinates)) %>%
           filter(keep == TRUE) %>% 
@@ -3472,7 +3475,9 @@ shiny::shinyApp(
         select(-vg, -ensembl_gene_id, -coordinates)
       
 
-      data_raw <- get_perc_overlap(data_raw %>% rename(start = start_position, end = end_position), 
+      test23100101 <<- data_raw
+      
+      data_raw <- get_perc_overlap(test23100101 %>% rename(start = start_position, end = end_position), 
                                    chrom_coordinates, 
                                    start_coordinates, 
                                    end_coordinates,
@@ -3750,18 +3755,13 @@ shiny::shinyApp(
       )
       
       
-      test14214124111 <<- input$select_cnv_syndrome
-      
-      
-      
       if (input$select_cnv_syndrome == 'decipher') {
         
         tmp_df <- running_cnv_syndromes() %>% 
           filter(source == 'decipher') %>% 
           select(chrom, start, end, syndrome_name, variant_class, phenotypes, p_overlap)
         
-        test919291931923913912312321123121313213123123 <<- tmp_df
-        
+
         datatable(tmp_df, rownames = FALSE,
                   colnames = c('Chrom', 'Start', 'End', 'CNV syndrome name', 'Variant class', 'Phenotypes', 'Overlap (%)'))
         
@@ -3828,7 +3828,7 @@ shiny::shinyApp(
         select(-start_position, -end_position, -chrom) %>%
         filter(source == 'CNV') %>%
         select(-source) %>%
-        select(band, gene, disease, orphanet, dev, fda, clingen, omim, fda, gwas, p_overlap) %>%
+        select(band, gene, disease, orphanet, dev, clingen, omim, gwas, p_overlap) %>%
         filter(disease == 'Yes')
         # mutate(n_evidences = sample(1:4, n(), replace = TRUE)) %>%
         # select(band, gene, n_evidences)
@@ -3868,7 +3868,7 @@ shiny::shinyApp(
         filter(source == 'CNV') %>%
         select(-source) %>%
         filter(disease == 'Yes') %>%
-        select(gene, dev, fda, omim, fda, orphanet, genomics_england, clingen) %>%
+        select(gene, dev, omim, orphanet, genomics_england, clingen) %>%
         slice(input$dgenes_rows_selected)
       
       test0131444441231 <<- data_input
@@ -3896,7 +3896,7 @@ shiny::shinyApp(
     
     output$select_gene_disease <- renderDataTable({
       
-      # req(input$select_source)
+      req(input$dgenes_rows_selected)
       
       validate(
         need(input$dgenes_rows_selected != '', 'Please, select a disease gene on the left panel.')
@@ -4079,15 +4079,17 @@ shiny::shinyApp(
       server <- TRUE
       data_input <- data_selected() %>% filter(source ==  input$select_reg_region) %>%
         select(-start_position, -end_position, -chrom) %>%
-        select(band, gene, disease, haplo, triplo, dev, fda, omim, fda, gwas, pLI, rvis, ccr, hi, gdi, snipre, ncrvis, 
+        select(band, gene, disease, essent, pLI, rvis, ccr, hi, gdi, snipre, ncrvis, 
                ncgerp)
 
-      datatable(data_input, rownames = FALSE, filter = 'top',
+      datatable(data_input, rownames = FALSE, filter = list(position = 'top'),
                 colnames = c('Band', 'Gene', 'Disease', 'Essential', 'pLI', 'RVIS', 'CCR', 'HI', 'GDI', 'SnIPRE', 'ncRVIS',
-                             'ncGERP', 'Overlap(%)')) %>%
+                             'ncGERP')) %>%
         formatStyle(c('pLI', 'rvis', 'hi', 'gdi', 'snipre', 'ncrvis', 'ncgerp'), color = styleInterval(94, c('weight', '#ff7f7f'))) %>%
         formatStyle(c('ccr'), color = styleInterval(1, c('weight', '#ff7f7f'))) %>%
-        formatStyle(c('disease', 'haplo', 'triplo', 'omim', 'dev', 'fda', 'gwas'), color = styleEqual(c('No', 'Yes'), c('weight', '#ff7f7f')))
+        formatStyle(c('disease'), color = styleEqual(c('No', 'Yes'), c('weight', '#ff7f7f')))
+      
+        # formatStyle(c('disease', 'haplo', 'triplo', 'omim', 'dev', 'fda', 'gwas'), color = styleEqual(c('No', 'Yes'), c('weight', '#ff7f7f')))
 
       # 
       #   }
@@ -4222,6 +4224,7 @@ shiny::shinyApp(
         
         filtered_genes_cnv <- data_selected() %>% pull(gene)
         filtered_tissue <- input$input_gtex_tissue
+
         
         p <- gtex %>%
           filter(tissue == filtered_tissue) %>%
@@ -4525,45 +4528,45 @@ shiny::shinyApp(
       tmp_df %>% pull(genes) %>% paste(collapse = ', ')
       
     })
+    # 
+    # fisher_running_two <- reactive({
+    #   
+    #   req(input$start_analysis > 0)
+    #   
+    #   
+    #   name_dbs <- c('omim', 'clinvar', 'haplo', 'triplo', 'dev', 'fda', 'gwas', 'essent')
+    #   input_genes <- data_selected() %>% select(gene) %>% pull()
+    #   # input_genes <- test2019 %>% select(gene) %>% pull()
+    #   fisher_result <- tibble()
+    #   
+    #   for (i in 1:length(name_dbs)) {
+    #     # i <- 8
+    #     print(i)
+    #     input_test <- matrix(rep(NA, 4), ncol = 2, dimnames = list(c('in_panel', 'no_panel'), c('col1', 'col2') ))
+    #     
+    #     input_test[1,][2] <- hgcn_genes %>% filter(get(name_dbs[i]) == 'Yes') %>% pull(gene) %in% input_genes %>% sum()
+    #     input_test[1,][1] <- hgcn_genes %>% filter(get(name_dbs[i]) == 'Yes') %>% nrow() - input_test[1,][2] 
+    #     input_test[2,][2] <- length(input_genes) - input_test[1,][2] 
+    #     input_test[2,][1] <- 19146 - input_test[2,][2] - input_test[1,][1] - input_test[1,][2]
+    #     test312321 <<- input_test
+    #     tmp_tibble <- tibble(name_panel = name_dbs[i], 
+    #                          p_value = fisher.test(input_test, alternative = 'greater')$p.value,
+    #                          gene_ratio = paste(as.character(input_test[1,][2]), '/',
+    #                                             as.character(input_test[1,][2] + input_test[1,][1]))
+    #     )
+    #     test44444 <<- tmp_tibble
+    #     fisher_result <- rbind(fisher_result, tmp_tibble)
+    #   }
+    #   
+    #   fisher_result %>% arrange(p_value) %>% mutate(p_value = round(p_value, 4))
+    #   
+    # })
     
-    fisher_running_two <- reactive({
-      
-      req(input$start_analysis > 0)
-      
-      
-      name_dbs <- c('omim', 'clinvar', 'haplo', 'triplo', 'dev', 'fda', 'gwas', 'essent')
-      input_genes <- data_selected() %>% select(gene) %>% pull()
-      # input_genes <- test2019 %>% select(gene) %>% pull()
-      fisher_result <- tibble()
-      
-      for (i in 1:length(name_dbs)) {
-        # i <- 8
-        print(i)
-        input_test <- matrix(rep(NA, 4), ncol = 2, dimnames = list(c('in_panel', 'no_panel'), c('col1', 'col2') ))
-        
-        input_test[1,][2] <- hgcn_genes %>% filter(get(name_dbs[i]) == 'Yes') %>% pull(gene) %in% input_genes %>% sum()
-        input_test[1,][1] <- hgcn_genes %>% filter(get(name_dbs[i]) == 'Yes') %>% nrow() - input_test[1,][2] 
-        input_test[2,][2] <- length(input_genes) - input_test[1,][2] 
-        input_test[2,][1] <- 19146 - input_test[2,][2] - input_test[1,][1] - input_test[1,][2]
-        test312321 <<- input_test
-        tmp_tibble <- tibble(name_panel = name_dbs[i], 
-                             p_value = fisher.test(input_test, alternative = 'greater')$p.value,
-                             gene_ratio = paste(as.character(input_test[1,][2]), '/',
-                                                as.character(input_test[1,][2] + input_test[1,][1]))
-        )
-        test44444 <<- tmp_tibble
-        fisher_result <- rbind(fisher_result, tmp_tibble)
-      }
-      
-      fisher_result %>% arrange(p_value) %>% mutate(p_value = round(p_value, 4))
-      
-    })
-    
-    output$df_fisher_two <- renderDataTable({
-      
-      datatable(fisher_running_two(), colnames = c('Database name', 'p.value', 'Gene ratio'))
-      
-    })
+    # output$df_fisher_two <- renderDataTable({
+    #   
+    #   datatable(fisher_running_two(), colnames = c('Database name', 'p.value', 'Gene ratio'))
+    #   
+    # })
     
 
     
@@ -5135,9 +5138,9 @@ shiny::shinyApp(
       chrom_coordinates <- coord_user()[3]
       
       data_tmp <- trrust %>% 
-        filter(tf_chrom == chrom_coordinates) %>%
+        filter(chrom == chrom_coordinates) %>%
         rowwise() %>%
-        mutate(keep = c(tf_start, tf_end) %overlaps% c(start_coordinates, end_coordinates)) %>%
+        mutate(keep = c(start, end) %overlaps% c(start_coordinates, end_coordinates)) %>%
         filter(keep == TRUE) %>%
         select(-keep) %>%
         ungroup() %>%
