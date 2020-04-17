@@ -475,6 +475,19 @@ clingen <- clingen_raw %>%
   select(gene) %>% 
   pull(gene)
 
+
+
+# ------------------------------------------------------------------------------
+# Dataset: CNV intolerance score (gene-level score)
+# ------------------------------------------------------------------------------
+
+download.file('https://storage.cloud.google.com/gnomad-public/legacy/exacv1_downloads/release0.3.1/cnv/exac-final-cnv.gene.scores071316',
+              'exac-final-cnv.gene.scores071316')
+
+cnv_int <- read_tsv('exac-final-cnv.gene.scores071316')
+
+
+
 # ------------------------------------------------------------------------------
 # Dataset: CNV Syndromes - ClinGen
 # Source: ftp://ftp.ncbi.nlm.nih.gov/pub/dbVar/clingen/ClinGen_recurrent_CNV_V1.0-hg19.bed
@@ -1986,7 +1999,7 @@ trrust <- trrust %>% separate_rows(reference, sep = ';')
 
 trrust <- trrust %>% 
   left_join(hgcn_genes %>% select(gene, chrom, start_position, end_position) %>% 
-              rename(tf_chrom = chrom, tf_start = start_position, tf_end = end_position)
+              rename(start = start_position, end = end_position)
   , by = c('tf' = 'gene')) %>%
   left_join(hgcn_genes %>% select(gene, chrom, start_position, end_position) %>% 
               rename(target_chrom = chrom, 
@@ -1994,7 +2007,7 @@ trrust <- trrust %>%
                      target_end = end_position)
             , by = c('target' = 'gene')) %>%
   na.omit() %>%
-  select(tf, tf_chrom, tf_start, tf_end, target, mechanism, everything())
+  select(tf, chrom, start, end, target, mechanism, everything())
 
 
 
