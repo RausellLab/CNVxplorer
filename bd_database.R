@@ -387,6 +387,7 @@ genomic_ranges <- tibble(chrom = '1', start = 1000000, end = )
   #   geom_col(aes(fill = disease)) +
   #   facet_wrap(~score)
   
+
   
   # ------------------------------------------------------------------------------
   # Centromeric and telomeric regions
@@ -2012,5 +2013,52 @@ trrust <- trrust %>%
   na.omit() %>%
   select(tf, chrom, start, end, target, mechanism, everything())
 
+# ------------------------------------------------------------------------------
+# Length chromosomes (hg19)
+# ------------------------------------------------------------------------------  
 
+coord_chrom_hg19 <- read_tsv('https://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/hg19.chrom.sizes',
+                             col_names = c('chrom', 'length')) %>%
+  filter(nchar(chrom) < 6) %>% filter(!str_detect(chrom, 'chrM')) %>%
+  mutate(chrom = str_remove(chrom, 'chr'))
+
+result_tbl <- tibble()
+
+for (i in 1:nrow(coord_chrom_hg19)) {
+  
+  last_nt <- coord_chrom_hg19 %>% slice(i) %>% pull(length)
+  
+  tmp_tbl <- tibble('chrom' = coord_chrom_hg19 %>% slice(i) %>% pull(chrom), 
+         'start' = seq(1, (last_nt-10**6), 10**6 ), 
+         'end' = seq(1000000, last_nt, 10**6,  ))
+  
+  tmp2_tbl <- tibble('chrom' = coord_chrom_hg19 %>% slice(i) %>% pull(chrom),
+         'start' = tmp_tbl %>% tail(1) %>% pull(end) + 1,
+         'end' = last_nt)
+  
+  
+  result_tbl <- result_tbl %>% bind_rows(tmp_tbl, tmp2_tbl)
+  
+  
+}
+
+count_genes <- function(chrom, start, end) {
+  
+  # chrom <- '1'
+  # start <- 3000001
+  # end <- 4000000
+  
+  
+  result_tmp <- hgcn_genes %>% 
+    rename(start = start_position, end = end_position) %>%
+    bed_intersect(tibble('chrom' = chrom, 'start' = start, 'end' = end)) %>%
+    nrow()
+  
+  return(result_tmp)
+}
+
+
+gene_density_tbl <- result_tbl %>% 
+  mutate(is_end = if_else((end - start + 1) < 10**6, 'yes', 'no')) %>%
+  mutate(gene_density = pmap_dbl(list(chrom, start, end), count_genes))
 
