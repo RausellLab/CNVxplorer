@@ -709,6 +709,23 @@ output_df %>%
 output_df %>% select(-clinical, -type_variant, -type_inheritance, -id) %>% correlate(method = 'pearson') %>% select(rowname, length_cnv) %>% na.omit()  %>% ggplot(aes(reorder(rowname, length_cnv), length_cnv)) + 
   geom_col(fill = 'steelblue', color = 'black') + coord_flip() + theme_bw()
 
+# PCA
+library(broom)
+a <- output_df %>% select(-clinical, -type_variant, -type_inheritance, -id, -dist_tel) %>% 
+  prcomp(scale = TRUE, center = TRUE)
+  
+a$x %>% 
+  as_tibble() %>% 
+  select(PC1, PC2) %>%  
+  bind_cols(output_df %>% select(clinical)) %>% 
+  ggplot(aes(PC1, PC2)) + 
+  geom_point(aes(fill = factor(clinical)), shape = 21, color = 'black') +
+  facet_grid(~ clinical) +
+  theme_bw()
+
+a %>%  fviz_contrib(choice = "var", axes = 1, top = 15)
+a %>%  fviz_contrib(choice = "var", axes = 2, top = 15)
+a %>%  fviz_eig(addlabels = TRUE, ylim = c(0, 50)) + gtitle('Scre')
 
 
 # 
