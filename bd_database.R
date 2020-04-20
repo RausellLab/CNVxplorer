@@ -1862,6 +1862,7 @@ non_coding_rna <- read_tsv('ftp://ftp.ebi.ac.uk/pub/databases/genenames/new/tsv/
 
 # ------------------------------------------------------------------------------
 # Dataset: List TFs human
+# Source: 
 # ------------------------------------------------------------------------------
 library(httr)
 
@@ -1934,7 +1935,8 @@ file.remove('allComplexes.txt.zip')
 
 # ------------------------------------------------------------------------------
 # Ohnologs genes
-# CORUM - Mammals Protein complexes 
+# OHNOLOGS database
+# Filter: Strict
 # ------------------------------------------------------------------------------
 
 
@@ -1990,6 +1992,7 @@ hgcn_genes <- hgcn_genes %>%
 
 # ------------------------------------------------------------------------------
 # Dataset: TRRUST v.2
+# Version 2
 # ------------------------------------------------------------------------------
 
 trrust <- read_tsv('https://www.grnpedia.org/trrust/data/trrust_rawdata.human.tsv', 
