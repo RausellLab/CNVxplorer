@@ -102,7 +102,7 @@ library(tidyverse)
 # ) 
 
 
-# source("global.R")
+source("global.R")
 
 
 
