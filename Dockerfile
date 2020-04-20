@@ -64,6 +64,8 @@ COPY cnvxplorer /srv/shiny-server/
 
 RUN gunzip /srv/shiny-server/local_data.RData.gz 
 
+RUN echo 'allow_app_override;' >> /etc/shiny-server/shiny-server.conf
+
 
 # Make all app files readable
 RUN chmod -R +r /srv/shiny-server/

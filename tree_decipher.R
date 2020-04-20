@@ -12,6 +12,8 @@ library(grid)
 library(tidyverse)
 library(tictoc)
 library(ontologyIndex)
+library(corrr)
+
 
 
 rename <- dplyr::rename
@@ -633,8 +635,8 @@ output_df %>%
   mutate(max_hi = if_else(max_hi >= 90, 'Yes', 'No')) %>%
   mutate_if(is.integer, ~ if_else(. > 0, 'Yes', 'No')) %>%
   mutate_if(is.double, ~ if_else(. > 0, 'Yes', 'No')) %>%
-  mutate(clinical = if_else(clinical == 'Likely benign', 'Benign', clinical)) %>%
-  mutate(clinical = if_else(clinical == 'Likely pathogenic', 'Pathogenic', clinical)) %>%
+  # mutate(clinical = if_else(clinical == 'Likely benign', 'Benign', clinical)) %>%
+  # mutate(clinical = if_else(clinical == 'Likely pathogenic', 'Pathogenic', clinical)) %>%
 
   count(clinical,
         n_cnv_syndromes,
@@ -661,7 +663,8 @@ output_df %>%
         tf_gene_disease,
         n_genes_hpo,
         n_blacklist) %>%
-  mutate(clinical = factor(clinical,levels = c("Pathogenic", "Unknown", "Uncertain", "Benign"))) %>%
+  mutate(clinical = factor(clinical,levels = c("Pathogenic",'Likely pathogenic', "Unknown", "Uncertain",
+                                               'Likely benign', "Benign"))) %>%
   group_by(clinical) %>%
   mutate(perc = n / sum(n)*100) %>%
   select(-n) %>%
@@ -674,7 +677,38 @@ output_df %>%
   xlab('Clinical significance') +
   ylab('Percentage (%)')
 # 
-# 
+# Plotting distances (telomeric and centromeric regions)
+output_df %>% ggplot(aes(dist_cent)) + 
+  geom_histogram(binwidth = 5, fill = 'steelblue', color = 'black') + facet_grid(~ clinical) +
+  theme_bw()
+
+output_df %>% ggplot(aes(dist_tel)) + geom_histogram(binwidth = 5, fill = 'steelblue', color = 'black') + 
+  facet_grid(~ clinical) +
+  theme_bw()
+
+output_df %>% ggplot(aes(dist_cent)) + 
+  geom_density(aes(fill = clinical), color = 'black', show.legend = FALSE) + facet_grid(~ clinical) +
+  theme_bw()
+
+output_df %>% ggplot(aes(dist_tel)) + 
+  geom_density(aes(fill = clinical), color = 'black') + facet_grid(~ clinical) +
+  theme_bw()
+
+# Plotting distance
+output_df %>% 
+  ggplot(aes(length_cnv, clinical)) + 
+  stat_density_ridges(quantile_lines = TRUE, quantiles = 2, aes(fill = clinical), 
+                      alpha = 0.6, show.legend = FALSE, size = 1.25) +
+  theme_ridges() +
+  scale_x_log10() +
+  xlab('log10(Length CNV)')
+
+
+# Plotting correlation with length_cnv
+
+output_df %>% select(-clinical, -type_variant, -type_inheritance, -id) %>% correlate(method = 'pearson') %>% select(rowname, length_cnv) %>% na.omit()  %>% ggplot(aes(reorder(rowname, length_cnv), length_cnv)) + 
+  geom_col(fill = 'steelblue', color = 'black') + coord_flip() + theme_bw()
+
 
 
 # 
