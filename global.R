@@ -1,3 +1,45 @@
+
+# Load libraries
+library(tablerDash)
+library(shinyEffects)
+library(echarts4r)
+library(shinyWidgets)
+library(shinyjs)
+# library(karyoploteR)
+library(DT)
+library(XML)
+library(gghighlight)
+library(ReactomePA)
+library(shinycssloaders)
+library(plotly)
+library(waiter)
+library(DescTools)# library(hrbrthemes)
+library(clusterProfiler)
+library(org.Hs.eg.db)
+library(patchwork)
+library(DOSE)
+library(enrichplot)
+library(rentrez)
+library(reactable)
+library(ggridges)
+library(shinymanager)
+library(UpSetR)
+library(randomForest) # delete in case of using an alternative model
+library(chromPlot)
+import::from(Gviz, "IdeogramTrack")
+import::from(Gviz, 'plotTracks')
+library(shiny)
+library(ontologySimilarity)
+library(ontologyIndex)
+library(formattable)
+library(valr)
+library(TissueEnrich)
+library(arules)
+library(arulesCBA)
+library(shinyalert)
+library(tidyverse)
+
+
 source('functions.R')
 
 # system('gunzip -c local_data.RData.gz > local_data.RData')
@@ -30,3 +72,7 @@ theme_fancy <- function() {
     theme(plot.title = element_text(size=22))
   
 }
+
+human_chrom <- list('chr1' = 1, 'chr2' = 2,'chr3' = 3,'chr4' = 4,'chr5' = 5,'chr6' = 6,'chr7' = 7,'chr8' = 8,'chr9' = 9,'chr10' = 10,'chr11' = 11,'chr12' = 12,'chr13' = 13,
+                    'chr14' = 14,'chr15' = 15,'chr16' = 16,'chr17' = 17,'chr18' = 18,'chr19' = 19, 'chr20' = 20, 'chr21' = 21,  'chr22' = 22,
+                    'chrX' = 'X','chrY' = 'Y')
