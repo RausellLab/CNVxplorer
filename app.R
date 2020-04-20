@@ -613,8 +613,7 @@ shiny::shinyApp(
             column(width = 12,
                    
                    tags$hr(),
-                   # tags$script(src = "test_script.js"),
-                   
+
                    tablerCard(
                      title = "Comparison CNV size with other CNVs databases",
                      plotOutput('plot_size'),
@@ -2148,8 +2147,7 @@ shiny::shinyApp(
       
       tmp_df <- map_blacklist() 
       
-      test918934181 <<- tmp_df
-      
+
       req(nrow(tmp_df) > 0)
       
       if (tmp_df %>% count(class) %>% nrow() > 1) {
@@ -2187,8 +2185,6 @@ shiny::shinyApp(
         df_tmp <- intersection_running() %>%
           select(id, start, end) %>%
           slice(input$df_intersection_rows_selected)
-        
-        test32134124122121421412 <<- df_tmp
         
         new_start <- df_tmp %>% pull(start)
         new_end <- df_tmp %>% pull(end)
@@ -2413,8 +2409,7 @@ shiny::shinyApp(
         need(!is.null(input$chosen_hp), "Please, select phenotype terms.")
       )
       
-      test322 <<- input$chosen_hp
-      
+
       hp_chosen <- input$chosen_hp
       genes_chosen <- df_genes %>% select(entrez_id) %>% pull()
       
@@ -2423,8 +2418,7 @@ shiny::shinyApp(
         filter(hp %in% hp_chosen) %>%
         filter(entrez_id %in% genes_chosen)
       
-      test9312321 <<- df_tmp
-      
+
       df_tmp2 <- df_tmp %>%
         select(hp) %>%
         distinct()
@@ -2435,8 +2429,7 @@ shiny::shinyApp(
         left_join(df_tmp2, by = 'hp')
       
       df_tmp
-      test19 <<- df_tmp
-      
+
       
     })
     
@@ -2460,8 +2453,7 @@ shiny::shinyApp(
 
       }
       
-       test42141 <<- hp_descendants
-      
+
        hp_descendants <- hp_descendants %>% paste(collapse = '|')
     })
     
@@ -2471,7 +2463,6 @@ shiny::shinyApp(
         need(nchar(suggest_hpo_terms()) > 0, "Select more HPO terms.")
       )
       
-      test0101 <<-suggest_hpo_terms()
 
       tmp_df <- vector_total_terms %>% 
         as_tibble() %>% 
@@ -2847,7 +2838,7 @@ shiny::shinyApp(
       query_link <- entrez_link(db= 'omim', id= ids_query, dbfrom="pubmed", by_id = TRUE)
     
       validate(
-        need(length(ids_query) != 0, 'No articles associated with OMIM entries.')
+        need(length(query_link) != 0, 'No articles associated with OMIM entries.')
       )
       
       tmp_df <- tibble(pubmed_id = ids_query, omim_assoc = NA)
@@ -6619,14 +6610,12 @@ output$switch_mirnas <- renderUI({
     
     output$group_go  <- renderPlot({
       
-      # test900 <<- running_go()
-      # test344 <<- running_enrich_go()
+
       running_go() %>%
         arrange(desc(Count)) %>%
         filter(Count != 0) %>%
         slice(1:10) %>%
         as_tibble() %>% 
-        # mutate(p.adjust = -log10(p.adjust)) %>%
         ggplot(aes(reorder(Description, Count), Count)) +
         geom_col(aes(fill = Description), color = 'black', show.legend = FALSE) +
         scale_fill_viridis_d() +
