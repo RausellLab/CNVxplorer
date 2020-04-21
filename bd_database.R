@@ -282,7 +282,7 @@ get_band <- function(band_input, chrom_input) {
   chrom_tmp <- paste('chromosome', chrom_input)
 
   result_del <- length(entrez_search(db="pubmed", 
-                                     term= paste(chrom_tmp,'AND', band_tmp,'OR', band2_tmp, 'AND deletion AND homo sapiens'), retmax = 1000 )$ids)
+                                     term= paste(chrom_tmp,'AND','(', band_tmp,'OR', band2_tmp,')', 'AND deletion AND homo sapiens'), retmax = 1000 )$ids)
   result_dup <- length(entrez_search(db="pubmed", 
                                      term= paste(chrom_tmp,'AND', '(', band_tmp, 'OR', band2_tmp, ')', 'AND duplication  AND homo sapiens'), retmax = 1000 )$ids)
   
