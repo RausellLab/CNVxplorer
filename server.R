@@ -701,26 +701,33 @@ function(input, output, session) {
     
     if (input$input_geno_karyo == 'Genomic coordinates') {
       
-      query_region <-  chromPlot::hg_cytoBandIdeo %>%
+      tmp_tbl <-  chromPlot::hg_cytoBandIdeo %>%
         filter(Chrom %in% chrom_coordinates) %>%
         mutate(keep = map2_chr(Start, End, function(x,y) c(start_coordinates, end_coordinates) %overlaps% c(x,y))) %>%
         filter(keep == TRUE) %>%
         select(Name) %>%
-        pull() %>%
-        map_chr(function(x) paste0(chrom_coordinates, x)) %>%
-        paste0(collapse = ' OR ') %>%
-        paste('AND deletion', sep = ' ')
+        pull()
+
+
+      chrom_tmp <- paste('chromosome', chrom_coordinates)
+      band_tmp <- tmp_tbl %>% paste0(collapse = ' OR ')
+      band2_tmp <- paste0(chrom_coordinates, tmp_tbl) %>% paste0(collapse = ' OR ')
       
+      query_region <- paste(chrom_tmp,'AND','(', band_tmp,'OR', band2_tmp,')', 'AND deletion AND homo sapiens')
+      
+
     } else {
-      query_region <- paste0(chrom_coordinates, input$input_karyotype)
+      
+      chrom_tmp <- paste('chromosome', chrom_coordinates)
+      
+      band_tmp <-  input$input_karyotype
+      band2_tmp <- paste0(chrom_coordinates, band_tmp)
+      query_region <- paste(chrom_tmp,'AND','(', band_tmp,'OR', band2_tmp,')', 'AND deletion AND homo sapiens')
       
     }
     
     query_pubmed <- entrez_search(db="pubmed", term= query_region, retmax = 200 )
-    
-    # validate(
-    #   need(length(query_pubmed[['ids']]) == 0, "0 articles found.")
-    # )
+
   })
   
   
@@ -829,16 +836,23 @@ function(input, output, session) {
   
   omim_assoc <- reactive({
     
-    ids_query <- c(query_pubmed_dup()[['ids']], query_pubmed_del()[['ids']])
     
-    # TMP REMOVE IN A FUTURE!!!
-    ids_query <- ids_query[1:100]
+    if (input$select_del_dup == 'deletions') {
+      
+      ids_query <- query_pubmed_del()[['ids']]
+    } else {
+      ids_query <- query_pubmed_dup()[['ids']]
+    }
+    # 
+    # 
+    # ids_query <- c(query_pubmed_dup()[['ids']], query_pubmed_del()[['ids']])
+    # 
+    # ids_query <- ids_query[1:200]
     
     query_link <- entrez_link(db= 'omim', id= ids_query, dbfrom="pubmed", by_id = TRUE)
     
-    validate(
-      need(length(query_link) != 0, 'No articles associated with OMIM entries.')
-    )
+
+
     
     tmp_df <- tibble(pubmed_id = ids_query, omim_assoc = NA)
     
@@ -859,7 +873,11 @@ function(input, output, session) {
     
     tmp_df <- tmp_df %>% separate_rows(omim_assoc, sep = ' ')
     
-    
+    test12311 <<- tmp_df 
+
+    validate(
+      need(nrow(tmp_df  %>% filter(omim_assoc != '')) != 0, 'No articles associated with OMIM entries.')
+    )
     
     
     tmp_df
@@ -933,32 +951,33 @@ function(input, output, session) {
     
     if (input$input_geno_karyo == 'Genomic coordinates') {
       
-      query_region <-  chromPlot::hg_cytoBandIdeo %>%
+      tmp_tbl <-  chromPlot::hg_cytoBandIdeo %>%
         filter(Chrom %in% chrom_coordinates) %>%
         mutate(keep = map2_chr(Start, End, function(x,y) c(start_coordinates, end_coordinates) %overlaps% c(x,y))) %>%
         filter(keep == TRUE) %>%
         select(Name) %>%
-        pull() %>%
-        map_chr(function(x) paste0(chrom_coordinates, x)) %>%
-        paste0(collapse = ' OR ') %>%
-        paste('AND duplication', sep = ' ')
+        pull()
+      
+      chrom_tmp <- paste('chromosome', chrom_coordinates)
+      band_tmp <- tmp_tbl %>% paste0(collapse = ' OR ')
+      band2_tmp <- paste0(chrom_coordinates, tmp_tbl) %>% paste0(collapse = ' OR ')
+      
+      query_region <- paste(chrom_tmp,'AND','(', band_tmp,'OR', band2_tmp,')', 'AND duplication AND homo sapiens')
+      
       
     } else {
       
-      query_region <- paste0(chrom_coordinates, input$input_karyotype)
+      chrom_tmp <- paste('chromosome', chrom_coordinates)
+      
+      band_tmp <-  input$input_karyotype
+      band2_tmp <- paste0(chrom_coordinates, band_tmp)
+      query_region <- paste(chrom_tmp,'AND','(', band_tmp,'OR', band2_tmp,')', 'AND duplication AND homo sapiens')
       
     }
     
-    test68 <<- query_region
-    
+
     query_pubmed <- entrez_search(db="pubmed", term= query_region, retmax = 200 )
-    
-    test4114 <<- query_pubmed
-    
-    # validate(
-    #   need(length(test4114[['ids']]) != 0, "0 articles found.")
-    # )
-    # 
+
   })
   
   output$n_pubmed_dup <- renderUI({
@@ -1276,8 +1295,7 @@ function(input, output, session) {
       
     }
     
-    test000000300 <<- tmp_df
-    
+
     
     datatable(tmp_df, rownames = FALSE, filter = 'top', selection = 'single', escape = FALSE,
               
@@ -1309,8 +1327,6 @@ function(input, output, session) {
       
     }
     
-    
-    test45 <<- paper_selected
     
     fetch.pubmed <- entrez_fetch(db = "pubmed", id = paper_selected %>% pull(pmid), rettype = "xml", parsed = T)
     # Extract the Abstracts for the respective IDS.  
@@ -5419,7 +5435,8 @@ function(input, output, session) {
       select(-keep) %>%
       mutate(pubmed_id = str_extract(LINK, '\\d{8}')) %>%
       select(-LINK)
-    test0054 <<- tmp_df
+
+    
     tmp_df
     
   })
