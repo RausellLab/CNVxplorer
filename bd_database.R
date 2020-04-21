@@ -2043,12 +2043,7 @@ for (i in 1:nrow(coord_chrom_hg19)) {
 }
 
 count_genes <- function(chrom, start, end) {
-  
-  # chrom <- '1'
-  # start <- 3000001
-  # end <- 4000000
-  
-  
+
   result_tmp <- hgcn_genes %>% 
     rename(start = start_position, end = end_position) %>%
     bed_intersect(tibble('chrom' = chrom, 'start' = start, 'end' = end)) %>%
