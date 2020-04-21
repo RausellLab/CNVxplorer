@@ -610,6 +610,7 @@ toc()
 
 output_df %>% write_tsv('output_df.tsv')
 
+rmarkdown::render("output_annotation_cnvs.Rmd", 'html_document')
 
 # 
 # output_df %>%
@@ -725,7 +726,6 @@ output_df %>%
   xlab('log10(Length CNV)')
 
 
-rmarkdown::render("output_annotation_cnvs.Rmd", 'html_document')
 
 
 
