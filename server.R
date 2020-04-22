@@ -152,7 +152,7 @@ function(input, output, session) {
       
       say_this <- 'High signal and low mappability region(s) overlapping with the CNV'
       
-    } else if (str_detect(tmp_df$class, 'High')) {
+    } else if (str_detect(tmp_df$class[1], 'High')) {
       
       say_this <- 'High signal region(s) overlapping with the CNV'
       
@@ -529,8 +529,7 @@ function(input, output, session) {
                              term_sim_method = 'resnik') %>%
       t()
     
-    test914u2141 <<- mat_test
-    
+
     colnames(mat_test) <- c('value')
     mat_test %>% as_tibble(rownames = 'gene') %>% 
       mutate(value = round(value, 2)) %>%
@@ -1005,12 +1004,11 @@ function(input, output, session) {
   
   output$n_mortality <- renderUI({
     
-    tmp_n <-  model_genes_phenotype() %>% count(description) %>% filter(description == 'mortality/aging') %>% pull(n)
+    tmp_n <- model_genes_phenotype() %>%  filter(description == 'mortality/aging') %>% nrow()
     
+
     tablerStatCard(
-      value =  length(tmp_n),
-      # status = "primary",
-      # icon = 'book',
+      value =  tmp_n,
       title = "Genes associated with mortality/aging phenotype",
       width = 12
     )
@@ -1020,13 +1018,10 @@ function(input, output, session) {
   
   output$n_embryo <- renderUI({
     
-    tmp_n <- model_genes_phenotype() %>% count(description) %>% filter(description == 'embryo') %>% pull(n)
-    
-    
+    tmp_n <- model_genes_phenotype() %>%  filter(description == 'embryo') %>% nrow()
+
     tablerStatCard(
-      value =   length(tmp_n),
-      # status = "primary",
-      # icon = 'book',
+      value =   tmp_n,
       title = "Genes associated with embryonic phenotype",
       width = 12
     )
@@ -2987,14 +2982,10 @@ function(input, output, session) {
   output$n_genes_enh_added <- renderUI({
     
     req(nrow(data_selected_enhancers()) > 0)
-    
-    
-    
+
     tmp_df <- data_selected_enhancers()
     
-    
-    # if (length(input$genes_from_enhancers_rows_all) == nrow(tmp_df) | is.null(input$genes_from_enhancers_rows_all)) {
-    tablerInfoCard(
+        tablerInfoCard(
       width = 12,
       value = paste0('+', nrow(tmp_df), " genes"),
       status = "warning",
@@ -3002,39 +2993,53 @@ function(input, output, session) {
       # description =  name_region
       description = 'Target-genes enhancers'
     )
-    # } else {
-    # df_genes <-tmp_df[input$genes_from_enhancers_rows_all,]
-    # tablerInfoCard(
-    #   width = 12,
-    #   value = paste0('+', nrow(df_genes), '/', nrow(tmp_df) , " genes"),
-    #   status = "warning",
-    #   icon = "database",
-    #   # description =  name_region
-    #   description = 'Target-genes enhancers (filtered)'
-    # )
-    # }
-    
-    # tablerInfoCard(
-    #   width = 12,
-    #   value =  paste0('+', nrow(data_selected_enhancers()), ' genes'),
-    #   status = "info",
-    #   icon = "database",
-    #   description =  'Target-genes enhancers'
-    #   
-    # )
-    # 
+
     
   })
+  
+  output$n_genes_mirna_added <- renderUI({
+    
+    req(nrow(data_selected_mirnas()) > 0)
+    
+    tmp_df <- data_selected_mirnas()
+    
+    tablerInfoCard(
+      width = 12,
+      value = paste0('+', nrow(tmp_df), " genes"),
+      status = "warning",
+      icon = "database",
+      # description =  name_region
+      description = 'Target-genes miRNAs'
+    )
+
+  })
+  
+  output$n_genes_tf_added <- renderUI({
+    
+    req(nrow(data_selected_tfs()) > 0)
+    
+    tmp_df <- data_selected_tfs()
+    
+    tablerInfoCard(
+      width = 12,
+      value = paste0('+', nrow(tmp_df), " genes"),
+      status = "warning",
+      icon = "database",
+      # description =  name_region
+      description = 'Target-genes TFs'
+    )
+    
+  })
+  
+  
+  
   
   output$n_genes_tad_added <- renderUI({
     
     req(nrow(data_selected_tads()) > 0)
     
-    
     tmp_df <- data_selected_tads()
     
-    
-    # if (length(input$genes_from_tads_rows_all) == nrow(tmp_df) | is.null(input$genes_from_tads_rows_all)) {
     tablerInfoCard(
       width = 12,
       value = paste0('+', nrow(tmp_df), " genes"),
@@ -3043,17 +3048,6 @@ function(input, output, session) {
       # description =  name_region
       description = 'Genes disrupted in TADs'
     )
-    # } else {
-    # df_genes <-tmp_df[input$genes_from_tads_rows_all,]
-    # tablerInfoCard(
-    #   width = 12,
-    #   value = paste0('+', nrow(df_genes), '/', nrow(tmp_df) , " genes"),
-    #   status = "warning",
-    #   icon = "database",
-    #   # description =  name_region
-    #   description = 'Genes disrupted in TADs (filtered)'
-    # )
-    # }
     
   })
   
@@ -4362,7 +4356,8 @@ function(input, output, session) {
             axis.title.y = element_text(size = 16),
             axis.text.x = element_text(size = 16),
             axis.text.y = element_text(size = 16)) +
-      labs(fill = NULL)
+      labs(fill = NULL) +
+      scale_x_discrete()
     
     # model_genes_phenotype() %>% count(description) %>% arrange(n) %>%
     #   e_charts() %>% 
