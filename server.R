@@ -4357,7 +4357,7 @@ function(input, output, session) {
             axis.text.x = element_text(size = 16),
             axis.text.y = element_text(size = 16)) +
       labs(fill = NULL) +
-      scale_x_discrete()
+      scale_y_continuous(breaks = scales::integer_breaks())
     
     # model_genes_phenotype() %>% count(description) %>% arrange(n) %>%
     #   e_charts() %>% 
