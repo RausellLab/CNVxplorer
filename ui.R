@@ -21,11 +21,6 @@ tablerDashPage(
         "Genetic evidence"
       ),
       tablerNavMenuItem(
-        tabName = "model",
-        icon = "box",
-        "Model organism"
-      ),
-      tablerNavMenuItem(
         tabName = "reg_region",
         icon = "box",
         "Regulatory elements"
@@ -36,6 +31,13 @@ tablerDashPage(
         "Phenotypic analysis"
         
       ),
+      tablerNavMenuItem(
+        tabName = "model",
+        icon = "box",
+        "Model organism"
+      ),
+
+
       tablerNavMenuItem(
         tabName = "pubmed",
         icon = "book",
@@ -91,6 +93,8 @@ tablerDashPage(
     src = "https://www.onlinelogomaker.com/applet_userdata/version2/5/0/18611424/projects/18611424.png",
     uiOutput('ref_user_genes_cnv'),
     uiOutput('n_genes_tad_added'),
+    uiOutput('n_genes_mirna_added'),
+    uiOutput('n_genes_tf_added'),
     uiOutput('n_genes_enh_added'),
     uiOutput('ref_user_genes')
     
@@ -150,25 +154,33 @@ tablerDashPage(
         fluidRow(
           column(
             width = 3,
+
             tablerCard(width = 12,
                        title = NULL,
                        collapsible = FALSE,
                        closable = FALSE,
                        zoomable = FALSE,
                        statusSide = 'left',
-                       selectizeInput(inputId = 'input_chrom', label = 'Chromosome', choices = human_chrom,
-                                      selected = NULL, multiple = FALSE,
-                                      options = NULL),
                        prettyRadioButtons(
                          inputId = "input_geno_karyo",
                          label = "Choose:", 
-                         choices = c("Genomic coordinates", "G banding"),
+                         choices = c("Genomic coordinates", "G banding", 'Multiple coordinates'),
                          inline = TRUE, 
                          status = "primary",
                          fill = TRUE
                        ),
+                       conditionalPanel(
+                         condition = "input.input_geno_karyo != 'Multiple coordinates'",
+                       selectizeInput(inputId = 'input_chrom', label = 'Chromosome', choices = human_chrom,
+                                      selected = NULL, multiple = FALSE,
+                                      options = NULL),
                        uiOutput('choose_geno_karyo1'),
-                       uiOutput('choose_geno_karyo2')
+                       uiOutput('choose_geno_karyo2')),
+                       conditionalPanel(
+                         condition = "input.input_geno_karyo == 'Multiple coordinates'",
+                         fileInput("file_cnv", label = h5("Upload file:"))),
+                       
+                       
             ),
             # tablerCard(width = 12,
             #            title = NULL,
@@ -194,6 +206,16 @@ tablerDashPage(
             tags$br()
           ),
           column(6,
+                 tablerCard(width = 12,
+                            title = NULL,
+                            collapsible = FALSE,
+                            closable = FALSE,
+                            zoomable = FALSE,
+                            statusSide = 'left',
+                   conditionalPanel(
+                     condition = "input.type_query == 'many'",
+                     DTOutput('cnv_file')),
+                 ),
                  plotOutput('plot_chrom', height = 200)
                  # tags$hr(),
                  # uiOutput("ui_run_arules"),
@@ -1751,7 +1773,7 @@ tablerDashPage(
             
             collapsible = FALSE,
             closable = FALSE,
-            DTOutput('del_dup_pubmed') %>% withSpinner(),
+            DTOutput('del_dup_pubmed') %>% withSpinner(type = 5),
             overflow = TRUE,
             width = 12,
             options = tagList(

@@ -57,8 +57,13 @@ function(input, output, session) {
     shinyjs::reset('data_selected_enhancers')
     
     shinyjs::reset('tads_on_off')
+    shinyjs::reset('data_selected_tads')
+    
     shinyjs::reset('tfs_on_off')
+    shinyjs::reset('data_selected_tfs')
+    
     shinyjs::reset('mirnas_on_off')
+    shinyjs::reset('mirnas_selected_tfs')
     
     #
     shinyjs::reset("hpo_filter_genes_rows_selected")
@@ -124,17 +129,10 @@ function(input, output, session) {
   })
   
   map_blacklist <- reactive({
-    
-    start_coordinates <- coord_user()[1]
-    end_coordinates <- coord_user()[2]
-    chrom_coordinates <- coord_user()[3]
-    
+
     blacklist_encode %>%
-      filter(chrom == chrom_coordinates) %>%
-      rowwise() %>%
-      mutate(keep = c(start, end) %overlaps% c(start_coordinates, end_coordinates)) %>%
-      filter(isTRUE(keep)) %>%
-      ungroup()
+      bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
+      select(-startdelete, -enddelete, -.overlap)
     
     
     
@@ -230,9 +228,13 @@ function(input, output, session) {
       
     }
     
-    c_output <- c(coord_start, coord_end, coord_chrom)
+    # c_output <- c(coord_start, coord_end, coord_chrom)
+    tbl_output <- tibble('chrom' = coord_chrom, 'start' = coord_start,
+                         'end' = coord_end)
     
+    test2020 <<- tbl_output
     
+    tbl_output
   })
   
   
@@ -351,19 +353,11 @@ function(input, output, session) {
   
   check_cnv_df <- reactive({
     
-    
-    start_coordinates <- as.numeric(coord_user()[1])
-    end_coordinates <- as.numeric(coord_user()[2])
-    chrom_coordinates <- coord_user()[3]
-    
-    df_output <- cnv_df %>%
-      filter(chrom == chrom_coordinates) %>%
-      rowwise() %>%
-      mutate(keep = c(start, end) %overlaps% c(start_coordinates, end_coordinates)) %>%
-      ungroup() %>%
-      filter(keep == TRUE) %>%
-      select(-keep) %>%
-      ungroup()
+
+    df_output <-  cnv_df %>%
+      bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
+      select(-startdelete, -enddelete, -.overlap)
+
     
     df_output
     
@@ -692,35 +686,31 @@ function(input, output, session) {
   
   query_pubmed_del <- reactive({
     
-    
-    start_coordinates <- coord_user()[1]
-    end_coordinates <- coord_user()[2]
-    chrom_coordinates <- coord_user()[3]
-    
+
     
     if (input$input_geno_karyo == 'Genomic coordinates') {
       
       tmp_tbl <-  chromPlot::hg_cytoBandIdeo %>%
-        filter(Chrom %in% chrom_coordinates) %>%
-        mutate(keep = map2_chr(Start, End, function(x,y) c(start_coordinates, end_coordinates) %overlaps% c(x,y))) %>%
-        filter(keep == TRUE) %>%
+        rename(chrom = Chrom, start = Start, end = End) %>%
+        bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
+        select(-startdelete, -enddelete, -.overlap) %>%
         select(Name) %>%
         pull()
 
 
-      chrom_tmp <- paste('chromosome', chrom_coordinates)
+      chrom_tmp <- paste('chromosome', coord_user() %>%  pull(chrom))
       band_tmp <- tmp_tbl %>% paste0(collapse = ' OR ')
-      band2_tmp <- paste0(chrom_coordinates, tmp_tbl) %>% paste0(collapse = ' OR ')
+      band2_tmp <- paste0( coord_user() %>%  pull(chrom), tmp_tbl) %>% paste0(collapse = ' OR ')
       
       query_region <- paste(chrom_tmp,'AND','(', band_tmp,'OR', band2_tmp,')', 'AND deletion AND homo sapiens')
       
 
     } else {
       
-      chrom_tmp <- paste('chromosome', chrom_coordinates)
+      chrom_tmp <- paste('chromosome',  coord_user() %>%  pull(chrom))
       
       band_tmp <-  input$input_karyotype
-      band2_tmp <- paste0(chrom_coordinates, band_tmp)
+      band2_tmp <- paste0( coord_user() %>%  pull(chrom), band_tmp)
       query_region <- paste(chrom_tmp,'AND','(', band_tmp,'OR', band2_tmp,')', 'AND deletion AND homo sapiens')
       
     }
@@ -944,32 +934,28 @@ function(input, output, session) {
   query_pubmed_dup <- reactive({
     
     
-    start_coordinates <- as.numeric(coord_user()[1])
-    end_coordinates <- as.numeric(coord_user()[2])
-    chrom_coordinates <- coord_user()[3]
-    
     if (input$input_geno_karyo == 'Genomic coordinates') {
       
       tmp_tbl <-  chromPlot::hg_cytoBandIdeo %>%
-        filter(Chrom %in% chrom_coordinates) %>%
-        mutate(keep = map2_chr(Start, End, function(x,y) c(start_coordinates, end_coordinates) %overlaps% c(x,y))) %>%
-        filter(keep == TRUE) %>%
+        rename(chrom = Chrom, start = Start, end = End) %>%
+        bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
+        select(-startdelete, -enddelete, -.overlap) %>%
         select(Name) %>%
         pull()
       
-      chrom_tmp <- paste('chromosome', chrom_coordinates)
+      chrom_tmp <- paste('chromosome', coord_user() %>%  pull(chrom))
       band_tmp <- tmp_tbl %>% paste0(collapse = ' OR ')
-      band2_tmp <- paste0(chrom_coordinates, tmp_tbl) %>% paste0(collapse = ' OR ')
+      band2_tmp <- paste0(coord_user() %>%  pull(chrom), tmp_tbl) %>% paste0(collapse = ' OR ')
       
       query_region <- paste(chrom_tmp,'AND','(', band_tmp,'OR', band2_tmp,')', 'AND duplication AND homo sapiens')
       
       
     } else {
       
-      chrom_tmp <- paste('chromosome', chrom_coordinates)
+      chrom_tmp <- paste('chromosome', coord_user() %>%  pull(chrom))
       
       band_tmp <-  input$input_karyotype
-      band2_tmp <- paste0(chrom_coordinates, band_tmp)
+      band2_tmp <- paste0(coord_user() %>%  pull(chrom), band_tmp)
       query_region <- paste(chrom_tmp,'AND','(', band_tmp,'OR', band2_tmp,')', 'AND duplication AND homo sapiens')
       
     }
@@ -1029,81 +1015,81 @@ function(input, output, session) {
   })
   
   
-  run_arules <- reactive({
-    
-    # test913 <<- as.numeric(input$type_cnv)
-    # test914 <<- as.numeric(input$denovo_yes_no)
-    
-    tmp_variant <- as.numeric(input$type_cnv) # Deletion 1 - Duplication 0
-    tmp_inheritance <- as.numeric(input$denovo_yes_no) # De novo consitutive 1 - Other 0
-    
-    tmp_start <- as.numeric(coord_user()[1])
-    tmp_end <- as.numeric(coord_user()[2])
-    tmp_chrom <- coord_user()[3]
-    
-    # tmp_start <- 34813719
-    # tmp_end <- 36278623
-    # tmp_chrom <- '4'
-    
-    tmp_out  <- check_app_cnv( 1, 1, tmp_variant, tmp_inheritance,
-                               tmp_chrom, tmp_start, tmp_end)  %>% 
-      select(-id, -clinical) %>%
-      rename(maximum_pli =  max_pli)
-    
-    test99912 <<- tmp_out
-    object <- model_cba
-    newdata <- tmp_out
-    type <- 'class'
-    method <- model_cba$method
-    
-    
-    
-    newdata <- arules::discretizeDF(tmp_out, lapply(object$discretization, 
-                                                    FUN = function(x) list(method = "fixed", breaks = x)))
-    
-    newdata <- as(newdata, "transactions")
-    newdata <- arules::recode(newdata, match = lhs(object$rules))
-    rulesMatchLHS <- is.subset(lhs(object$rules), newdata, sparse = (length(newdata) * 
-                                                                       length(rules(object)) > 150000))
-    dimnames(rulesMatchLHS) <- list(NULL, NULL)
-    
-    matched_rules <- rulesMatchLHS %>% as_tibble(name = 'V1') %>% 
-      mutate(id = row_number()) %>% 
-      filter(V1 == TRUE) %>% 
-      pull(id)
-    
-    validate(
-      need( length(matched_rules) != 0, "No association rules matching")
-    )
-    
-    test900410410 <<- matched_rules
-    
-    tmp_output <- bind_cols(quality(model_cba$rules[matched_rules]), 
-                            labels(model_cba$rules[matched_rules],  itemSep = " + ") %>% 
-                              enframe(name = 'rule')) %>%
-      slice(1)
-    
-    conf_result <- tmp_output$confidence
-    
-    tmp_object <- tmp_output$value %>% str_split('=>')
-    
-    test0202 <<- tmp_object
-    
-    prediction_result <- tmp_object[[1]][2] %>% 
-      str_remove('\\{clinical=') %>%
-      str_remove('\\}')
-    
-    rules_result <- tmp_object[[1]][1] %>% 
-      str_split('\\+')
-    
-    test0101 <<- list('prediction' = prediction_result, 
-                      'rules' = rules_result)
-    
-    output_list <- list('prediction' = prediction_result, 
-                        'rules' = rules_result,
-                        'confidence' = round(conf_result,1)*100)
-    
-  })
+  # run_arules <- reactive({
+  #   
+  #   # test913 <<- as.numeric(input$type_cnv)
+  #   # test914 <<- as.numeric(input$denovo_yes_no)
+  #   
+  #   tmp_variant <- as.numeric(input$type_cnv) # Deletion 1 - Duplication 0
+  #   tmp_inheritance <- as.numeric(input$denovo_yes_no) # De novo consitutive 1 - Other 0
+  #   
+  #   # tmp_start <- as.numeric(coord_user()[1])
+  #   # tmp_end <- as.numeric(coord_user()[2])
+  #   # tmp_chrom <- coord_user()[3]
+  #   
+  #   # tmp_start <- 34813719
+  #   # tmp_end <- 36278623
+  #   # tmp_chrom <- '4'
+  #   
+  #   tmp_out  <- check_app_cnv( 1, 1, tmp_variant, tmp_inheritance,
+  #                              tmp_chrom, tmp_start, tmp_end)  %>% 
+  #     select(-id, -clinical) %>%
+  #     rename(maximum_pli =  max_pli)
+  #   
+  #   test99912 <<- tmp_out
+  #   object <- model_cba
+  #   newdata <- tmp_out
+  #   type <- 'class'
+  #   method <- model_cba$method
+  #   
+  #   
+  #   
+  #   newdata <- arules::discretizeDF(tmp_out, lapply(object$discretization, 
+  #                                                   FUN = function(x) list(method = "fixed", breaks = x)))
+  #   
+  #   newdata <- as(newdata, "transactions")
+  #   newdata <- arules::recode(newdata, match = lhs(object$rules))
+  #   rulesMatchLHS <- is.subset(lhs(object$rules), newdata, sparse = (length(newdata) * 
+  #                                                                      length(rules(object)) > 150000))
+  #   dimnames(rulesMatchLHS) <- list(NULL, NULL)
+  #   
+  #   matched_rules <- rulesMatchLHS %>% as_tibble(name = 'V1') %>% 
+  #     mutate(id = row_number()) %>% 
+  #     filter(V1 == TRUE) %>% 
+  #     pull(id)
+  #   
+  #   validate(
+  #     need( length(matched_rules) != 0, "No association rules matching")
+  #   )
+  #   
+  #   test900410410 <<- matched_rules
+  #   
+  #   tmp_output <- bind_cols(quality(model_cba$rules[matched_rules]), 
+  #                           labels(model_cba$rules[matched_rules],  itemSep = " + ") %>% 
+  #                             enframe(name = 'rule')) %>%
+  #     slice(1)
+  #   
+  #   conf_result <- tmp_output$confidence
+  #   
+  #   tmp_object <- tmp_output$value %>% str_split('=>')
+  #   
+  #   test0202 <<- tmp_object
+  #   
+  #   prediction_result <- tmp_object[[1]][2] %>% 
+  #     str_remove('\\{clinical=') %>%
+  #     str_remove('\\}')
+  #   
+  #   rules_result <- tmp_object[[1]][1] %>% 
+  #     str_split('\\+')
+  #   
+  #   test0101 <<- list('prediction' = prediction_result, 
+  #                     'rules' = rules_result)
+  #   
+  #   output_list <- list('prediction' = prediction_result, 
+  #                       'rules' = rules_result,
+  #                       'confidence' = round(conf_result,1)*100)
+  #   
+  # })
   
   
   
@@ -1388,72 +1374,35 @@ function(input, output, session) {
     
     req(coord_user())
     
-    
-    start_coordinates <- as.numeric(coord_user()[1])
-    end_coordinates <- as.numeric(coord_user()[2])
-    chrom_coordinates <- coord_user()[3]
-    
-    data_raw <- hgcn_genes %>% filter(chrom == chrom_coordinates)
+
+    data_raw <- hgcn_genes
     
     if (input$input_geno_karyo == 'Genomic coordinates') {
       
       data_raw <- data_raw  %>%
-        rowwise() %>%
-        mutate(keep = c(start_position, end_position) %overlaps% c(start_coordinates, end_coordinates)) %>%
-        ungroup() %>%
-        filter(keep == TRUE) %>% 
-        select(-keep) %>%
-        ungroup()
+        bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
+        select(-startdelete, -enddelete, -.overlap)
       
       
     } else {
       
-      test002 <<- data_raw
-      test003 <<- start_coordinates
-      test004 <<- end_coordinates
       
       data_raw <- data_raw  %>%
-        rowwise() %>%
-        mutate(keep = c(start_position, end_position) %overlaps% c(start_coordinates, end_coordinates)) %>%
-        filter(keep == TRUE) %>% 
-        select(-keep) %>%
-        ungroup()
+        bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
+        select(-startdelete, -enddelete, -.overlap)
     }
-    # if (input$snv_yes_no == 'Yes') {
-    #   
-    #   snv_df <- reading_snv_file()
-    #   
-    # 
-    #   for (i in 1:nrow(snv_df)) {
-    #     
-    #     df_add <- hgcn_genes %>% 
-    #       filter(chrom == snv_df$chrom[i]) %>%
-    #       mutate(keep = NA) %>%
-    #       rowwise() %>%
-    #       mutate(keep = c(start_position, end_position) %overlaps% c(snv_df$start[i], snv_df$end[i])) %>%
-    #       filter(keep == TRUE) %>% 
-    #       select(-keep) %>%
-    #       ungroup()
-    #     # check with snvs that overlap in more than 1 gene
-    #     if (!df_add$gene %in% data_raw$gene) {
-    #       data_raw <-  bind_rows(data_raw, df_add)
-    #     }
-    #   }}
+
     
     data_raw <- data_raw %>% 
-      mutate(coordinates = paste0(chrom,':', start_position,'-', end_position)) %>%
+      mutate(coordinates = paste0(chrom,':', start,'-', end)) %>%
       select(-vg, -ensembl_gene_id, -coordinates)
     
     
-    test23100101 <<- data_raw
-    
-    data_raw <- get_perc_overlap(test23100101 %>% rename(start = start_position, end = end_position), 
-                                 chrom_coordinates, 
-                                 start_coordinates, 
-                                 end_coordinates,
+
+    data_raw <- get_perc_overlap(data_raw, coord_user(),
                                  is_a_gene = TRUE)
     
-    data_raw <- data_raw %>% rename(start_position = start, end_position = end)
+    data_raw <- data_raw 
     
     data_raw
     
@@ -1470,11 +1419,11 @@ function(input, output, session) {
         genes_cnv <- data_selected_prev()
         genes_cnv <- genes_cnv %>% select(gene) %>% pull()
         # Genes NOT mapped in CNV
-        if (is.null(input$df_enhancer_rows_all)) {
-          enhancers_df <- prev_enhancer()
-        } else {
-          enhancers_df <- prev_enhancer()[input$df_enhancer_rows_all,]
-        }
+        # if (is.null(input$df_enhancer_rows_all)) {
+        #   enhancers_df <- prev_enhancer()
+        # } else {
+        #   enhancers_df <- prev_enhancer()[input$df_enhancer_rows_all,]
+        # }
         genes_no_cnv <- enhancers_df %>% select(gene) %>% distinct() %>% pull()
         genes_no_cnv <- genes_no_cnv[! genes_no_cnv %in% genes_cnv]
         # ADAPT IT WHEN ADDING OMIM OR OTHERS!!!
@@ -1629,6 +1578,9 @@ function(input, output, session) {
   })
   
   
+  
+  
+  
   # data_selected <- reactive({
   #   
   #   
@@ -1654,20 +1606,13 @@ function(input, output, session) {
   
   running_cnv_syndromes <- reactive({
     
-    start_coordinates <- as.numeric(coord_user()[1])
-    end_coordinates <- as.numeric(coord_user()[2])
-    chrom_coordinates <- coord_user()[3]
-    
+
     tmp_df <- syndromes_total %>% 
-      filter(chrom == chrom_coordinates) %>%
-      rowwise() %>%
-      mutate(keep = c(start, end) %overlaps% c(start_coordinates, end_coordinates)) %>%
-      ungroup() %>%
-      filter(keep == TRUE) %>%
-      select(-keep) %>%
+      bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
+      select(-startdelete, -enddelete, -.overlap) %>%
       replace_na(replace = list(variant_class = '-', phenotypes = '-')) %>%
       select(chrom, start, end, syndrome_name, variant_class, phenotypes, source) %>%
-      get_perc_overlap(chrom_coordinates, start_coordinates, end_coordinates)
+      get_perc_overlap((coord_user()))
     
   })
   
@@ -1681,9 +1626,6 @@ function(input, output, session) {
       pull(new_one) %>%
       str_replace('decipher', 'DECIPHER') %>% 
       str_replace('clingen', 'ClinGen')
-    
-    
-    test91241 <<- vector_n_dbs
     
     
     if (length(vector_n_dbs) == 0) {
@@ -1721,6 +1663,8 @@ function(input, output, session) {
   
   output$cnv_syndromes <- renderDataTable({
     
+    req(running_cnv_syndromes())
+    
     validate(
       need(nrow(running_cnv_syndromes()) != 0, "No CNV syndromes found.")
     )
@@ -1739,8 +1683,7 @@ function(input, output, session) {
     } else {
       
       tmp_df <- running_cnv_syndromes() %>% filter(source == 'clingen') %>% select(chrom, start, end, syndrome_name, p_overlap, -source)
-      test10 <<- tmp_df
-      
+
       
       datatable(tmp_df, rownames = FALSE,
                 colnames = c('Chrom', 'Start', 'End', 'CNV syndrome name', 'Overlap (%)'))
@@ -1757,14 +1700,13 @@ function(input, output, session) {
   
   running_upset_disease <- reactive({
     
-    test13133334 <<- data_selected()
-    
+
     uspset_df <- data_selected() %>% 
-      select(-start_position, -end_position, -chrom) %>%
+      select(-start, -end, -chrom) %>%
       filter(source == 'CNV') %>%
       filter(disease == 'Yes') %>%
       select(-source, -disease) %>%
-      select(gene, orphanet, dev, genomics_england, omim, clingen) %>%
+      select(gene, orphanet, dev, genomics_england, omim) %>%
       pivot_longer(-gene) %>%
       filter(value == 'Yes') %>%
       rename(term = name) %>%
@@ -1795,8 +1737,10 @@ function(input, output, session) {
     
     server <- TRUE
     
+    
+    
     data_input <- data_selected()  %>% 
-      select(-start_position, -end_position, -chrom) %>%
+      select(-start, -end, -chrom) %>%
       filter(source == 'CNV') %>%
       select(-source) %>%
       select(band, gene, disease, orphanet, dev, clingen, omim, gwas, p_overlap) %>%
@@ -1835,7 +1779,7 @@ function(input, output, session) {
     )
     
     data_input <- data_selected()  %>% 
-      select(-start_position, -end_position, -chrom) %>%
+      select(-start, -end, -chrom) %>%
       filter(source == 'CNV') %>%
       select(-source) %>%
       filter(disease == 'Yes') %>%
@@ -1965,7 +1909,7 @@ function(input, output, session) {
     tmp_df <-  data_selected() 
     
     data_input <- tmp_df %>% 
-      select(-start_position, -end_position, -chrom) %>%
+      select(-start, -end, -chrom) %>%
       filter(source == 'CNV') %>%
       select(-source) %>%
       select(band, gene, disease, essent, pLI, rvis, ccr, hi, gdi, snipre, ncrvis, 
@@ -2049,7 +1993,7 @@ function(input, output, session) {
     
     server <- TRUE
     data_input <- data_selected() %>% filter(source ==  input$select_reg_region) %>%
-      select(-start_position, -end_position, -chrom) %>%
+      select(-start, -end, -chrom) %>%
       select(band, gene, disease, essent, pLI, rvis, ccr, hi, gdi, snipre, ncrvis, 
              ncgerp)
     
@@ -2131,14 +2075,9 @@ function(input, output, session) {
   output$plot_size <- renderPlot({
     
     req(coord_user())
+   
     
-    start_coordinates <- coord_user()[1]
-    end_coordinates <- coord_user()[2]
-    
-    start_coordinates <- as.numeric(start_coordinates)
-    end_coordinates <- as.numeric(end_coordinates)
-    
-    size_cnv_query = end_coordinates - start_coordinates + 1
+    size_cnv_query = coord_user() %>% mutate(length_cnv = end - start + 1) %>% pull(length_cnv)
     
     
     if (input$select_density == 'global') {
@@ -2414,6 +2353,9 @@ function(input, output, session) {
     start_coordinates <- as.numeric(start_coordinates)
     end_coordinates <- as.numeric(end_coordinates)
     
+    start_coordinates <- 1
+    start_coordinates <- 10000000
+    chrom_coordinates <- 'chr1'
     
     
     ideoTrack <- IdeogramTrack(genome="hg19", chromosome= chrom_coordinates)
@@ -2870,7 +2812,7 @@ function(input, output, session) {
     
     
     tmp_df <- data_selected() %>% 
-      select(-start_position, -end_position, -chrom) %>%
+      select(-start, -end, -chrom) %>%
       filter(source == 'CNV')
     
     
@@ -2936,23 +2878,11 @@ function(input, output, session) {
     
     if (input$input_geno_karyo == 'Genomic coordinates') {
       
-      start_coordinates <- as.numeric(coord_user()[1])
-      end_coordinates <- as.numeric(coord_user()[2])
-      chrom_coordinates <- coord_user()[3]
       
-      test91 <<- start_coordinates
-      test92 <<- end_coordinates
-      
-      test93 <<- chrom_coordinates
-      
-      # 120600000 117800000
       tmp_cyto <- chromPlot::hg_cytoBandIdeo %>%
-        filter(Chrom %in% chrom_coordinates) %>%
-        # mutate(keep = map2_chr(Start, End, function(x,y) c(start_coordinates, end_coordinates) %overlaps% c(x,y))) %>%
-        rowwise() %>%
-        mutate(keep = c(start_coordinates, end_coordinates) %overlaps% c(Start, End)) %>%
-        ungroup() %>%
-        filter(keep == TRUE) %>%
+        rename(chrom = Chrom, start = Start, end = End) %>%
+        bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
+        select(-startdelete, -enddelete, -.overlap) %>%
         select(Name) %>%
         pull() %>%
         paste(collapse = ', ')
@@ -3064,12 +2994,8 @@ function(input, output, session) {
     
     data_tmp <- mirtarbase %>% 
       filter(chrom == chrom_coordinates) %>%
-      rowwise() %>%
-      mutate(keep = c(start, end) %overlaps% c(start_coordinates, end_coordinates)) %>%
-      ungroup() %>%
-      filter(keep == TRUE) %>%
-      select(-keep) %>%
-      ungroup() 
+      bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
+      select(-startdelete, -enddelete, -.overlap)
     
     
     
@@ -3109,12 +3035,8 @@ function(input, output, session) {
     chrom_coordinates <- coord_user()[3]
     
     data_tmp <- trrust %>% 
-      filter(chrom == chrom_coordinates) %>%
-      rowwise() %>%
-      mutate(keep = c(start, end) %overlaps% c(start_coordinates, end_coordinates)) %>%
-      ungroup() %>%
-      filter(keep == TRUE) %>%
-      select(-keep) %>%
+      bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
+      select(-startdelete, -enddelete, -.overlap) %>%
       select(-target_chrom, -target_start, -target_end) %>%
       mutate(reference = paste0("<a href='", paste0('https://pubmed.ncbi.nlm.nih.gov/', reference),"' target='_blank'>", reference,"</a>"))
     
@@ -3146,11 +3068,8 @@ function(input, output, session) {
       mutate(keep = 0)
     
     data_tmp <- lncrna_coord %>%
-      filter(chrom == chrom_coordinates) %>%
-      rowwise() %>%
-      mutate(keep = c(start, end) %overlaps% c(start_coordinates, end_coordinates)) %>%
-      ungroup() %>%
-      filter(keep == TRUE) %>%
+      bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
+      select(-startdelete, -enddelete, -.overlap) %>%
       select(id) %>%
       distinct() %>%
       pull(id)
@@ -3214,43 +3133,23 @@ function(input, output, session) {
     
     req(input$start_analysis > 0)
     
-    
-    start_coordinates <- as.numeric(coord_user()[1])
-    end_coordinates <- as.numeric(coord_user()[2])
-    chrom_coordinates <- coord_user()[3]
-    
-    
     data_tmp <- df_enhancers %>% 
-      filter(chrom == chrom_coordinates) %>%
-      rowwise() %>%
-      mutate(keep = c(start, end) %overlaps% c(start_coordinates, end_coordinates)) %>%
-      ungroup() %>%
-      filter(keep == TRUE) %>%
-      select(-keep)
+      bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
+      select(-startdelete, -enddelete, -.overlap)
     
     
-    data_tmp <- data_tmp %>% 
-      left_join(hgcn_genes %>% select(gene, chrom, start_position, end_position, chrom) %>% 
-                  rename(chrom_gene = chrom, start_gene = start_position, end_gene = end_position), by = 'gene') %>%
-      rowwise() %>%
-      mutate(inside_cnv = c(start_gene, end_gene) %overlaps% c(start_coordinates, end_coordinates)) %>%
-      mutate(inside_cnv = if_else(chrom_gene == chrom_coordinates, inside_cnv, FALSE)) %>%
-      select(-chrom_gene, -start_gene, -end_gene) %>%
-      distinct() %>%
-      filter(!is.na(inside_cnv))
+    # data_tmp <- data_tmp %>% 
+    #   left_join(hgcn_genes %>% select(gene, chrom, start, end) %>% 
+    #               rename(chrom_gene = chrom), by = 'gene') %>%
+    #   rowwise() %>%
+    #   mutate(inside_cnv = c(start_gene, end_gene) %overlaps% c(start_coordinates, end_coordinates)) %>%
+    #   mutate(inside_cnv = if_else(chrom_gene == chrom_coordinates, inside_cnv, FALSE)) %>%
+    #   select(-chrom_gene, -start_gene, -end_gene) %>%
+    #   distinct() %>%
+    #   filter(!is.na(inside_cnv))
     
-    test1946 <<- data_tmp
-    
-    # get_coord_genes <- hgcn_genes %>% 
-    #   filter(gene %in% (data_tmp %>% pull(gene))) %>%
-    #   mutate(inside_cnv = c(start, end) %overlaps% c(start_coordinates, end_coordinates)) %>%
-    #   select(gene, inside_cnv)
-    # 
-    #   test1946 <<- get_coord_genes
-    #   
-    #   data_tmp <- data_tmp %>% left_join(get_coord_genes)
-    
-    
+    # test1946 <<- data_tmp
+
     data_tmp
     
     
@@ -3274,6 +3173,7 @@ function(input, output, session) {
   
   output$n_enhancer <- renderUI({
     
+
     data_tmp <- prev_enhancer() %>% select(id) %>% distinct() %>% pull(id)
     
     
@@ -3296,12 +3196,12 @@ function(input, output, session) {
   })
   
   
-  redundancy_enhancers <- reactive({
-    
-    data_tmp <- prev_enhancer() %>% select(gene) %>% distinct() %>% pull(gene)
-    df_output <- df_enhancers %>% filter(gene %in% data_tmp) %>% count(gene)
-    test25 <<- df_output
-  })
+  # redundancy_enhancers <- reactive({
+  #   
+  #   data_tmp <- prev_enhancer() %>% select(gene) %>% distinct() %>% pull(gene)
+  #   df_output <- df_enhancers %>% filter(gene %in% data_tmp) %>% count(gene)
+  #   test25 <<- df_output
+  # })
   
   # output$redund_n_enhancer <- renderUI({
   #   
@@ -3377,17 +3277,13 @@ function(input, output, session) {
   })
   
   output$df_enhancer <- renderDataTable({
-    
-    
-    df_tmp <- prev_enhancer() 
-    df_tmp <- df_tmp %>% select(-score_enh, -score) %>%
-      select(id,chrom, start, end, gene, everything()) %>%
-      filter(!is.na(inside_cnv))
-    test0000 <<- df_tmp
+
+    df_tmp <- prev_enhancer()  %>% select(-score_enh, -score) %>%
+      select(id,chrom, start, end, gene, everything())
+      # filter(!is.na(inside_cnv))
     datatable(df_tmp, rownames = FALSE, filter = 'top', selection = 'single',
               colnames = c('ID Enhancer', 'Chrom',
-                           'Start',  'End','Target-gene', 'Phast100way', 'Phast46way Placental', 'Phast46way Primates','o/e gnomad', 
-                           'Gene mapped in CNV'),
+                           'Start',  'End','Target-gene', 'Phast100way', 'Phast46way Placental', 'Phast46way Primates','o/e gnomad'),
               options = list(
                 pageLength = 5, 
                 # autoWidth = TRUE,
@@ -3523,8 +3419,7 @@ function(input, output, session) {
     
     req(input$start_analysis > 0)
     
-    # CHECK WHY WE TAKE THIS INPUT AND NOT data_selected()
-    
+
     tmp_df <- data_selected_prev()
     
     start_coordinates <- as.numeric(coord_user()[1])
@@ -3549,10 +3444,8 @@ function(input, output, session) {
       tmp_end <- n_tads$end[i]
       
       tmp_genes <- hgcn_genes %>%
-        rowwise() %>%
-        mutate(is_overlap = c(start_position, end_position) %overlaps%  c(tmp_start, tmp_end)) %>%
-        ungroup() %>%
-        filter(isTRUE(is_overlap)) %>%
+        bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
+        select(-startdelete, -enddelete, -.overlap) %>%
         pull(gene)
       
       genes_not_cnv <- tmp_genes[!tmp_genes %in% (tmp_df %>% pull(gene))]
@@ -3696,7 +3589,6 @@ function(input, output, session) {
     
     
     hpo_yes <-  data_selected() %>% select(gene) %>% pull()
-    test2020 <<- hpo_yes
     hpo_genes_filter <- hpo_genes %>% 
       filter(gene %in% hpo_yes) %>%
       select(term) %>%
@@ -4937,37 +4829,31 @@ function(input, output, session) {
     })
   
   
-  # reading_snv_file <- reactive({
-  #   
-  #   # conditional of errors!
-  #   # req(input$snv_yes_no == 'Yes')
-  #   req(input$file_snv)
-  #   
-  #   file1 <- input$file_snv
-  #   data1 <- read.table(file1$datapath, sep = '\t', header = FALSE) %>%
-  #             rename(chrom = V1, start = V2, end = V3)
-  # })
-  
-  output$test_reading_snv_file <- renderDT({
+  reading_cnv_file <- reactive({
+
+    req(input$type_query == 'many')
     
-    datatable(reading_snv_file())
+      validate(
+        need(!is.null(input$file_cnv), "Please upload a file.")
+      )
+
+    file1 <- input$file_cnv
+    test0020 <<- file1
+    data1 <- read_tsv(file1$datapath, col_names = c('chrom', 'start', 'end'))
+  })
+  
+  output$cnv_file <- renderDT({
+    
+    datatable(reading_cnv_file(), colnames = c('Chrom', 'Start', 'End'))
     
   })
   
   df_overlap_cnvs_running <- reactive({
     
     req(input$start_analysis > 0)
-    
-    start_coordinates <- as.numeric(coord_user()[1])
-    end_coordinates <- as.numeric(coord_user()[2])
-    chrom_coordinates <- coord_user()[3]
-    
-    
-    
-    tmp_df <-  get_perc_overlap(check_cnv_df(), 
-                                chrom_coordinates,  
-                                start_coordinates, 
-                                end_coordinates)
+
+    tmp_df <-  get_perc_overlap(check_cnv_df(),
+                                coord_user())
     
     
     tmp_df
@@ -5083,69 +4969,71 @@ function(input, output, session) {
     tmp_df
   })
   
-  output$plot_cnv_bar <- renderPlot({
-    
-    
-    start_pos <- as.numeric(coord_user()[1])
-    end_pos <- as.numeric(coord_user()[2])  
-    
-    
-    
-    df_nonpathogenic <- df_overlap_cnvs_running() %>% filter(source != 'decipher')
-    df_pathogenic <- df_overlap_cnvs_running() %>% filter(source == 'decipher')
-    
-    test8231 <<- start_pos
-    test8999 <<- end_pos
-    test88881 <<- df_nonpathogenic
-    test88882 <<- df_pathogenic
-    
-    # start_pos <- test8231
-    # end_pos <- test8999
-    # df_nonpathogenic <- test88881
-    # df_pathogenic <- test88882
-    
-    
-    interval_values <- seq(from = start_pos, to = end_pos, length.out = 200)
-    
-    df_interval <- matrix(interval_values, ncol = 2, byrow = TRUE)
-    colnames(df_interval) <- c('start', 'end')
-    df_interval <- as_tibble(df_interval)
-    
-    query <- IRanges(df_interval$start, df_interval$end)
-    
-    # Evaluate pathogenic CNVs
-    subject_patho <- IRanges(df_pathogenic$start_position, df_pathogenic$end_position)
-    hits_intervals_patho <- countOverlaps(query, subject_patho)
-    
-    # Evaluate pathogenic CNVs
-    subject_nonpatho<- IRanges(df_nonpathogenic$start_position, df_nonpathogenic$end_position)
-    hits_intervals_nonpatho <- countOverlaps(query, subject_nonpatho)
-    
-    
-    df_interval <- df_interval %>% mutate(n_patho = hits_intervals_patho, 
-                                          n_nonpatho = hits_intervals_nonpatho) %>%
-      mutate(id = row_number()) %>%
-      gather('category', 'n_overlap', -start, -end, -id)
-    
-    
-    df_interval %>%
-      mutate(category = if_else(category == 'n_patho', 'Pathogenic CNVs', 'Non-pathogenic CNVs')) %>%
-      ggplot(aes(id, n_overlap)) +
-      geom_col(aes(fill = category), color = 'black', show.legend = FALSE) + 
-      #geom_point() +
-      # geom_smooth(aes(color = category, group = category))
-      #geom_line(aes(color = category, group = category)) + 
-      theme_minimal() + 
-      facet_wrap(~category, nrow = 2)
-    
-  })
+  # output$plot_cnv_bar <- renderPlot({
+  #   
+  #   
+  #   start_pos <- as.numeric(coord_user()[1])
+  #   end_pos <- as.numeric(coord_user()[2])  
+  #   
+  #   
+  #   
+  #   df_nonpathogenic <- df_overlap_cnvs_running() %>% filter(source != 'decipher')
+  #   df_pathogenic <- df_overlap_cnvs_running() %>% filter(source == 'decipher')
+  #   
+  #   test8231 <<- start_pos
+  #   test8999 <<- end_pos
+  #   test88881 <<- df_nonpathogenic
+  #   test88882 <<- df_pathogenic
+  #   
+  #   # start_pos <- test8231
+  #   # end_pos <- test8999
+  #   # df_nonpathogenic <- test88881
+  #   # df_pathogenic <- test88882
+  #   
+  #   
+  #   interval_values <- seq(from = start_pos, to = end_pos, length.out = 200)
+  #   
+  #   df_interval <- matrix(interval_values, ncol = 2, byrow = TRUE)
+  #   colnames(df_interval) <- c('start', 'end')
+  #   df_interval <- as_tibble(df_interval)
+  #   
+  #   query <- IRanges(df_interval$start, df_interval$end)
+  #   
+  #   # Evaluate pathogenic CNVs
+  #   subject_patho <- IRanges(df_pathogenic$start_position, df_pathogenic$end_position)
+  #   hits_intervals_patho <- countOverlaps(query, subject_patho)
+  #   
+  #   # Evaluate pathogenic CNVs
+  #   subject_nonpatho<- IRanges(df_nonpathogenic$start_position, df_nonpathogenic$end_position)
+  #   hits_intervals_nonpatho <- countOverlaps(query, subject_nonpatho)
+  #   
+  #   
+  #   df_interval <- df_interval %>% mutate(n_patho = hits_intervals_patho, 
+  #                                         n_nonpatho = hits_intervals_nonpatho) %>%
+  #     mutate(id = row_number()) %>%
+  #     gather('category', 'n_overlap', -start, -end, -id)
+  #   
+  #   
+  #   df_interval %>%
+  #     mutate(category = if_else(category == 'n_patho', 'Pathogenic CNVs', 'Non-pathogenic CNVs')) %>%
+  #     ggplot(aes(id, n_overlap)) +
+  #     geom_col(aes(fill = category), color = 'black', show.legend = FALSE) + 
+  #     #geom_point() +
+  #     # geom_smooth(aes(color = category, group = category))
+  #     #geom_line(aes(color = category, group = category)) + 
+  #     theme_minimal() + 
+  #     facet_wrap(~category, nrow = 2)
+  #   
+  # })
   
   
   
   
   output$df_overlap_cnvs <- renderDT({
     
-    test1231329999999 <<- df_overlap_cnvs_running()
+
+    
+    
     
     tmp_df <- df_overlap_cnvs_running() %>% filter(source == 'decipher') %>% 
       filter(pathogenicity %in% c('Pathogenic', 'Likely pathogenic')) %>%
@@ -5225,14 +5113,14 @@ function(input, output, session) {
     end_coordinates <- as.numeric(coord_user()[2])
     chrom_coordinates <- coord_user()[3]
     
+
+    
     filter_id <-  df_overlap_cnvs_running() %>%
       filter(source == 'dgv') %>% pull(id)
     
-    test9141241299 <<- filter_id
-    
     tmp_df <- dgv_df_raw %>% 
       filter(id %in% filter_id) %>%
-      get_perc_overlap(chrom_coordinates, start_coordinates, end_coordinates) %>%
+      get_perc_overlap(coord_user()) %>%
       select(id, chrom, start, end, everything())
     
     
@@ -5243,16 +5131,12 @@ function(input, output, session) {
     
     req(input$start_analysis > 0)
     
-    start_coordinates <- as.numeric(coord_user()[1])
-    end_coordinates <- as.numeric(coord_user()[2])
-    chrom_coordinates <- coord_user()[3]
-    
     filter_id <-  df_overlap_cnvs_running() %>%
       filter(source == 'decipher_control') %>% pull(id)
     
     tmp_df <- decipher_control_raw %>% 
       filter(id %in% filter_id) %>%
-      get_perc_overlap(chrom_coordinates, start_coordinates, end_coordinates) %>%
+      get_perc_overlap(coord_user()) %>%
       arrange(desc(p_overlap)) %>%
       select(-source) %>%
       select(id, chrom, start, end, everything())
@@ -5266,18 +5150,13 @@ function(input, output, session) {
   running_gnomad <- reactive({
     
     req(input$start_analysis > 0)
-    
-    start_coordinates <- as.numeric(coord_user()[1])
-    end_coordinates <- as.numeric(coord_user()[2])
-    chrom_coordinates <- coord_user()[3]
-    
-    
+
     filter_id <-  df_overlap_cnvs_running() %>%
       filter(source == 'gnomad_v2.1') %>% pull(id)
     
     tmp_df <- gnomad_sv_raw %>% 
       filter(id %in% filter_id) %>%
-      get_perc_overlap(chrom_coordinates, start_coordinates, end_coordinates) %>%
+      get_perc_overlap(coord_user()) %>%
       select(id, chrom, start, end, svtype, AF, p_overlap)
     
     
@@ -5414,26 +5293,14 @@ function(input, output, session) {
   running_gwas <- reactive({
     
     req(input$start_analysis > 0)
-    
-    start_coordinates <- as.numeric(coord_user()[1])
-    end_coordinates <- as.numeric(coord_user()[2])
-    chrom_coordinates <- coord_user()[3]
-    
-    
-    
+
     tmp_df <- gwas_variants %>%
-      filter(CHR_ID == chrom_coordinates) %>%
-      rowwise() %>%
-      mutate(keep = CHR_POS %overlaps% c(start_coordinates, end_coordinates)) %>%
-      ungroup() %>%
-      filter(keep == TRUE) %>%
-      select(-keep) %>%
+      rename(chrom = CHR_ID, start = CHR_POS) %>%
+      mutate(end = start) %>%
+      bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
+      select(-startdelete, -enddelete, -.overlap) %>%
       mutate(pubmed_id = str_extract(LINK, '\\d{8}')) %>%
       select(-LINK)
-
-    
-    tmp_df
-    
   })
   
   output$df_gwas <- renderDataTable({
@@ -5455,41 +5322,29 @@ function(input, output, session) {
   running_de_novo <- reactive({
     
     req(input$start_analysis > 0)
-    
-    start_coordinates <- as.numeric(coord_user()[1])
-    end_coordinates <- as.numeric(coord_user()[2])
-    chrom_coordinates <- coord_user()[3]
-    
-    
-    
+
     tmp_df <- denovo %>%
-      filter(chrom == chrom_coordinates) %>%
-      rowwise() %>%
-      mutate(keep = Position %overlaps% c(start_coordinates, end_coordinates)) %>%
-      ungroup() %>%
-      filter(keep == TRUE) %>%
-      select(-keep)
+      rename(start = Position) %>%
+      mutate(end = start) %>%
+      bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
+      select(-startdelete, -enddelete, -.overlap) %>%
+      mutate(position = start) %>%
+      select(-end)
     
     tmp_df
     
   })
   
   running_clinvar <- reactive({
-    
-    
-    start_coordinates <- as.numeric(coord_user()[1])
-    end_coordinates <- as.numeric(coord_user()[2])
-    chrom_coordinates <- coord_user()[3]
-    
-    
-    
+
     tmp_df <- clinvar_variants %>%
-      filter(chrom == chrom_coordinates) %>%
-      rowwise() %>%
-      mutate(keep = pos %overlaps% c(start_coordinates, end_coordinates)) %>%
-      ungroup() %>%
-      filter(keep == TRUE) %>%
-      select(-keep)
+      mutate(chrom = as.character(chrom)) %>%
+      rename(start = pos) %>%
+      mutate(end = start) %>%
+      bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
+      select(-startdelete, -enddelete, -.overlap) %>%
+      rename(pos = start) %>%
+      select(-end)
     
     tmp_df
     
