@@ -81,6 +81,7 @@ library(tidyverse)
 
 # 
 # file.remove('local_data.RData.gz')
+# file.remove('local_data.RData')
 # save(hgcn_genes, df_enhancers, tad, gtex, hpa, hpo_genes, cnv_df, vector_total_terms,
 #      gnomad_sv_raw, decipher_control_raw, dgv_df_raw, hpo_omim, anato_df, mirtarbase,
 #       vector_inheritance, trrust, tf_genes, drugbank,prot_complex,ohno_genes,
@@ -92,8 +93,8 @@ library(tidyverse)
 
 source('functions.R')
 
-# system('gunzip -c local_data.RData.gz > local_data.RData')
-load('local_data.RData')
+#  system('gunzip -c local_data.RData.gz > local_data.RData')
+# load('local_data.RData')
 
 ridges_home <- cnv_df %>%
   mutate(source =

@@ -207,14 +207,22 @@ tablerDashPage(
           ),
           column(6,
                  tablerCard(width = 12,
-                            title = NULL,
+                            title = 'Input file',
                             collapsible = FALSE,
                             closable = FALSE,
                             zoomable = FALSE,
                             statusSide = 'left',
+
                    conditionalPanel(
-                     condition = "input.type_query == 'many'",
+                     condition = "input.input_geno_karyo == 'Multiple coordinates'",
                      DTOutput('cnv_file')),
+                   options = tagList(
+                     selectizeInput(inputId = 'select_n_cnvs',
+                                    label = 'Select all?',
+                                    choices = c('Yes' = 'yes', 'No' = 'no'),
+                                    selected = NULL,
+                                    multiple = FALSE,
+                                    options = NULL))
                  ),
                  plotOutput('plot_chrom', height = 200)
                  # tags$hr(),
@@ -1109,17 +1117,7 @@ tablerDashPage(
             # downloadButton("download_adsasdasdasdasdasdgenes", "Download table")
           )
         ),
-        tablerCard(
-          title = "Target-genes from disrupted regulatory elements",
-          DTOutput("genes_from_reg_regions") %>% withSpinner(type = 5),
-          width = 12,
-          collapsible = FALSE,
-          closable = FALSE,
-          overflow = TRUE,
-          options = tagList(
-            uiOutput('choose_reg_region')
-          )
-        ),
+
         # tablerCard(
         #   title = "Target-genes from disrupted TADs",
         #   DTOutput("genes_from_tads") %>% withSpinner(type = 5),
@@ -1333,7 +1331,17 @@ tablerDashPage(
           #            width = 3),
           # uiOutput('switch_enhancers'),
           
-          
+          tablerCard(
+            title = "Target-genes from disrupted regulatory elements",
+            DTOutput("genes_from_reg_regions") %>% withSpinner(type = 5),
+            width = 12,
+            collapsible = FALSE,
+            closable = FALSE,
+            overflow = TRUE,
+            options = tagList(
+              uiOutput('choose_reg_region')
+            )
+          ),
           tablerCard(title = 'Enhancers disrupted',
                      collapsible = FALSE,
                      closable = FALSE,
