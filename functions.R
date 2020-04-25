@@ -12,40 +12,20 @@ slice <- dplyr::slice
 # ------------------------------------------------------------------------------
 
 
-check_tads <- function(chrom = NULL, start = NULL, end = NULL, tad_object = NULL) {
-  # 
-  # chrom_tmp <- test655
-  # start_tmp <- test555
-  # end_tmp <- test666
-  # 
-  chrom_tmp <-  chrom
-  start_tmp <-  start
-  end_tmp <-  end
-  
-  
-  
-  
-  tmp_df <- tad_object %>%
-    filter(chrom == !!chrom_tmp) %>%
-    mutate(check_tad = if_else(start_tmp <= start & end_tmp >= start, 1, 0 )) %>%
-    mutate(check_tad2 = if_else(start_tmp <= end & end_tmp >= end, 1, 0 )) %>%
-    mutate(check_tad3 = if_else(start_tmp <= start & end_tmp >= end, 1, 0 )) %>%
-    mutate(check_final_tad = if_else(check_tad  + check_tad2 + check_tad3 > 0, 1, 0 )) %>%
-    filter(check_final_tad > 0) %>%
-    select(-contains('check'))
+check_tads <- function(coord_tbl, tad_object = NULL) {
 
+ 
   
+  select_tads_disrupted <-  tad_object %>%
+    pivot_longer(-c(id,chrom), names_to = 'coord', values_to = 'start') %>%
+    mutate(end = start) %>%
+    select(-coord) %>%
+    bed_intersect(coord_tbl) %>%
+    pull(id.x)
   
-  if (nrow(tmp_df) > 0) {
-    
-    df_tads <- tmp_df
-    
-    
-  } else {
-    
-    df_tads <- 0
-    
-  }
+ df_tads <- tad_object %>% filter(id %in% select_tads_disrupted)
+  
+  if (nrow(df_tads) == 0) df_tads <- 0
   
   return(df_tads)
   
@@ -104,17 +84,9 @@ check_regions <- function(chrom = NULL, start = NULL, end = NULL) {
 
 
 
-get_perc_overlap <- function(df, chrom_cnv, start_cnv, end_cnv, 
+get_perc_overlap <- function(df, input_tbl, 
                              is_a_gene = FALSE) {
 
-  # test002 <<- data_raw
-  # test003 <<- start_coordinates
-  # test004 <<- end_coordinates
-  # 
-  # df <- test23100101 %>% rename(start = start_position, end = end_position)
-  # start_cnv <- 34813719
-  # end_cnv <- 36278623
-  # chrom_cnv <- '1'
 
   df <- df %>%
     mutate(id_tmp = row_number())
@@ -125,7 +97,7 @@ get_perc_overlap <- function(df, chrom_cnv, start_cnv, end_cnv,
     tmp_df <- df %>%
       dplyr::select(chrom, start, end, id_tmp) 
     
-  df <- bed_intersect(tmp_df, tibble(chrom = chrom_cnv, start = start_cnv, end = end_cnv ) ) %>%
+  df <- bed_intersect(tmp_df, input_tbl) %>%
     mutate(p_overlap = ((.overlap + 1)  /(end.x - start.x + 1))*100) %>% 
     mutate(p_overlap = round(p_overlap, 2)) %>%
     select(start.x, end.x, p_overlap, id_tmp.x) %>%
@@ -139,7 +111,7 @@ get_perc_overlap <- function(df, chrom_cnv, start_cnv, end_cnv,
     
     tmp_df <- df %>% dplyr::select(chrom, start, end, id_tmp)
     
-    df <- bed_intersect(tmp_df, tibble(chrom = chrom_cnv, start = start_cnv, end = end_cnv)) %>%
+    df <- bed_intersect(tmp_df, input_tbl) %>%
       mutate(p_overlap = ((.overlap + 1) /(end.x - start.x + 1))*100) %>% 
       arrange(p_overlap) %>%
       mutate(p_overlap = round(p_overlap, 2)) %>%

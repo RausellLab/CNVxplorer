@@ -78,6 +78,9 @@ function(input, output, session) {
     shinyjs::reset("enable_tsea")
     #
     shinyjs::reset('only_omim')
+    #
+    shinyjs::reset('chosen_hp')
+    
   })
   
   
@@ -88,6 +91,7 @@ function(input, output, session) {
     shinyjs::reset("enable_do_analysis")
     shinyjs::reset("enable_group_go")
     shinyjs::reset("enable_tsea")
+    shinyjs::reset('chosen_hp')
     
   })
   
@@ -98,6 +102,7 @@ function(input, output, session) {
     shinyjs::reset("enable_do_analysis")
     shinyjs::reset("enable_group_go")
     shinyjs::reset("enable_tsea")
+    shinyjs::reset('chosen_hp')
     
   })
   
@@ -108,6 +113,7 @@ function(input, output, session) {
     shinyjs::reset("enable_do_analysis")
     shinyjs::reset("enable_group_go")
     shinyjs::reset("enable_tsea")
+    shinyjs::reset('chosen_hp')
     
   })
   
@@ -118,13 +124,14 @@ function(input, output, session) {
     shinyjs::reset("enable_do_analysis")
     shinyjs::reset("enable_group_go")
     shinyjs::reset("enable_tsea")
+    shinyjs::reset('chosen_hp')
+    
     
   })
   
   observeEvent(input$reset_pheno_analysis, {
     
     
-    shinyjs::reset("run_pheno_analysis")
     shinyjs::reset('chosen_hp')
   })
   
@@ -396,14 +403,12 @@ function(input, output, session) {
     req(input$start_analysis > 0)
     
     # go <- rols::Ontology("hp")
-    
-    
-    
-    if (is.null(input$dgenes_rows_all)) {
-      df_genes <- data_selected()
-    } else {
-      df_genes <- data_selected()[input$dgenes_rows_all,]
-    }
+  
+    # if (is.null(input$dgenes_rows_all)) {
+    #   df_genes <- data_selected()
+    # } else {
+    #   df_genes <- data_selected()[input$dgenes_rows_all,]
+    # }
     
     
     validate(
@@ -423,8 +428,7 @@ function(input, output, session) {
     df_tmp2 <- df_tmp %>%
       select(hp) %>%
       distinct()
-    # mutate(description = map(hp, function(x) ifelse(length(term(go, x)@description) == 0, NA, term(go, x)@description))) 
-    
+
     
     df_tmp <- df_tmp %>% 
       left_join(df_tmp2, by = 'hp')
@@ -500,51 +504,66 @@ function(input, output, session) {
   })
   
   
-  # test_hpo <- eventReactive(input$run_pheno_analysis, {
+  # test_hpo <- reactive({
+  #   
+  #   
+  #   req(input$start_analysis > 0)
+  #   # req(input$run_pheno_analysis)
+  #   
+  #   
+  #   genes_selected <- data_selected() %>% select(gene) %>% pull()
+  #   
+  #   hpo_patient  <- list('patient' = input$chosen_hp)
+  #   
+  #   tmp_df <- hpo_genes %>% 
+  #     filter(gene %in% genes_selected) %>%
+  #     select(gene, hp)
+  #   
+  #   
+  #   if (length(input$chosen_hp) == 0) {
+  #     
+  #     
+  #     mat_test <- tmp_df %>%
+  #       select(gene) %>%
+  #       distinct() %>%
+  #       mutate(similarity_score = NA)
+  #     
+  #     
+  #     
+  #   } else {
+  #     
+  # 
+  #     
+  #     to_p_value <- tmp_df %>% count(gene, name = 'n_freq')
+  #     
+  #     genes_sample <- base::split(tmp_df$hp, tmp_df$gene)
+  #     
+  #     
+  #     
+  #     mat_test <- get_sim_grid(ontology=hpo_dbs, 
+  #                              term_sets= hpo_patient,
+  #                              term_sets2 = genes_sample,
+  #                              term_sim_method = 'resnik') %>%
+  #       t()
+  #     
+  #     
+  #     colnames(mat_test) <- c('value')
+  #     
+  #     mat_test %>% as_tibble(rownames = 'gene') %>% 
+  #       mutate(value = round(value, 2)) %>%
+  #       rename(similarity_score = value)
+  #     
+  #   }
+  #   
+  # 
+  #   
+  # })
   
-  test_hpo <- reactive({
-    
-    
-    req(input$start_analysis > 0)
-    req(input$run_pheno_analysis)
-    
-    
-    genes_selected <- data_selected() %>% select(gene) %>% pull()
-    
-    hpo_patient  <- list('patient' = input$chosen_hp)
-    
-    tmp_df <- hpo_genes %>% 
-      filter(gene %in% genes_selected) %>%
-      select(gene, hp)
-    
-    to_p_value <- tmp_df %>% count(gene, name = 'n_freq')
-    
-    genes_sample <- base::split(tmp_df$hp, tmp_df$gene)
-    
-    test00021 <<- genes_sample
-    test00022 <<- hpo_patient
-    
-    
-    mat_test <- get_sim_grid(ontology=hpo_dbs, 
-                             term_sets= hpo_patient,
-                             term_sets2 = genes_sample,
-                             term_sim_method = 'resnik') %>%
-      t()
-    
+  
 
-    colnames(mat_test) <- c('value')
-    mat_test %>% as_tibble(rownames = 'gene') %>% 
-      mutate(value = round(value, 2)) %>%
-      rename(similarity_score = value)
-    
-  })
-  
-  
-  # calculate_sim_disease <- eventReactive(input$run_pheno_analysis, {
-  
   calculate_sim_disease <- reactive({
     
-    req(input$run_pheno_analysis)
+    req(input$start_analysis > 0)
     
     
     
@@ -576,6 +595,22 @@ function(input, output, session) {
     }
     
     disease_genes_selected <- base::split(disease_genes_selected$hp, disease_genes_selected$mim_disease)
+    
+    
+    
+    if (length(input$chosen_hp) == 0) {
+      
+
+      mat_test <- hpo_omim %>% 
+        filter(mim_disease %in% input_mim_disease) %>%
+        select(mim_disease) %>%
+        distinct() %>%
+        mutate(similarity_score = NA)
+      
+      
+
+    } else {
+    
     hpo_selected  <- list(input$chosen_hp)
     
     
@@ -590,6 +625,7 @@ function(input, output, session) {
       mutate(V1 = round(V1, 3)) %>%
       rename(similarity_score = V1)
     
+    }
     
     mat_test
     
@@ -1498,11 +1534,12 @@ function(input, output, session) {
         genes_cnv <- genes_cnv %>% select(gene) %>% pull()
         # Genes NOT mapped in CNV
         
-        # if (is.null(input$df_mirna_rows_all)) {
-        #   mirnas_df <- mirna_raw()
-        # } else {
-        #   mirnas_df <- mirna_raw()[input$df_mirna_rows_all,]
-        # }
+        if (is.null(input$df_mirna_rows_all)) {
+          mirnas_df <- mirna_raw()
+        } else {
+          mirnas_df <- mirna_raw()
+          # mirnas_df <- mirna_raw()[input$df_mirna_rows_all,]
+        }
         
         
         genes_no_cnv <- mirnas_df %>% select(gene_symbol) %>% distinct() %>% pull()
@@ -1747,6 +1784,39 @@ function(input, output, session) {
   })
   
   
+  running_upset_disease_reg <- reactive({
+    
+    
+    uspset_df <- data_selected() %>% 
+      select(-start, -end, -chrom) %>%
+      filter(source != 'CNV') %>%
+      filter(disease == 'Yes') %>%
+      select(-source, -disease) %>%
+      select(gene, orphanet, dev, genomics_england, omim, clingen) %>%
+      pivot_longer(-gene) %>%
+      filter(value == 'Yes') %>%
+      rename(term = name) %>%
+      mutate(term = str_replace(term, 'orphanet', 'ORPHANET'),
+             term = str_replace(term, 'dev', 'DECIPHER'),
+             term = str_replace(term, 'genomics_england', 'GENOMICS ENGLAND'),
+             term = str_replace(term, 'omim', 'OMIM'),
+             term = str_replace(term, 'clingen', 'CLINGEN'))
+    
+    test63321311321312312441241266 <<- uspset_df
+    uspset_df
+  })
+  
+  output$plot_upset_disease_reg <- renderPlot({
+    
+    test0001 <<- running_upset_disease_reg()
+    
+    get_upset(test0001, gene = TRUE)
+    
+    
+    
+  })
+  
+  
   
   output$dgenes <- renderDataTable({
     
@@ -1777,14 +1847,43 @@ function(input, output, session) {
                             filter = list(position = 'top'), 
                             selection = 'single',
                             options = list(columnDefs = list(list(className = 'dt-center', targets = '_all'))))
+
+    tmp_output
+
+  })
+  
+  output$dgenes_reg <- renderDataTable({
+    
+    server <- TRUE
     
     
+    
+    data_input <- data_selected()  %>% 
+      select(-start, -end, -chrom) %>%
+      filter(source != 'CNV') %>%
+      select(source, band, gene, disease, orphanet, dev, clingen, omim, gwas) %>%
+      filter(disease == 'Yes')
+
+    
+    data_tmp <- data_input %>% 
+      left_join(running_upset_disease_reg() %>% 
+                  count(gene, value), by = 'gene') %>%
+      select(source, gene, n)
+    
+    
+    validate(
+      need(nrow(data_tmp) > 0, "0 disease genes.")
+    )
+    
+    tmp_output <- datatable(data_tmp, rownames = FALSE, colnames = c('Source','Gene', 'Nº evidences'),
+                            filter = list(position = 'top'), 
+                            selection = 'single',
+                            options = list(columnDefs = list(list(className = 'dt-center', targets = '_all'))))
     
     tmp_output
     
-    
-    
   })
+  
   
   
   output$input_source <- renderUI({
@@ -1801,12 +1900,9 @@ function(input, output, session) {
       select(gene, dev, omim, orphanet, genomics_england, clingen) %>%
       slice(input$dgenes_rows_selected)
     
-    test0131444441231 <<- data_input
-    
+
     options_sources <- data_input %>% pivot_longer(cols = -gene) %>% filter(value == 'Yes') %>%
       pull(name)
-    
-    test99931 <<- options_sources
     
     
     test <- split(options_sources, 
@@ -1818,9 +1914,36 @@ function(input, output, session) {
       label = "", 
       choices = test
     )
+  })
+  
+  output$input_source_reg <- renderUI({
+    
+    validate(
+      need(input$dgenes_reg_rows_selected != '', '')
+    )
+    
+    data_input <- data_selected()  %>% 
+      select(-start, -end, -chrom) %>%
+      filter(source != 'CNV') %>%
+      select(-source) %>%
+      filter(disease == 'Yes') %>%
+      select(gene, dev, omim, orphanet, genomics_england, clingen) %>%
+      slice(input$dgenes_reg_rows_selected)
     
     
+    options_sources <- data_input %>% pivot_longer(cols = -gene) %>% filter(value == 'Yes') %>%
+      pull(name)
     
+    
+    test <- split(options_sources, 
+                  toupper(options_sources) %>% str_replace('_', ' ') %>% str_replace('DEV', 'DECIPHER') %>%
+                    str_replace('GENOMICS ENGLAND', 'GENOMICS ENGLAND PanelApp'))
+    
+    pickerInput(
+      inputId = "select_source_reg",
+      label = "", 
+      choices = test
+    )
   })
   
   
@@ -1917,6 +2040,99 @@ function(input, output, session) {
     
   })
   
+  output$select_gene_disease_reg <- renderDataTable({
+    
+    req(input$dgenes_reg_rows_selected)
+    
+    validate(
+      need(input$dgenes_reg_rows_selected != '', 'Please, select a disease gene on the left panel.')
+    )
+    
+    
+    gene_selected <- data_selected() %>% 
+      filter(source != 'CNV') %>%
+      filter(disease == 'Yes') %>%
+      slice(input$dgenes_reg_rows_selected) %>%
+      pull(gene)
+    
+    
+    if (input$select_source_reg == 'omim') {
+      
+      tmp_df <- omim %>% 
+        replace_na(list(gene_inheritance_mode = '-')) %>%
+        filter(gene == gene_selected) %>%
+        select(MIM_gene_number, gene_inheritance_mode, MIM_pheno_number, Phenotype) %>%
+        mutate(Phenotype = str_remove(Phenotype, '[0-9]{6}')) %>%
+        mutate(MIM_gene_number =  paste0("<a href='", 
+                                         paste0('https://www.omim.org/entry/', MIM_gene_number),"' target='_blank'>", MIM_gene_number,"</a>")) %>%
+        mutate(MIM_pheno_number =  paste0("<a href='", 
+                                          paste0('https://www.omim.org/entry/', MIM_pheno_number),"' target='_blank'>", MIM_pheno_number,"</a>")) 
+      datatable(tmp_df, escape = FALSE, rownames = FALSE, colnames = c('Gene MIM number', 'Inheritance', 'Disease MIM number', 'Phenotype'))
+      
+    } else if (input$select_source_reg == 'orphanet') {
+      
+      tmp_df <- orphanet_raw %>% 
+        filter(gene  == gene_selected) %>%
+        replace_na(list(SourceOfValidation = '-')) %>%
+        mutate(SourceOfValidation = str_replace_all(SourceOfValidation, '_', '<br>')) %>%
+        select(gene, Name6, Name, OrphaNumber, SourceOfValidation ) %>%
+        mutate(gene = paste0("<a href='", 
+                             paste0('https://www.orpha.net/consor/cgi-bin/Disease_Genes.php?lng=EN&data_id=16132&Disease_Disease_Genes_diseaseGroup=', gene),"' target='_blank'>", gene,"</a>")) %>%
+        mutate(OrphaNumber = paste0("<a href='", 
+                                    paste0('https://www.orpha.net/consor/cgi-bin/Disease_Search.php?lng=EN&data_id=8648&Disease_Disease_Search_diseaseGroup=', OrphaNumber),"' target='_blank'>", OrphaNumber,"</a>") )
+      
+      
+      
+      datatable(tmp_df, escape = FALSE, rownames = FALSE, colnames = c('Gene',
+                                                                       'Description', 
+                                                                       # 'ID Orpha gene', 
+                                                                       'Disease', 
+                                                                       'ID Orpha disease', 
+                                                                       'Source of validation'))
+      
+    }  else if (input$select_source_reg == 'dev') {
+      
+      tmp_df <- dev_raw %>%
+        filter(gene == gene_selected) %>%
+        mutate(`gene mim` =  paste0("<a href='", 
+                                    paste0('https://www.omim.org/entry/', `gene mim`),"' target='_blank'>", `gene mim`,"</a>")) %>%
+        mutate(`organ specificity list` = str_replace_all(`organ specificity list`, ';', '<br>')) %>%
+        mutate(pmids = str_replace_all(pmids, ';', '<br>'))
+      
+      
+      datatable(tmp_df, rownames = FALSE, escape = FALSE, colnames = c('Gene', 'Gene MIM number', 'Disease', 'Allelic requirement', 
+                                                                       'Organ specificity', 'PMIDS'))
+      
+    } else if (input$select_source_reg == 'genomics_england') {
+      
+      tmp_df <- panel_total %>%
+        filter(gene == gene_selected) %>%
+        mutate(source = str_remove(source, 'gene_panel_')) %>%
+        mutate(Phenotypes = str_replace_all(Phenotypes, ';', '<br>')) %>%
+        mutate(gene = paste0("<a href='", 
+                             paste0('https://panelapp.genomicsengland.co.uk/panels/entities/', gene),"' target='_blank'>", gene,"</a>")) %>%
+        mutate(source = paste0("<a href='", 
+                               paste0('https://panelapp.genomicsengland.co.uk/panels/', source),"' target='_blank'>", source,"</a>")) %>%
+        mutate(Level4 = paste0(Level4, ' (', source, ')')) %>% 
+        select(-source)
+      
+      datatable(tmp_df, escape = FALSE, rownames = FALSE, colnames = c('Gene', 'Gene panel', 'Phenotype associated'))
+      
+    } else if (input$select_source_reg == 'clingen') {
+      
+      tmp_df <- data_selected() %>%
+        filter(gene == gene_selected) %>%
+        select(gene, haplo, triplo) %>%
+        mutate(gene = paste0("<a href='", 
+                             paste0('https://www.ncbi.nlm.nih.gov/projects/dbvar/clingen/clingen_gene.cgi?sym=', gene),"' target='_blank'>", gene,"</a>"))
+      
+      datatable(tmp_df, escape = FALSE, rownames = FALSE, colnames = c('Gene', 'Haploinsufficient', 'Triplosensitivity'))
+      
+      
+    }
+    
+  })
+  
   output$dgenes_no_disease <- renderDataTable({
     
     server <- TRUE
@@ -1964,6 +2180,7 @@ function(input, output, session) {
     
     tmp_data <- data_selected() %>% 
       filter(source != 'CNV') %>%
+      filter(disease != 'Yes') %>%
       count(source) %>%
       mutate(source = as.character(source)) %>%
       na.omit()
@@ -2003,14 +2220,15 @@ function(input, output, session) {
     
     
     validate(
-      need(!is.null(input$select_reg_region), "0 target genes selected.")
+      need(!is.null(input$select_reg_region), "0 non-disease target genes selected.")
     )
     
     server <- TRUE
     data_input <- data_selected() %>% filter(source ==  input$select_reg_region) %>%
       select(-start, -end, -chrom) %>%
       select(band, gene, disease, essent, pLI, rvis, ccr, hi, gdi, snipre, ncrvis, 
-             ncgerp)
+             ncgerp) %>%
+      filter(disease == 'No')
     
     datatable(data_input, rownames = FALSE, filter = list(position = 'top'),
               colnames = c('Band', 'Gene', 'Disease', 'Essential', 'pLI', 'RVIS', 'CCR', 'HI', 'GDI', 'SnIPRE', 'ncRVIS',
@@ -3588,7 +3806,7 @@ function(input, output, session) {
     hpo_yes <-  data_selected() %>% select(gene) %>% pull()
     hpo_genes_filter <- hpo_genes %>% 
       filter(gene %in% hpo_yes) %>%
-      select(term) %>%
+      select(hp) %>%
       distinct()
     
     tablerStatCard(
@@ -3654,17 +3872,11 @@ function(input, output, session) {
   
   hpo_filter <- reactive({
     
-    req(input$run_pheno_analysis > 0)
-    
-    
-    
     hpo_yes <-  data_selected() %>% select(gene) %>% pull()
     
     hpo_genes_filter <- hpo_genes %>% 
       filter(gene %in% hpo_yes)
-    
-    
-    
+
   })
   
   
@@ -3687,96 +3899,194 @@ function(input, output, session) {
   # })
   # 
   
-  output$hpo_filter_genes <- renderDataTable({
+  # output$hpo_filter_genes <- renderDataTable({
+  #   
+  #   
+  #   # validate(
+  #   #   need(length(input$chosen_hp) > 0, "Please, select at least one HPO term.")
+  #   # )
+  #   
+  #   # validate(
+  #   #   need(input$run_pheno_analysis, "Click on run analysis.")
+  #   #   
+  #   # )
+  #   
+  #   hpo_yes <-  data_selected() %>% select(gene) %>% pull()
+  #   
+  #   n_genes <- hpo_genes %>% 
+  #     filter(gene %in% hpo_yes) %>% 
+  #     select(gene) %>% 
+  #     distinct() %>%
+  #     nrow()
+  #   
+  #   validate(
+  #     need(n_genes != 0, "0 genes associated with HPO terms.")
+  #     
+  #   )
+  #   
+  #   tmp_df <- hpo_filter()   %>% 
+  #     count(gene) %>% 
+  #     left_join(test_hpo(), by = 'gene') %>%
+  #     left_join((data_selected() %>% select(source, gene)), by = 'gene') %>%
+  #     select(source, everything()) %>%
+  #     mutate(similarity_score = replace_na(similarity_score, '-'))
+  #   
+  #   datatable(tmp_df, selection = 'single', rownames = FALSE,
+  #             filter = 'top', colnames = c('Source','Gene', 'Nº HPO terms', 'Similarity score')
+  #             
+  #   )
+  #   
+  # })
+  
+  
+  running_sim_score <- reactive({
     
-    hpo_yes <-  data_selected() %>% select(gene) %>% pull()
+    req(input$start_analysis > 0)
     
-    n_genes <- hpo_genes %>% 
-      filter(gene %in% hpo_yes) %>% 
-      select(gene) %>% 
-      distinct() %>%
-      nrow()
+    req(input$input_inheritance != '')
     
-    validate(
-      need(n_genes != 0, "0 genes associated with HPO terms.")
+    
+    tmp_tbl <- test2019 %>% 
+      select(source, gene) %>%
+      left_join(hpo_genes %>% select(identifier, gene, hp), by = 'gene') %>%
+      rename(hp_gene = hp) %>%
+      na.omit()
+    
+    if (input$input_inheritance != 'Any') {
+    keep_identifiers <- tmp_tbl %>% select(identifier) %>%
+      left_join(hpo_omim %>% select(identifier, hp)) %>%
+      filter(hp %in% input$input_inheritance) %>%
+      pull(identifier)
+    
+    tmp_tbl <- tmp_tbl %>% filter(identifier %in% keep_identifiers)
+    
+    }
+    
+
+    if (length(input$chosen_hp) == 0) {
       
-    )
-    
-    validate(
-      need(length(input$chosen_hp) > 0, "Please, select at least one HPO term.")
-    )
-    
-    validate(
-      need(input$run_pheno_analysis, "Click on run analysis.")
+      return_tbl <- tmp_tbl %>% mutate(sim_gene = NA,
+                         sim_mim = NA)
       
-    )
+    } else {
+      
+
+      to_sim_gene <- tmp_tbl %>% 
+        select(gene, hp_gene)
+      
+      to_sim_disease <- tmp_tbl %>% 
+        select(identifier) %>%
+        left_join(hpo_omim %>% select(identifier, hp)  %>% rename(hp_omim = hp), by = 'identifier') %>%
+        na.omit()
+      
+
+
+      list_hpo_genes <- base::split(to_sim_gene$hp_gene, to_sim_gene$gene)      
+      list_hpo_diseases <- base::split(to_sim_disease$hp_omim, to_sim_disease$identifier)      
+      
+      # hpo_patient  <- list('patient' = 'HP:0001285')
+      hpo_patient  <- list('patient' = input$chosen_hp)
+      
+      
+      
+      output_genes <- get_sim_grid(ontology=hpo_dbs, 
+                                   term_sets= hpo_patient,
+                                   term_sets2 = list_hpo_genes,
+                                   term_sim_method = 'resnik') %>%
+        t() %>% 
+        as_tibble(rownames = 'gene') %>% 
+        rename(sim_gene = patient) %>%
+        mutate(sim_gene = round(sim_gene, 2))
+
+      output_diseases <- get_sim_grid(ontology=hpo_dbs, 
+                               term_sets= hpo_patient,
+                               term_sets2 = list_hpo_diseases,
+                               term_sim_method = 'resnik') %>%
+        t() %>% 
+        as_tibble(rownames = 'identifier') %>% 
+        mutate(identifier = as.double(identifier)) %>%
+        rename(sim_mim = patient) %>%
+        mutate(sim_mim = round(sim_mim, 2))
+      
+      
+      return_tbl <- tmp_tbl %>% 
+        select(-hp_gene) %>%
+        distinct() %>%
+        left_join(output_genes, by = 'gene') %>%
+        left_join(output_diseases, by = 'identifier') %>%
+        na.omit()
+        
+    }
     
-    tmp_df <- hpo_filter() 
-    
-    tmp_df <- tmp_df  %>% count(gene) %>% left_join(test_hpo(), by = 'gene') 
-    
-    test888888 <<- tmp_df
-    datatable(tmp_df, selection = 'single', rownames = FALSE,
-              filter = 'top', colnames = c('Gene', 'Nº HPO terms', 'Similarity score')
-              
-    )
+    return_tbl %>%
+      left_join(hpo_omim %>% select(identifier, desc, disease_source) %>% distinct(), by = 'identifier') %>%
+      select(source, gene, identifier, disease_source, desc, sim_gene, sim_mim ) %>%
+      distinct()
     
   })
-  
-  
-  
-  
-  
-  run_sim_diseases <- reactive({
     
-    tmp <- data_selected() %>% select(gene) %>% pull()
-    
-    input_mim_disease <- omim %>% 
-      filter(gene %in% tmp) %>%
-      pull(MIM_pheno_number) %>%
-      unique()
-    
-    n_hpo_terms <- hpo_omim %>% 
-      filter(mim_disease %in% input_mim_disease) %>%
-      count(mim_disease, desc, name = "n_hpo_terms" )
-    
-    validate(
-      need(nrow(n_hpo_terms) != 0, "0 OMIM diseases associated with HPO terms.")
+    output$dt_running_sim_score <- renderDT({
       
-    )
-    
-    validate(
-      need(length(input$chosen_hp) > 0, "Please, select at least one HPO term.")
-    )
-    
-    validate(
-      need(input$run_pheno_analysis, "Click on run analysis.")
       
-    )
-    
-    tmp_df <- n_hpo_terms %>%
-      left_join(calculate_sim_disease(), by = 'mim_disease') %>%
-      mutate(mim_disease = paste0("<a href='", paste0('https://www.omim.org/entry/', mim_disease),"' target='_blank'>", mim_disease,"</a>")) %>%
-      select(-n_hpo_terms)
-    
-  })
+      datatable(running_sim_score() %>% replace_na(list(sim_gene = '-', sim_mim = '-')) %>%
+                  mutate(identifier = paste0(identifier, '(', disease_source, ')')) %>%
+                  select(-disease_source), 
+                rownames = FALSE,
+                selection = 'single',
+                colnames = c('Source', 'Gene', 'Identifier', 'Disease description', 'Similarity score (gene)',
+                             'Similarity score (disease)'))
+    })
+
+  
+  
+  # run_sim_diseases <- reactive({
+  #   
+  #   tmp <- data_selected() %>% select(gene) %>% pull()
+  # 
+  #   input_mim_disease <- omim %>%
+  #     filter(gene %in% tmp) %>%
+  #     select(MIM_pheno_number, gene) %>%
+  #     rename(mim_disease = MIM_pheno_number)
+  # 
+  #   n_hpo_terms <- hpo_omim %>%
+  #     count(mim_disease, desc, name = "n_hpo_terms" ) %>%
+  #     inner_join(input_mim_disease, by = 'mim_disease')
+  #   
+  #   validate(
+  #     need(nrow(n_hpo_terms) != 0, "0 OMIM diseases associated with HPO terms.")
+  #     
+  #   )
+  #   
+  #   # validate(
+  #   #   need(length(input$chosen_hp) > 0, "Please, select at least one HPO term.")
+  #   # )
+  #   
+  #   # validate(
+  #   #   need(input$run_pheno_analysis, "Click on run analysis.")
+  #   #   
+  #   # )
+  #   
+  #   tmp_df <- n_hpo_terms %>%
+  #     left_join(calculate_sim_disease(), by = 'mim_disease') %>%
+  #     mutate(mim_disease = paste0("<a href='", paste0('https://www.omim.org/entry/', mim_disease),"' target='_blank'>", mim_disease,"</a>")) %>%
+  #     select(-n_hpo_terms) %>%
+  #     mutate(similarity_score = replace_na(similarity_score, '-'))
+  #   
+  # })
   
   
   output$n_diseases <- renderUI({
     
     
-    tmp_result_original <- run_sim_diseases() %>%  nrow()
-    tmp_result_filtered <- run_sim_diseases() %>% na.omit() %>% nrow()
-    
+    number_diseases <- running_sim_score() %>%  nrow()
+
     
     tablerInfoCard(
       width = 12,
-      value =  paste0(tmp_result_filtered, '/', tmp_result_original, ' OMIM diseases'),
+      value =  paste(number_diseases, 'diseases'),
       status = "primary",
       icon = "database",
       description =  ''
-      
-      # description =  'You can filter based on the mode of inheritance'
     )
     
   })
@@ -3784,43 +4094,18 @@ function(input, output, session) {
   output$hpo_filter_diseases <- renderDataTable({
     
     
-    datatable(run_sim_diseases() %>% na.omit(), 
+    datatable(run_sim_diseases(), 
               rownames = FALSE, 
               escape = FALSE, 
               selection = 'single', 
-              colnames = c('MIM term', 'Disease Name', 'Similarity score'))
+              colnames = c('MIM term', 'Disease Name','Gene', 'Similarity score'))
     
     
   })
   
   
   
-  output$hpo_assoc_genes <- renderDataTable({
-    
-    # hpo_filter_genes
-    
-    validate(
-      need(input$hpo_filter_genes_rows_selected != '', "Please, select a gene.")
-    )
-    
-    
-    
-    tmp_df <- hpo_filter() %>%
-      count(gene) %>%
-      slice(input$hpo_filter_genes_rows_selected) %>%
-      select(gene) %>%
-      pull(gene)
-    
-    
-    tmp_df2 <- hpo_filter()
-    tmp_df2 <- tmp_df2 %>% filter(gene %in% tmp_df ) %>% select(-entrez_id)
-    tmp_df2 <- tmp_df2 %>% 
-      mutate(hp = paste0("<a href='", paste0('https://hpo.jax.org/app/browse/term/', hp),"' target='_blank'>", hp,"</a>")) %>%
-      select(gene, hp, term)
-    test232134 <<- tmp_df2
-    datatable(tmp_df2, escape = FALSE, rownames = FALSE, colnames = c('Gene', 'HPO term', 'Description'))
-    
-  })
+
   
   # output$hpo_assoc_genes <- renderDataTable({
   #   
@@ -3851,46 +4136,74 @@ function(input, output, session) {
   
   
   
-  run_select_disease_hpo <- reactive({
-    
+  # run_select_disease_hpo <- reactive({
+  #   
+  #   
+  # 
+  #   
+  # })
+  # 
+  output$hpo_assoc_diseases <- renderDataTable({
     
     validate(
-      need(input$hpo_filter_diseases_rows_selected != '', "Please, select an OMIM disease.")
+      need(input$dt_running_sim_score_rows_selected != '', "Please, select a row.")
     )
     
-    selected_genes <- data_selected() %>% select(gene) %>% pull()
+    test301 <<- running_sim_score()
     
-    input_mim_disease <- omim %>% 
-      filter(gene %in% selected_genes) %>% # filter genes only mapping with CNVs or target-genes of reg. regions
-      pull(MIM_pheno_number) %>%
-      unique()
     
-    # input_mim_disease <- c(100050, 100050)
+    disease_selected <- running_sim_score() %>%
+      slice(input$dt_running_sim_score_rows_selected) %>%
+      pull(identifier)
     
-    n_genes <- hpo_omim %>% 
-      filter(mim_disease %in% input_mim_disease) %>%
-      count(mim_disease, desc, name = "n_hpo_terms" )
-    
-    disease_selected <- n_genes %>%
-      slice(input$hpo_filter_diseases_rows_selected) %>%
-      pull(mim_disease)
     
     
     tmp_df <- hpo_omim %>% 
-      filter(mim_disease %in% disease_selected) %>%
-      select(mim_disease, hp) %>%
-      left_join(hpo_genes %>% select(hp, term) %>% distinct(), by = 'hp')
+      filter(identifier %in% disease_selected) %>%
+      select(identifier, hp, disease_source) %>%
+      left_join(hpo_genes %>% select(desc, hp) %>% distinct(), by = 'hp')
+    
+
+    tmp_df <- tmp_df %>%  
+      mutate(hp = paste0("<a href='", paste0('https://hpo.jax.org/app/browse/term/', hp),"' target='_blank'>", hp,"</a>")) %>%
+      
+      mutate(identifier = if_else(disease_source == 'OMIM', paste0("<a href='", paste0('https://www.omim.org/entry/', identifier),"' target='_blank'>", identifier,"</a>"),
+                                  paste0("<a href='", 
+                                         paste0('https://www.orpha.net/consor/cgi-bin/Disease_Search.php?lng=EN&data_id=8648&Disease_Disease_Search_diseaseGroup=', identifier),"' target='_blank'>", identifier,"</a>"))
+      ) %>%
+      mutate(identifier = paste0(identifier, ' (', disease_source, ')')) %>%
+      select(-disease_source)
+                                    
+    
+    
+    datatable(tmp_df, escape = FALSE, rownames = FALSE, colnames = c('Disease identifier', 'HPO term', 'Description'))
     
   })
   
-  output$hpo_assoc_diseases <- renderDataTable({
+  output$hpo_assoc_genes <- renderDataTable({
     
-    tmp_df <- run_select_disease_hpo()
-    tmp_df <- tmp_df %>%  mutate(hp = paste0("<a href='", paste0('https://hpo.jax.org/app/browse/term/', hp),"' target='_blank'>", hp,"</a>")) %>%
-      mutate(mim_disease = paste0("<a href='", paste0('https://hpo.jax.org/app/browse/term/', mim_disease),"' target='_blank'>", mim_disease,"</a>"))
+    validate(
+      need(input$dt_running_sim_score_rows_selected != '', "Please, select a row.")
+    )
+    
+    tmp_df <- running_sim_score() %>%
+      slice(input$dt_running_sim_score_rows_selected) %>%
+      pull(gene)
     
     
-    datatable(tmp_df, escape = FALSE, rownames = FALSE, colnames = c('MIM term', 'HPO term', 'Description'))
+    test91212411 <<- tmp_df
+    
+    tmp_df2 <- hpo_filter() %>% 
+      filter(gene %in% tmp_df)
+      # left_join(hpo_genes %>% select(term, hp) %>% distinct(), by = c('hp' = 'term')) 
+    
+    test9999999999999999 <<- tmp_df2
+    
+    tmp_df2 <- tmp_df2 %>% 
+      mutate(hp = paste0("<a href='", paste0('https://hpo.jax.org/app/browse/term/', hp),"' target='_blank'>", hp,"</a>")) %>%
+      select(gene, hp, desc)
+    
+    datatable(tmp_df2, escape = FALSE, rownames = FALSE, colnames = c('Gene', 'HPO term', 'Description'))
     
   })
   
@@ -3939,28 +4252,23 @@ function(input, output, session) {
     
     
     validate(
-      need(input$hpo_filter_genes_rows_selected != '', "Please, select a gene."),
-      need(!is.null(input$hpo_filter_genes_rows_selected), "Please, select a disease.")
-      
+        need(length(input$chosen_hp) != 0, 'Please, select at least one HPO term.'),
+        need(input$dt_running_sim_score_rows_selected != '', "Please, select a row.")
+
     )
     
     
-    selected_gene <- hpo_filter() %>%
-      count(gene) %>%
-      slice(input$hpo_filter_genes_rows_selected) %>%
-      select(gene) %>%
+    selected_gene <- running_sim_score() %>% 
+      slice(input$dt_running_sim_score_rows_selected) %>% 
       pull(gene)
     
-    
-    test41241412000 <<- run_select_disease_hpo()
-    selected_disease <- run_select_disease_hpo() %>% 
-      pull(mim_disease) %>% 
-      unique() %>% 
-      as.character()
-    
-    hpo_from_gene <- hpo_genes %>% filter(gene %in% selected_gene) %>% pull(hp)
+    selected_disease <- running_sim_score() %>% 
+      slice(input$dt_running_sim_score_rows_selected) %>% 
+      pull(identifier)
+
+    hpo_from_gene <- hpo_genes %>% filter(gene == selected_gene) %>% pull(hp)
+    hpo_from_disease <- hpo_omim %>% filter(identifier == selected_disease) %>% pull(hp)
     hpo_from_patient <- input$chosen_hp
-    hpo_from_disease <- run_select_disease_hpo() %>% pull(hp)
     
     
     test100 <<- hpo_from_gene
@@ -4024,21 +4332,26 @@ function(input, output, session) {
     
   })
   
-  
+
   output$plot_similarity_genes <- renderPlot({
     
     
+    validate(
+      need(length(input$chosen_hp) > 0, "Please, select at least one HPO term.")
+    )
+    
+    
+    tmp_df <- running_sim_score()
+    
+
     if (input$select_sim_gene_disease == 'genes') {
-      
-      tmp_df <- test_hpo()
-      tmp_df <- tmp_df[input$hpo_filter_genes_rows_all,]
-      
+
       tmp_df  %>%
-        arrange(desc(similarity_score)) %>%
-        # filter(similarity_score >= filter_higher_than) %>%
-        ggplot(aes(reorder(gene, similarity_score), similarity_score)) +
-        geom_col(aes(fill = similarity_score), color = 'black') + 
-        # coord_flip() +
+        select(gene, sim_gene) %>%
+        arrange(desc(sim_gene)) %>%
+        distinct() %>%
+        ggplot(aes(reorder(gene, sim_gene), sim_gene)) +
+        geom_col(aes(fill = sim_gene), color = 'black', show.legend = FALSE) +
         ylab('Phenotypic similarity score') +
         xlab('Genes') +
         scale_fill_viridis_c() +
@@ -4046,33 +4359,28 @@ function(input, output, session) {
         theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
               axis.title.x = element_text(size = 16),
               axis.title.y = element_text(size = 16))
-      
+
     } else {
-      
-      tmp_df <- calculate_sim_disease()
-      
+
       tmp_df  %>%
-        arrange(desc(similarity_score)) %>%
+        select(identifier, sim_mim) %>%
+        arrange(desc(sim_mim)) %>%
         # filter(similarity_score >= filter_higher_than) %>%
-        ggplot(aes(reorder(mim_disease, similarity_score), similarity_score)) +
-        geom_col(aes(fill = similarity_score), color = 'black') + 
+        ggplot(aes(reorder(identifier, sim_mim), sim_mim)) +
+        geom_col(aes(fill = sim_mim), color = 'black', show.legend = FALSE) +
         # coord_flip() +
         ylab('Phenotypic similarity score') +
-        xlab('OMIM diseases') +
+        xlab('Disease identifiers') +
         scale_fill_viridis_c() +
         theme_fancy() +
         theme(axis.text.x = element_text(angle = 45, hjust = 1),
               axis.title.x = element_text(size = 16),
               axis.title.y = element_text(size = 16))
-      
-      
-      
-      
-      
+
     }
-    
-    
-  })  
+
+
+  })
   
   
   output$n_hi<- renderUI({

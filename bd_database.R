@@ -265,17 +265,17 @@ vg <- vg_raw %>% left_join(test, by = c('gene' = 'ENSEMBL')) %>%
 # Dataset: Pubmed articles associated with G-bands and "deletion" "duplication" keywords
 # ------------------------------------------------------------------------------
 
-pubmed_bands <- chromPlot::hg_cytoBandIdeo %>% as_tibble() %>%
-            # mutate(Name = paste0(Chrom, Name)) %>%
-            select(Name, Chrom)
+pubmed_bands <- chromPlot::hg_cytoBandIdeo %>% 
+                  as_tibble() %>%
+                  select(Name, Chrom)
 
 get_band <- function(band_input, chrom_input) {
 
   
-  print(band_input)
+  print(glue('{chrom_input} - {band_input}'))
 
-  # band_input <- 'p36.33'
-  # chrom_input <- '1'
+  # band_input <- 'q24.3'
+  # chrom_input <- '5'
 
   band_tmp <- band_input
   band2_tmp <- paste0(chrom_input, band_input)
@@ -302,7 +302,10 @@ toc()
 
 pubmed_df <- pubmed_df %>% left_join( chromPlot::hg_cytoBandIdeo %>% select(Chrom, Start, End, Name), by =
                            c('band' = 'Name', 'chrom' = 'Chrom')) %>%
-  rename(start = Start, end = End)
+  rename(start = Start, end = End) %>% 
+  mutate(start = start + 1)
+
+
 
 # ------------------------------------------------------------------------------
 # Annotation promoter region (-2kbs - TSS - + 2kbs)
@@ -317,10 +320,6 @@ plan("multiprocess", workers = 40)
 
 genomic_ranges <- tibble(chrom = '1', start = 1000000, end = )
 
-
-
-
-  
 
   get_annot_promoter <- function(gene, chrom, tss) {
     
@@ -1110,16 +1109,6 @@ ridges_home <- cnv_df %>%
 #   slice(1:100)
 
 
-# ------------------------------------------------------------------------------
-# Dataset: Human Phenotype Ontology
-# Source: http://compbio.charite.de/jenkins/job/hpo.annotations/lastStableBuild/artifact/misc/phenotype_annotation.tab
-# Name file: phenotype_annotation.tab
-# ------------------------------------------------------------------------------
-
-# ERROR - 10 ROWS MISSING!!
-
-url <- 'http://compbio.charite.de/jenkins/job/hpo.annotations/lastStableBuild/artifact/util/annotation/genes_to_phenotype.txt'
-hpo_genes <- read_tsv(url, col_names = c('entrez_id', 'gene', 'term', 'hp'), skip = 1)
 
 
 
@@ -1519,6 +1508,7 @@ snipre <- snipre %>% select(Gene, SnIPRE.f) %>%
 # onset?
 # make the intersect with the list of omim filtered genes
 # update the list with the account new version from OMIM
+# what is a qualifier?
 
 url <- 'http://compbio.charite.de/jenkins/job/hpo.annotations.current/lastSuccessfulBuild/artifact/current/phenotype.hpoa'
 
@@ -1526,14 +1516,34 @@ hpo_omim <- read_tsv(url, col_names = TRUE, skip = 4) %>%
   rename(mim_disease = DatabaseID,
          desc = DiseaseName,
          hp = HPO_ID) %>%
-  filter(str_detect(mim_disease, 'OMIM')) %>%
+  mutate(disease_source = str_extract(mim_disease, '^[^:]+:\\s*')) %>%
+  mutate(disease_source = str_remove(disease_source, ':')) %>%
   mutate(mim_disease = str_remove(mim_disease, 'OMIM:')) %>%
+  mutate(mim_disease = str_remove(mim_disease, 'DECIPHER:')) %>%
+  mutate(mim_disease = str_remove(mim_disease, 'ORPHA:')) %>%
     mutate(desc = str_remove(desc, '[0-9]{6}'),
            desc = str_remove(desc, '#')) %>%
-  mutate(mim_disease = as.numeric(mim_disease))
+  mutate(mim_disease = as.numeric(mim_disease)) %>%
+  rename(identifier = mim_disease) 
 
   
+# ------------------------------------------------------------------------------
+# Dataset: Human Phenotype Ontology
+# Source: http://compbio.charite.de/jenkins/job/hpo.annotations/lastStableBuild/artifact/misc/phenotype_annotation.tab
+# Name file: phenotype_annotation.tab
+# ------------------------------------------------------------------------------
 
+# ERROR - 10 ROWS MISSING!!
+
+url <- 'http://compbio.charite.de/jenkins/job/hpo.annotations/lastStableBuild/artifact/util/annotation/genes_to_phenotype.txt'
+hpo_genes <- read_tsv(url, skip = 1, col_names = FALSE)
+
+hpo_genes <- hpo_genes %>% select(X2, X3, X4, X9) %>%
+  mutate(disease_source = str_extract(X9, '^[^:]+:\\s*')) %>%
+  mutate(X9 = str_remove(X9, '^[^:]+:\\s*')) %>%
+  mutate(disease_source = str_remove(disease_source, ':')) %>%
+  rename(gene = X2, hp = X3, desc = X4, identifier = X9) %>%
+  mutate(identifier = as.double(identifier))
 
 # hpo_omim <- hpo_omim %>%
 #   filter(X1 == 'OMIM') %>%
@@ -1991,6 +2001,8 @@ hgcn_genes <- hgcn_genes %>%
   mutate(gdi = ntile(-(gdi), 100)) %>% # low gdi = Likely Pathogenic
   mutate(hi = ntile(-(hi), 100)) %>% # low hi = Likely Pathogenic
   mutate(snipre = ntile(-(snipre), 100)) # low snipre = Likely Pathogenic
+
+hgcn_genes <- hgcn_genes %>% rename(start = start_position, end = end_position)
 
 # ------------------------------------------------------------------------------
 # Dataset: TRRUST v.2

@@ -206,23 +206,25 @@ tablerDashPage(
             tags$br()
           ),
           column(6,
+                 conditionalPanel(
+                   condition = "input.input_geno_karyo == 'Multiple coordinates'",
                  tablerCard(width = 12,
                             title = 'Input file',
                             collapsible = FALSE,
                             closable = FALSE,
                             zoomable = FALSE,
                             statusSide = 'left',
+                            options = tagList(
+                              selectizeInput(inputId = 'select_n_cnvs',
+                                             label = 'Select all?',
+                                             choices = c('Yes' = 'yes', 'No' = 'no'),
+                                             selected = NULL,
+                                             multiple = FALSE,
+                                             options = NULL)),
 
-                   conditionalPanel(
-                     condition = "input.input_geno_karyo == 'Multiple coordinates'",
+
                      DTOutput('cnv_file')),
-                   options = tagList(
-                     selectizeInput(inputId = 'select_n_cnvs',
-                                    label = 'Select all?',
-                                    choices = c('Yes' = 'yes', 'No' = 'no'),
-                                    selected = NULL,
-                                    multiple = FALSE,
-                                    options = NULL))
+   
                  ),
                  plotOutput('plot_chrom', height = 200)
                  # tags$hr(),
@@ -1076,6 +1078,7 @@ tablerDashPage(
           closable = FALSE,
           overflow = TRUE
         ),
+
         fluidRow(
           tablerCard(
             title = "Overlap with disease genes",
@@ -1332,7 +1335,48 @@ tablerDashPage(
           # uiOutput('switch_enhancers'),
           
           tablerCard(
-            title = "Target-genes from disrupted regulatory elements",
+            title = "Intersection of disease target-genes from regulatory elements",
+            plotOutput("plot_upset_disease_reg"),
+            width = 12,
+            collapsible = FALSE,
+            closable = FALSE,
+            overflow = TRUE
+          ),
+          column(12,
+          fluidRow(
+            tablerCard(
+              title = "Overlap with disease target-genes from regulatory elements",
+              DTOutput("dgenes_reg") %>% withSpinner(type = 5),
+              width = 4,
+              collapsible = FALSE,
+              closable = FALSE,
+              overflow = TRUE,
+              options = tagList(
+                # actionBttn(
+                #   inputId = "Id111",
+                #   label = "Reset table",
+                #   style = "minimal",
+                #   color = "primary"
+                # ),
+                # downloadButton("download_dgenes", "Download table")
+              )
+            ),
+            tablerCard(
+              title = "Disease evidences",
+              DTOutput("select_gene_disease_reg") %>% withSpinner(type = 5),
+              width = 8,
+              collapsible = FALSE,
+              closable = FALSE,
+              overflow = TRUE,
+              options = tagList(
+                uiOutput('input_source_reg')
+                # downloadButton("downloadfdsfs_dgenes", "Download table")
+              )
+            ))
+          ),
+          
+          tablerCard(
+            title = "Non-disease target genes from disrupted regulatory elements",
             DTOutput("genes_from_reg_regions") %>% withSpinner(type = 5),
             width = 12,
             collapsible = FALSE,
@@ -1482,40 +1526,12 @@ tablerDashPage(
         fluidRow(
           column(width = 3,
                  tablerCard(title = 'Filter options:',
-                            tags$b('Select a gene:'),
-                            selectInput(
-                              "gene_yes_no", "",
-                              c(No = "No",
-                                Yes = "Yes")),
-                            conditionalPanel(
-                              condition = "input.gene_yes_no == 'Yes'",
-                              uiOutput('gene_tissue')),
-                            tags$b('Select a tissue:'),
-                            selectInput(
-                              "tissue_yes_no", "",
-                              c(No = "No",
-                                Yes = "Yes")),
-                            conditionalPanel(
-                              condition = "input.tissue_yes_no == 'Yes'",
-                              uiOutput('select_tissue')),
-                            
-                            width = 12)
-                 
-          ),
-          tablerCard(title = 'Protein Expression (Human Protein Atlas)',
-                     DTOutput('tissue_hpa'),
-                     width = 9)),
-        
-        
-        
-        fluidRow(
-          column(width = 3,
-                 tablerCard(title = 'Filter options:',
                             tags$b('Display by:'),
                             selectInput(
                               "gtex_gene_tissue", "",
                               c(Gene = "Gene",
-                                Tissue = "Tissue")),
+                                Tissue = "Tissue"),
+                              selected = 'Tissue'),
                             conditionalPanel(
                               condition = "input.gtex_gene_tissue == 'Gene'",
                               uiOutput('gtex_gene')),
@@ -1535,6 +1551,11 @@ tablerDashPage(
           
           
         ),
+
+        
+        
+        
+
         fluidRow(
           column(width = 3,
                  tablerCard(title = 'Configuration:',
@@ -1568,15 +1589,39 @@ tablerDashPage(
                      ))
           
           
-        )
+        ),
+        fluidRow(
+          column(width = 3,
+                 tablerCard(title = 'Filter options:',
+                            tags$b('Select a gene:'),
+                            selectInput(
+                              "gene_yes_no", "",
+                              c(No = "No",
+                                Yes = "Yes")),
+                            conditionalPanel(
+                              condition = "input.gene_yes_no == 'Yes'",
+                              uiOutput('gene_tissue')),
+                            tags$b('Select a tissue:'),
+                            selectInput(
+                              "tissue_yes_no", "",
+                              c(No = "No",
+                                Yes = "Yes")),
+                            conditionalPanel(
+                              condition = "input.tissue_yes_no == 'Yes'",
+                              uiOutput('select_tissue')),
+                            
+                            width = 12)
+                 
+          ),
+          tablerCard(title = 'Protein Expression (Human Protein Atlas)',
+                     DTOutput('tissue_hpa'),
+                     width = 9))
         
       ),
       tablerTabItem(
         tabName = "disease",
         fluidRow(
-          uiOutput('n_hp_chosen'),
-          uiOutput('hpo_unique_genes_panel'),
-          uiOutput('n_diseases')
+          uiOutput('n_hp_chosen')
           # tablerCard(title = 'Mode of inheritance',
           #            width = 3,
           #            closable = FALSE,
@@ -1618,15 +1663,6 @@ tablerDashPage(
                          style = "material-flat",
                          # icon = icon("sliders"),
                          block = TRUE
-                       ),
-                       actionBttn(
-                         inputId = "run_pheno_analysis",
-                         label = "run analysis!",
-                         size = 'sm',
-                         color = "success",
-                         style = "material-flat",
-                         # icon = icon("sliders"),
-                         block = TRUE
                        )
                      )
                      
@@ -1638,21 +1674,21 @@ tablerDashPage(
                             DTOutput('suggest_df')
                             
                  )),
-          tablerCard(title = 'Anatomical entities associated with HPO terms',
-                     plotOutput('plot_anatomy'),
-                     width = 12),
+
           column(width = 12,
                  fluidRow(width = 12,
-                          tablerCard(title = 'Genes with HPO terms',
-                                     DTOutput('hpo_filter_genes'),
-                                     width = 6),
-                          tablerCard(title = 'OMIM diseases',
+
+                          tablerCard(title = 'Gene-disease associations',
                                      closable = FALSE,
                                      collapsible = FALSE,
                                      zoomable = FALSE,
-                                     DTOutput('hpo_filter_diseases'),
-                                     width = 6,
+                                     DTOutput('dt_running_sim_score') %>% withSpinner(type = 5),
+                                     width = 12,
                                      options = tagList(
+                                       uiOutput('hpo_unique_genes_panel'),
+                                       
+                                       uiOutput('n_diseases'),
+                                       
                                        selectizeInput(inputId = 'input_inheritance',
                                                       label = 'Filter by mode of inheritance:',
                                                       choices = vector_inheritance,
@@ -1661,18 +1697,28 @@ tablerDashPage(
                                                       options = NULL)
                                        
                                        
-                                     ))
-                 )),
-          
-          column(width = 12,
-                 fluidRow(width = 12,
+                                     )),
+                          # fluidRow(width = 12,
+                                   
                           tablerCard(title = 'HPO terms associated with genes',
                                      DTOutput('hpo_assoc_genes'),
                                      width = 6),
                           tablerCard(title = 'HPO terms associated with diseases',
                                      DTOutput('hpo_assoc_diseases'),
                                      width = 6)
+                          # )
                  )),
+          
+          # column(width = 12,
+          #        fluidRow(width = 12,
+          #                 tablerCard(title = 'Genes with HPO terms',
+          #                            DTOutput('hpo_filter_genes'),
+          #                            width = 8)
+          # 
+          #        )),
+          tablerCard(title = 'Anatomical entities associated with HPO terms',
+                     plotOutput('plot_anatomy'),
+                     width = 12),
           tablerCard(title = 'Phenotypic similarity score',
                      plotOutput('plot_similarity_genes'),
                      width = 12,
