@@ -1959,6 +1959,75 @@ ohno_genes <- ohno %>% select(Symbol1, Symbol2) %>%
   pivot_longer(values_to = 'gene', names_to = 'delete', cols = c(Symbol1, Symbol2)) %>% 
   select(gene) %>%
   distinct()
+
+# ------------------------------------------------------------------------------
+# ncRNAs associated with diseases
+# OHNOLOGS database
+# Filter: Strict
+# ------------------------------------------------------------------------------
+# 
+# url <- 'https://www.rna-society.org/mndr/php/download.php?file=All%20ncRNA-disease.zip'
+# download.file(url, 'all_ncrna.zip')
+# system('unzip all_ncrna.zip')
+# 
+# ncrna_disease <- read_tsv('All ncRNA-disease.txt', col_names = TRUE)
+# 
+# ncrna_disease %>%
+#   filter(Species == 'Homo sapiens') %>%
+#   filter(`ncRNA Category` == 'lncRNA') %>% 
+#   filter(`Related Gene` != '') %>%
+#   count(Methods) %>% arrange(desc(n))
+# 
+# ncrna_disease %>% glimpse()
+# 
+# file.remove('All ncRNA-disease.txt')
+# file.remove('all_ncrna.zip')
+
+
+# ------------------------------------------------------------------------------
+# lncRNA2target database
+# Only 153 unique lncRNAs 
+# ------------------------------------------------------------------------------
+library(readxl)
+
+url <- 'http://123.59.132.21/lncrna2target/data/lncRNA_target_from_low_throughput_experiments.xlsx'
+
+download.file(url, 'lncRNA_target_from_low_throughput_experiments.xlsx')
+file.remove('lncRNA_target_from_low_throughput_experiments.xlsx')
+lncrna_raw <- read_xlsx('lncRNA_target_from_low_throughput_experiments.xlsx', sheet = 1)
+
+lncrna_target <- lncrna_raw %>% 
+  filter(Species == 'Homo sapiens') %>%
+  # filter(Ensembl_ID != 'NA') %>%
+  select(LncRNA_official_symbol,Ensembl_ID, GENCODE_gene_name,Entrez_ID,
+         LncRNA_experiment, Target_official_symbol,Tissue_Origin, Disease_state, PMID)
+
+human  <- useMart("ensembl", dataset = "hsapiens_gene_ensembl",
+                  host    = "grch37.ensembl.org",
+                  path    = "/biomart/martservice")
+
+interval_genes <- getBM(attributes = c('ensembl_gene_id', 'start_position','end_position', 'chromosome_name', 
+                                       'entrezgene_id','hgnc_symbol', 'version'),
+                        mart = human ) %>% 
+  as_tibble() %>% 
+  filter(!str_detect(chromosome_name, 'PATCH')) %>% 
+  na.omit()
+
+coord_lncrna <- lncrna_target %>% 
+  select(Ensembl_ID) %>% 
+  distinct() %>%
+  left_join(interval_genes, by = c('Ensembl_ID' = 'ensembl_gene_id')) %>% 
+  select(-entrezgene_id, -version, -hgnc_symbol) %>%
+  na.omit() %>%
+  distinct()
+
+
+lncrna_target <- lncrna_target %>%
+  select(Ensembl_ID, LncRNA_official_symbol, Target_official_symbol, Tissue_Origin, Disease_state, PMID) %>%
+  left_join(coord_lncrna, by = 'Ensembl_ID') %>%
+  na.omit()
+
+
 # ------------------------------------------------------------------------------
 # AGGREGATE ALL THE INFORMATION
 # ------------------------------------------------------------------------------
