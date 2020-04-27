@@ -502,12 +502,33 @@ result_n_enhancers <- bed_intersect(df_enhancers, tmp_cnv) %>%
   filter(.overlap > threshold_30_tmp) %>%
   select(id.x) %>% distinct() %>% nrow()
 
-
-result_enhancer_gene_disease <-  bed_intersect(df_enhancers, tmp_cnv) %>%
+genes_enhancers_no_cnv <- bed_intersect(df_enhancers, tmp_cnv) %>%
   filter(.overlap > threshold_30_tmp) %>%
-  select(gene.x) %>% rename(gene = gene.x) %>% distinct() %>% filter(!gene %in% vector_genes) %>%
-  filter(gene %in% (hgcn_genes %>% filter(disease == 'Yes') %>% pull(gene))) %>% nrow()
+  select(gene.x) %>% rename(gene = gene.x) %>% distinct() %>% filter(!gene %in% vector_genes)
+
+result_enhancer_gene_disease <-  genes_enhancers_no_cnv %>%
+  filter(gene %in% (hgcn_genes %>% filter(disease == 'Yes') %>% 
+                      pull(gene))) %>% 
+  nrow()
   
+
+n_genes_one_hpo <- genes_enhancers_no_cnv %>% filter(gene  %in% hpo_genes$gene) %>% nrow()
+
+if(length(n_genes_one_hpo) == 0) {
+  vector_hpo_genes <- NA
+} else {
+  
+  vector_hpo_genes <- hpo_genes %>% filter(gene %in% (genes_enhancers_no_cnv %>% pull(gene))) %>% 
+    pull(gene) %>% unique() %>% paste(collapse = ', ')
+  
+}
+
+
+
+
+
+
+
 # Number miRNAs
 
 result_n_mirna <-bed_intersect(mirtarbase, tmp_cnv) %>%
@@ -576,6 +597,8 @@ result_tmp <- tibble(
   'n_enhancers' = result_n_enhancers,
   'n_mirnas' = result_n_mirna,
   'enh_gene_disease' = result_enhancer_gene_disease,
+  'enh_gene_n_hpo' = n_genes_one_hpo,
+  'enh_gene_hpo_vector' = vector_hpo_genes,
   'mirna_gene_disease' = result_mirnas_gene_disease,
   'tf_gene_disease' = result_tfs_gene_disease,
   'gene_density' = result_gene_density
@@ -585,12 +608,10 @@ return(result_tmp)
 
 }
 
-plan("multiprocess", workers = 40)
+plan("multiprocess", workers = 50)
 
 
 # test_before <- input_check_cnv %>% slice(sample(1:nrow(.), 100)) 
-
-
 
 
 tic()
