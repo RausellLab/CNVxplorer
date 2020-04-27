@@ -2025,7 +2025,10 @@ coord_lncrna <- lncrna_target %>%
 lncrna_target <- lncrna_target %>%
   select(Ensembl_ID, LncRNA_official_symbol, Target_official_symbol, Tissue_Origin, Disease_state, PMID) %>%
   left_join(coord_lncrna, by = 'Ensembl_ID') %>%
-  na.omit()
+  na.omit() %>%
+  rename(start = start_position, end = end_position, chrom = chromosome_name,
+         official_symbol = LncRNA_official_symbol, target_symbol = Target_official_symbol) %>%
+  select(official_symbol, chrom, start, end, everything())
 
 
 # ------------------------------------------------------------------------------
