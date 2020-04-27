@@ -25,3 +25,8 @@ submit_dataset
 app_deprecated.R
 ny-app.conf
 test.Rmd
+test.html
+output_df.tsv
+output_annotation_cnvs.html
+output_annotation_cnvs.Rmd
+output_annotation_cnvs_files
