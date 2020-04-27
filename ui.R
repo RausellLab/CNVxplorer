@@ -92,10 +92,10 @@ tablerDashPage(
     id = "mymenu",
     src = "https://www.onlinelogomaker.com/applet_userdata/version2/5/0/18611424/projects/18611424.png",
     uiOutput('ref_user_genes_cnv'),
-    uiOutput('n_genes_tad_added'),
-    uiOutput('n_genes_mirna_added'),
-    uiOutput('n_genes_tf_added'),
-    uiOutput('n_genes_enh_added'),
+    uiOutput('counter_header'),
+    # uiOutput('n_genes_mirna_added'),
+    # uiOutput('n_genes_tf_added'),
+    # uiOutput('n_genes_enh_added'),
     uiOutput('ref_user_genes')
     
     # uiOutput('ref_user_filter_genes')
@@ -178,7 +178,9 @@ tablerDashPage(
                        uiOutput('choose_geno_karyo2')),
                        conditionalPanel(
                          condition = "input.input_geno_karyo == 'Multiple coordinates'",
-                         fileInput("file_cnv", label = h5("Upload file:"))),
+                         fileInput("file_cnv", label = h5("Upload file:")),
+                         downloadLink('download_file_1', label = "Download file example")
+                       ),
                        
                        
             ),
@@ -215,8 +217,8 @@ tablerDashPage(
                             zoomable = FALSE,
                             statusSide = 'left',
                             options = tagList(
-                              selectizeInput(inputId = 'select_n_cnvs',
-                                             label = 'Select all?',
+                              selectizeInput(inputId = 'select_all_cnvs',
+                                             label = 'Select all the variants?',
                                              choices = c('Yes' = 'yes', 'No' = 'no'),
                                              selected = NULL,
                                              multiple = FALSE,
@@ -1409,15 +1411,7 @@ tablerDashPage(
                             width = 6)
         ),
         
-        tablerCard(title = 'Topologically Associating Domains (TADs) disrupted',
-                   DTOutput('df_tads'),
-                   collapsible = FALSE,
-                   closable = FALSE,
-                   width = 12,
-                   options = tagList(
-                     uiOutput('ui_tad')
-                     # uiOutput('switch_tads')
-                   )),
+
         tablerCard(title = 'micro-RNAs (miRNAs) disrupted',
                    DTOutput('df_mirna'),
                    collapsible = FALSE,
@@ -1434,11 +1428,24 @@ tablerDashPage(
                    options = tagList(
                      uiOutput('switch_tfs')
                    )),
+
         tablerCard(title = 'Long noncoding RNAs (lncRNAs) disrupted',
                    DTOutput('lncrna_df'),
                    collapsible = FALSE,
                    closable = FALSE,
-                   width = 12)
+                   width = 12,
+                   options = tagList(
+                     uiOutput('switch_lncrnas')
+                   )),
+        tablerCard(title = 'Topologically Associating Domains (TADs) disrupted',
+                   DTOutput('df_tads'),
+                   collapsible = FALSE,
+                   closable = FALSE,
+                   width = 12,
+                   options = tagList(
+                     uiOutput('ui_tad')
+                     # uiOutput('switch_tads')
+                   )),
         
       ),
       
@@ -1640,6 +1647,9 @@ tablerDashPage(
         fluidRow(
           tablerCard(title = 'Phenotype terms',
                      width = 8,
+                     closable = FALSE,
+                     collapsible = FALSE,
+                     zoomable = FALSE,
                      multiInput(
                        inputId = "chosen_hp",
                        label = "",
@@ -1649,19 +1659,12 @@ tablerDashPage(
                        choiceValues = vector_total_terms$term
                      ),
                      options = tagList(
-                       # selectizeInput(inputId = 'input_in19heritance', 
-                       #                label = '', 
-                       #                choices = vector_inheritance,
-                       #                selected = NULL, 
-                       #                multiple = FALSE,
-                       #                options = NULL),
                        actionBttn(
                          inputId = "reset_pheno_analysis",
                          label = "Reset",
                          size = 'sm',
                          color = "default",
                          style = "material-flat",
-                         # icon = icon("sliders"),
                          block = TRUE
                        )
                      )
@@ -1685,8 +1688,7 @@ tablerDashPage(
                                      DTOutput('dt_running_sim_score') %>% withSpinner(type = 5),
                                      width = 12,
                                      options = tagList(
-                                       uiOutput('hpo_unique_genes_panel'),
-                                       
+                                       uiOutput('n_genes'),
                                        uiOutput('n_diseases'),
                                        
                                        selectizeInput(inputId = 'input_inheritance',
