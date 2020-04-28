@@ -133,7 +133,7 @@ library(tidyverse)
 source('functions.R')
 
 #  system('gunzip -c local_data.RData.gz > local_data.RData')
-load('local_data.RData')
+# load('local_data.RData')
 
 ridges_home <- cnv_df %>%
   filter(length_cnv >= 50) %>%

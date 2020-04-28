@@ -1,6 +1,38 @@
 
 
 
+library(tidytext)
+library(widyr)
+library(igraph)
+library(ggraph)
+
+
+a <- test0100 %>% mutate(type = 'deletion') %>% select(pmid, title, type)
+b <- test0010  %>% mutate(type = 'duplication') %>% select(pmid, title, type)
+
+c <- bind_rows(a, b)
+
+c %>%
+  select(pmid, title, type) %>%
+  unnest_tokens(word, title) %>%
+  anti_join(stop_words) %>%
+  pairwise_count(word, pmid, sort = TRUE)  %>%
+  filter(n >= 2) %>%
+  graph_from_data_frame() %>%
+  ggraph(layout = "fr") +
+  geom_edge_link(aes(edge_alpha = n, edge_width = n), edge_colour = "cyan4") +
+  geom_node_point(size = 5) +
+  geom_node_text(aes(label = name), repel = TRUE, 
+                 point.padding = unit(0.2, "lines")) +
+  theme_void()
+  
+  
+
+
+
+
+
+
 test91312 <<- plot_df
 
 p <- test91312 %>%

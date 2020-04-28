@@ -633,12 +633,13 @@ function(input, output, session) {
         select(-startdelete, -enddelete, -.overlap) %>%
         mutate(chrom_name = paste0(chrom, Name)) %>%
         select(chrom, Name, chrom_name) %>%
-        mutate(result = paste('(','(', 'chromosome', chrom,'AND', '(', Name ,'OR', chrom_name,  ')', ')')) %>%
+        mutate(result = paste('(','(', 'chromosome', chrom,'AND' , Name, ')' ,'OR', chrom_name, ')')) %>%
         pull(result) %>%
         paste(collapse = ' OR ') %>%
-        paste('AND deletion AND homo sapiens')
+        paste('AND (deletion OR microdeletion) AND homo sapiens')
         
 
+      test1005 <<- tmp_query
       
       query_region <- tmp_query
       
@@ -648,8 +649,9 @@ function(input, output, session) {
       chrom_tmp <- paste('chromosome',  coord_user() %>%  pull(chrom))
       band_tmp <-  input$input_karyotype
       band2_tmp <- paste0( coord_user() %>%  pull(chrom), band_tmp)
+
       
-      query_region <- paste(chrom_tmp,'AND','(', band_tmp,'OR', band2_tmp,')', 'AND deletion AND homo sapiens')
+      query_region <- paste('(','(', chrom_tmp,'AND', band_tmp,')','OR', band2_tmp,')', 'AND deletion AND homo sapiens')
       
     }
     
@@ -816,16 +818,13 @@ function(input, output, session) {
     
     ids_query <- c(query_pubmed_del()[['ids']], query_pubmed_dup()[['ids']])
     
-    test01234 <<- ids_query
     query_link <- entrez_link(db= 'gene', id= ids_query, dbfrom="pubmed")
-    test4141 <<- query_link
     query_link <- query_link$links[['pubmed_gene']] %>% as.numeric()
     
     validate(
       need(query_link != 0, 'No gene entries')
     )
     
-    test1311111 <<- query_link
     query_tmp <- entrez_summary(db="gene", id= test1311111)
     
     title <- unname(map_chr(query_tmp, function(x) x[["name"]]))
@@ -882,14 +881,13 @@ function(input, output, session) {
         select(-startdelete, -enddelete, -.overlap) %>%
         mutate(chrom_name = paste0(chrom, Name)) %>%
         select(chrom, Name, chrom_name) %>%
-        mutate(result = paste('(','(', 'chromosome', chrom,'AND', '(', Name ,'OR', chrom_name,  ')', ')')) %>%
+        mutate(result = paste('(','(', 'chromosome', chrom,'AND' , Name, ')' ,'OR', chrom_name, ')')) %>%
         pull(result) %>%
         paste(collapse = ' OR ') %>%
         paste('AND duplication AND homo sapiens')
       
       
-      test91241412 <<- tmp_query
-      
+
       # if (length(tmp_query) > 1) tmp_query %>% coll 
       query_region <- tmp_query
       
@@ -900,7 +898,7 @@ function(input, output, session) {
       band_tmp <-  input$input_karyotype
       band2_tmp <- paste0( coord_user() %>%  pull(chrom), band_tmp)
       
-      query_region <- paste(chrom_tmp,'AND','(', band_tmp,'OR', band2_tmp,')', 'AND duplication AND homo sapiens')
+      query_region <- paste('(','(', chrom_tmp,'AND', band_tmp,')','OR', band2_tmp,')', 'AND duplication AND homo sapiens')
       
     }
     
@@ -1164,6 +1162,7 @@ function(input, output, session) {
   output$del_dup_pubmed <- renderDataTable({
     
     req(running_pubmed_del())
+    req(running_pubmed_dup())
     req(input$select_del_dup)
     
     
@@ -1177,6 +1176,10 @@ function(input, output, session) {
       
     }
     
+    test0100 <<- running_pubmed_del()
+    test0010 <<- running_pubmed_dup()
+    
+    
     
     if(input$only_omim == 'Yes') {
       
@@ -1187,18 +1190,13 @@ function(input, output, session) {
         left_join(omim_assoc(), by = c('pmid' = 'pubmed_id')) %>%
         filter(omim_assoc != '') %>%
         mutate(omim_assoc = paste0("<a href='", paste0('https://www.omim.org/entry/', omim_assoc),"' target='_blank'>", omim_assoc,"</a>")) %>%
-        # mutate(tmp_col = 'tmp_cols') %>%
-        # pivot_wider(id_cols = pmid, values_from = omim_assoc, names_from = tmp_col) %>%
         mutate(pmid = paste0("<a href='", paste0('https://pubmed.ncbi.nlm.nih.gov/', pmid),"' target='_blank'>", pmid,"</a>"))
-      
-      
-      
-      
-      
-      
+
       vector_colnames <- c('PMID', 'Title','First author', 'Last author', 'N°cites','Journal', 'Published date', 'OMIM entries')
       
     } else {
+      
+      test14 <<- tmp_df
       
       tmp_df <- tmp_df %>% 
         select(pmid, everything()) %>%
@@ -1208,8 +1206,6 @@ function(input, output, session) {
       vector_colnames <- c('PMID', 'Title','First author', 'Last author', 'N°cites','Journal', 'Published date')
       
     }
-    
-
     
     datatable(tmp_df, rownames = FALSE, filter = 'top', selection = 'single', escape = FALSE,
               
