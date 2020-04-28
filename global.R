@@ -82,22 +82,61 @@ library(tidyverse)
 # 
 # file.remove('local_data.RData.gz')
 # file.remove('local_data.RData')
-# save(hgcn_genes, df_enhancers, tad, gtex, hpa, hpo_genes, cnv_df, vector_total_terms,
-#      gnomad_sv_raw, decipher_control_raw, dgv_df_raw, hpo_omim, anato_df, mirtarbase,
-#       vector_inheritance, trrust, tf_genes, drugbank,prot_complex,ohno_genes,
-#       genes_promoter,para_genes,string_db,region_gaps, fusil_score, coord_chrom_hg19,
-#     select, dev_raw, panel_total, omim, orphanet_raw,  hpo_dbs, model1, lncrna,
+# save(hgcn_genes, 
+#     df_enhancers, 
+#     tad, 
+#     gtex, 
+#     hpa, 
+#     hpo_genes, 
+#     cnv_df, 
+#     vector_total_terms,
+#     gnomad_sv_raw, 
+#     decipher_control_raw, 
+#     dgv_df_raw, 
+#     hpo_omim, 
+#     anato_df, 
+#     mirtarbase,
+#     vector_inheritance, 
+#     trrust, 
+#     tf_genes, 
+#     drugbank,
+#     prot_complex,
+#     ohno_genes,
+#     genes_promoter,
+#     para_genes,
+#     string_db,
+#     region_gaps, 
+#     fusil_score, 
+#     coord_chrom_hg19,
+#     select, 
+#     dev_raw, 
+#     panel_total, 
+#     omim, 
+#     orphanet_raw,  
+#     hpo_dbs, 
+#     model1, 
+#     lncrna,
 #     lncrna_target,
-#     denovo, clinvar_variants, plot_p100, plot_p46pla,lncrna_coord,
-#     blacklist_encode, mpo_dbs, gwas_variants,mgi, syndromes_total, file = "local_data.RData")
+#     denovo, 
+#     clinvar_variants, 
+#     plot_p100, 
+#     plot_p46pla,
+#     lncrna_coord,
+#     blacklist_encode, 
+#     mpo_dbs, 
+#     gwas_variants,
+#     mgi, 
+#     syndromes_total, file = "local_data.RData")
+
 # system("gzip local_data.RData")
 
 source('functions.R')
 
 #  system('gunzip -c local_data.RData.gz > local_data.RData')
-load('local_data.RData')
+# load('local_data.RData')
 
 ridges_home <- cnv_df %>%
+  filter(length_cnv >= 50) %>%
   mutate(source =
            case_when(
              source == 'dgv' ~ 'DGV',

@@ -1,6 +1,84 @@
 
 
 
+test91312 <<- plot_df
+
+p <- test91312 %>%
+  mutate(value = as.factor(value)) %>%
+  mutate(value = fct_relevel(value, 'Ear', after = 0 )) %>%
+  mutate(value = fct_relevel(value, 'Breast', after = 1 )) %>%
+  ggplot(aes(x = value, y = valuae)) +
+  geom_col(aes(fill = class), position = 'dodge', color = 'black') +
+  theme_fancy() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
+        legend.position = 'top',
+        legend.text=element_text(size= 13)) +
+  labs( y = 'Number of HPO terms', 
+        x = 'Anatomical entities', 
+        fill = NULL)
+
+
+library(highcharter)
+
+bs.table = data.frame(
+  Closing.Date = paste(2013:2017, 12, sep = "/"),
+  Non.Current.Assets = c(13637344, 14075507, 14578093, 10911628, 10680998),
+  Current.Assets = c(13078654, 12772388, 14226181, 10205708, 10950779),
+  Non.Current.Liabilities = c(9376243, 8895126, 9715914, 9810157, 13493110),
+  Current.Liabilities = c(5075985, 4963856, 5992229, 8859263, 4094183)
+)
+
+a <- test91312 %>%
+  pivot_wider(names_from = class, values_from = valuae )
+
+colnames(a) <- c('value', 'gene', 'patient', 'disease')
+
+yy <- paste(c('Arachnodactyly', 'Abnormality'), collapse = ' <br/> ')
+
+
+highchart() %>% 
+  hc_chart(type = "column") %>%
+  hc_plotOptions(column = list(stacking = "normal")) %>%
+  hc_xAxis(categories = factor(a$value)) %>%
+  hc_xAxis(labels = c('hee', 'ola', 'manolo')) %>%
+  
+  hc_add_series(name="Gene",
+                data = a$gene[1],
+                stack = "Gene",
+                labels = 'jcasa' ) %>%
+  hc_add_series(name="Patient",
+                data = a$patient[1],
+                stack = "Patient") %>%
+  hc_add_series(name="Disease",
+                data = a$disease[1],
+                stack = "Disease")
+
+
+data("favorite_bars")
+data("favorite_pies")
+
+highchart() %>%
+  hc_title(text = "This is a bar graph describing my favorite pies
+                   including a pie chart describing my favorite bars") %>%
+  hc_subtitle(text = "In percentage of tastiness and awesomeness") %>%
+  hc_add_series_labels_values(favorite_pies$pie, favorite_pies$percent, name = "Pie",
+                              colorByPoint = TRUE, type = "column") %>%
+  hc_add_series_labels_values(favorite_bars$bar, favorite_bars$percent,
+                              colors = substr(terrain.colors(5), 0 , 7), type = "pie",
+                              name = "Bar", colorByPoint = TRUE, center = c('35%', '10%'),
+                              size = 100, dataLabels = list(enabled = FALSE)) %>%
+  hc_yAxis(title = list(text = "percentage of tastiness"),
+           labels = list(format = "{value}%"), max = 100) %>%
+  hc_xAxis(categories = favorite_pies$pie) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(pointFormat = "{point.y}%")
+
+
+
+
+ggplotly(p)
+
+
 #### TO ANTONIO #####
 
 library(tidyverse)

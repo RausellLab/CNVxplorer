@@ -1719,7 +1719,7 @@ tablerDashPage(
           # 
           #        )),
           tablerCard(title = 'Anatomical entities associated with HPO terms',
-                     plotOutput('plot_anatomy'),
+                     highchartOutput('plot_anatomy'),
                      width = 12),
           tablerCard(title = 'Phenotypic similarity score',
                      plotOutput('plot_similarity_genes'),
