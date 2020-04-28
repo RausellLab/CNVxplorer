@@ -1835,17 +1835,6 @@ tablerDashPage(
             options = tagList(
               uiOutput('ui_only_omim'),
               uiOutput('ui_select_del_dup')
-              
-              # switchInput(
-              #   inputId = "enable_omim_papers",
-              #   label = "Articles associated with OMIM?",
-              #   value = FALSE,
-              #   onStatus = "success",
-              #   offStatus = "danger",
-              #   width = 'auto',
-              #   size = 'mini'
-              #   
-              # )
             )
           ),
           tablerCard(
@@ -1854,7 +1843,27 @@ tablerDashPage(
             DTOutput("abstract_del_pubmed"),
             width = 12,
             overflow = TRUE
-          )
+          ),
+          tablerCard(
+            collapsible = FALSE,
+            closable = FALSE,
+            title = "Co-occurrence network",
+            
+            plotOutput("plot_net_pubmed") %>% withSpinner(type = 5),
+            width = 12,
+            overflow = TRUE,
+            options = tagList(
+              switchInput(
+                inputId = "enable_net",
+                label = "Run?",
+                value = FALSE,
+                onStatus = "success",
+                offStatus = "danger",
+                width = 'auto',
+                size = 'mini'
+                
+              )
+          ))
           # tablerCard(
           #   title = "Pubmed articles associated with duplications in the region",
           #   

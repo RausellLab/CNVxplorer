@@ -72,6 +72,8 @@ function(input, output, session) {
     shinyjs::reset('counter_header')
     shinyjs::reset('select_reg_region')
     
+    #
+    shinyjs::reset('enable_net')
     
 
     
@@ -1215,6 +1217,37 @@ function(input, output, session) {
                 selection = 'single'
                 # columnDefs = list(list(className = 'dt-center', targets = '_all'))
               ))
+    
+  })
+  
+  
+
+  
+  
+  output$plot_net_pubmed <- renderPlot({
+    
+    req(isTRUE(input$enable_net))
+    
+    a <- running_pubmed_del() %>% mutate(type = 'deletion')
+    b <- running_pubmed_dup() %>% mutate(type = 'duplication')
+    
+    c <- bind_rows(a, b)
+    
+    c %>%
+      select(pmid, title, type) %>%
+      unnest_tokens(word, title) %>%
+      anti_join(stop_words) %>%
+      pairwise_count(word, pmid, sort = TRUE) %>%
+      filter(n >= 2) %>%
+      graph_from_data_frame() %>%
+      ggraph(layout = "fr") +
+      geom_edge_link(aes(edge_alpha = n, edge_width = n), edge_colour = "cyan4") +
+      geom_node_point(size = 5) +
+      geom_node_text(aes(label = name), repel = TRUE, 
+                     point.padding = unit(0.2, "lines")) +
+      theme_void()
+    
+    
     
   })
   
