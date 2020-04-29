@@ -93,9 +93,6 @@ tablerDashPage(
     src = "https://www.onlinelogomaker.com/applet_userdata/version2/5/0/18611424/projects/18611424.png",
     uiOutput('ref_user_genes_cnv'),
     uiOutput('counter_header'),
-    # uiOutput('n_genes_mirna_added'),
-    # uiOutput('n_genes_tf_added'),
-    # uiOutput('n_genes_enh_added'),
     uiOutput('ref_user_genes')
     
     # uiOutput('ref_user_filter_genes')
@@ -884,7 +881,7 @@ tablerDashPage(
             tags$hr(),
             prettyRadioButtons(
               inputId = "choose_group_go",
-              label = tags$b("Select one option:"), 
+              label = tags$b("Select one option:"),
               choices = c("biological process", "molecular function", "cellular component"),
               inline = TRUE, 
               status = "primary",
@@ -1394,7 +1391,7 @@ tablerDashPage(
                      dataTableOutput('df_enhancer') %>% withSpinner(type = 5),
                      width = 12,
                      options = tagList(
-                       uiOutput('n_filtered_enhancers'),
+                       uiOutput('n_target_enh'),
                        uiOutput('switch_enhancers')
                        
                      ))),
@@ -1418,6 +1415,7 @@ tablerDashPage(
                    closable = FALSE,
                    width = 12,
                    options = tagList(
+                     uiOutput('n_target_mirna'),
                      uiOutput('switch_mirnas')
                    )),
         tablerCard(title = 'Transcription factors (TFs) targets disrupted',
@@ -1426,6 +1424,7 @@ tablerDashPage(
                    closable = FALSE,
                    width = 12,
                    options = tagList(
+                     uiOutput('n_target_tf'),
                      uiOutput('switch_tfs')
                    )),
 
@@ -1435,6 +1434,7 @@ tablerDashPage(
                    closable = FALSE,
                    width = 12,
                    options = tagList(
+                     uiOutput('n_target_lncrna'),
                      uiOutput('switch_lncrnas')
                    )),
         tablerCard(title = 'Topologically Associating Domains (TADs) disrupted',
@@ -1834,7 +1834,14 @@ tablerDashPage(
             width = 12,
             options = tagList(
               uiOutput('ui_only_omim'),
-              uiOutput('ui_select_del_dup')
+              prettyRadioButtons(
+                inputId = "select_del_dup",
+                label = '',   
+                choices =  split(c('deletions', 'duplications'), c('Deletions', 'Duplications')),
+                inline = TRUE, 
+                status = "primary",
+                fill = TRUE
+              )
             )
           ),
           tablerCard(
@@ -1847,12 +1854,32 @@ tablerDashPage(
           tablerCard(
             collapsible = FALSE,
             closable = FALSE,
+            title = NULL,
+            width = 3,
+            sliderInput("min_threshold_cooccurrence", label = tags$b("Select minimum co-occurrence:"), min = 2, 
+                        max = 50, value = 2)
+          ),
+            
+          tablerCard(
+            collapsible = FALSE,
+            closable = FALSE,
             title = "Co-occurrence network",
             
+            
             plotOutput("plot_net_pubmed") %>% withSpinner(type = 5),
-            width = 12,
+            width = 9,
             overflow = TRUE,
             options = tagList(
+
+              prettyRadioButtons(
+                inputId = "choose_net_source",
+                label = '',
+                choices = list('Both' = 'both', 'Deletions' = 'deletion', 'Duplications' = 'duplication'),
+                # selected = 'total',
+                inline = TRUE, 
+                status = "primary",
+                fill = TRUE
+              ),
               switchInput(
                 inputId = "enable_net",
                 label = "Run?",

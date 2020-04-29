@@ -74,6 +74,9 @@ function(input, output, session) {
     
     #
     shinyjs::reset('enable_net')
+    shinyjs::reset('choose_net_source')
+    
+    
     
 
     
@@ -1109,11 +1112,11 @@ function(input, output, session) {
   
   running_pubmed_del <- reactive({
     
-    # tryCatch(
-    # 
-    #   error= function(e) stop("Please, reduce the level assigned"))
+    tryCatch(
+        query_tmp <- entrez_summary(db="pubmed", id= query_pubmed_del()[['ids']]),
+      error= function(e) stop("Server error, please try later.")
+      )
 
-    query_tmp <- entrez_summary(db="pubmed", id= query_pubmed_del()[['ids']])
     
     title <- unname(map_chr(query_tmp, function(x) x[["title"]]))
     n_cites <- unname(map_chr(query_tmp, function(x) x[["pmcrefcount"]]))
@@ -1228,17 +1231,38 @@ function(input, output, session) {
     
     req(isTRUE(input$enable_net))
     
-    a <- running_pubmed_del() %>% mutate(type = 'deletion')
-    b <- running_pubmed_dup() %>% mutate(type = 'duplication')
+    if (input$choose_net_source == 'both') {
+      
+      tmp_del <- running_pubmed_del() %>% mutate(type = 'deletion')
+      tmp_dup <- running_pubmed_dup() %>% mutate(type = 'duplication')
+      
+      tmp_to_plot <- bind_rows(tmp_del, tmp_dup)
+      
+    } else if (input$choose_net_source == 'deletion') {
+      
+      tmp_to_plot <- running_pubmed_del() %>% mutate(type = 'deletion')
+      
+      
+    } else {
+      
+      tmp_to_plot <- running_pubmed_dup() %>% mutate(type = 'duplication')
+      
+    }
     
-    c <- bind_rows(a, b)
+
     
-    c %>%
+    tmp_to_plot <-   tmp_to_plot %>%
       select(pmid, title, type) %>%
       unnest_tokens(word, title) %>%
-      anti_join(stop_words) %>%
+      anti_join(stop_words, by = 'word') %>%
       pairwise_count(word, pmid, sort = TRUE) %>%
-      filter(n >= 2) %>%
+      filter(n >= input$min_threshold_cooccurrence) 
+    
+    validate(
+      need(nrow(tmp_to_plot) != 0, 'Please, reduce the minimum threshold of co-occurrence.')
+    )
+
+      tmp_to_plot %>%
       graph_from_data_frame() %>%
       ggraph(layout = "fr") +
       geom_edge_link(aes(edge_alpha = n, edge_width = n), edge_colour = "cyan4") +
@@ -1909,15 +1933,15 @@ function(input, output, session) {
         filter(gene  == gene_selected) %>%
         replace_na(list(SourceOfValidation = '-')) %>%
         mutate(SourceOfValidation = str_replace_all(SourceOfValidation, '_', '<br>')) %>%
-        select(gene, Name6, Name, OrphaNumber, SourceOfValidation ) %>%
+        select(gene, OrphaNumber5, Name6, Name, OrphaNumber, SourceOfValidation ) %>%
         mutate(gene = paste0("<a href='", 
-                             paste0('https://www.orpha.net/consor/cgi-bin/Disease_Genes.php?lng=EN&data_id=16132&Disease_Disease_Genes_diseaseGroup=', gene),"' target='_blank'>", gene,"</a>")) %>%
+                             paste0('https://www.orpha.net/consor/cgi-bin/OC_Exp.php?lng=en&Expert=', OrphaNumber5),"' target='_blank'>", gene,"</a>")) %>%
         mutate(OrphaNumber = paste0("<a href='", 
-                                    paste0('https://www.orpha.net/consor/cgi-bin/Disease_Search.php?lng=EN&data_id=8648&Disease_Disease_Search_diseaseGroup=', OrphaNumber),"' target='_blank'>", OrphaNumber,"</a>") )
+                                    paste0('https://www.orpha.net/consor/cgi-bin/OC_Exp.php?lng=en&Expert=', OrphaNumber),"' target='_blank'>", OrphaNumber,"</a>") )
       
       
       
-      datatable(tmp_df, escape = FALSE, rownames = FALSE, colnames = c('Gene',
+      datatable(tmp_df %>% select(-OrphaNumber5), escape = FALSE, rownames = FALSE, colnames = c('Gene',
                                                                        'Description', 
                                                                        # 'ID Orpha gene', 
                                                                        'Disease', 
@@ -2004,15 +2028,15 @@ function(input, output, session) {
         filter(gene  == gene_selected) %>%
         replace_na(list(SourceOfValidation = '-')) %>%
         mutate(SourceOfValidation = str_replace_all(SourceOfValidation, '_', '<br>')) %>%
-        select(gene, Name6, Name, OrphaNumber, SourceOfValidation ) %>%
+        select(gene, OrphaNumber5, Name6, Name, OrphaNumber, SourceOfValidation ) %>%
         mutate(gene = paste0("<a href='", 
-                             paste0('https://www.orpha.net/consor/cgi-bin/Disease_Genes.php?lng=EN&data_id=16132&Disease_Disease_Genes_diseaseGroup=', gene),"' target='_blank'>", gene,"</a>")) %>%
+                             paste0('https://www.orpha.net/consor/cgi-bin/OC_Exp.php?lng=en&Expert=', OrphaNumber5),"' target='_blank'>", gene,"</a>")) %>%
         mutate(OrphaNumber = paste0("<a href='", 
-                                    paste0('https://www.orpha.net/consor/cgi-bin/Disease_Search.php?lng=EN&data_id=8648&Disease_Disease_Search_diseaseGroup=', OrphaNumber),"' target='_blank'>", OrphaNumber,"</a>") )
+                                    paste0('https://www.orpha.net/consor/cgi-bin/OC_Exp.php?lng=en&Expert=', OrphaNumber),"' target='_blank'>", OrphaNumber,"</a>") )
       
       
       
-      datatable(tmp_df, escape = FALSE, rownames = FALSE, colnames = c('Gene',
+      datatable(tmp_df %>% select(-OrphaNumber5), escape = FALSE, rownames = FALSE, colnames = c('Gene',
                                                                        'Description', 
                                                                        # 'ID Orpha gene', 
                                                                        'Disease', 
@@ -3088,23 +3112,23 @@ function(input, output, session) {
   })
   
   
-  output$n_genes_enh_added <- renderUI({
-    
-    req(nrow(data_selected_enhancers()) > 0)
-
-    tmp_df <- data_selected_enhancers()
-    
-        tablerInfoCard(
-      width = 12,
-      value = paste0('+', nrow(tmp_df), " genes"),
-      status = "warning",
-      icon = "database",
-      # description =  name_region
-      description = 'Target-genes enhancers'
-    )
-
-    
-  })
+  # output$n_genes_enh_added <- renderUI({
+  #   
+  #   req(nrow(data_selected_enhancers()) > 0)
+  # 
+  #   tmp_df <- data_selected_enhancers()
+  #   
+  #       tablerInfoCard(
+  #     width = 12,
+  #     value = paste0('+', nrow(tmp_df), " genes"),
+  #     status = "warning",
+  #     icon = "database",
+  #     # description =  name_region
+  #     description = 'Target-genes enhancers'
+  #   )
+  # 
+  #   
+  # })
   
   output$counter_header <- renderUI({
 
@@ -3510,26 +3534,84 @@ function(input, output, session) {
   })
   
   
-  output$n_filtered_enhancers <- renderUI({
+  # output$n_filtered_enhancers <- renderUI({
+  #   
+  #   
+  #   if (is.null(input$df_enhancer_rows_all)) {
+  #     n_enhancers <- prev_enhancer()
+  #   } else {
+  #     n_enhancers <- prev_enhancer()[input$df_enhancer_rows_all,]
+  #   }
+  #   
+  #   n_total_enhancers <- prev_enhancer() %>% select(gene) %>% distinct() %>% nrow()
+  #   n_enhancers <- n_enhancers %>% select(gene) %>% distinct() %>% nrow()
+  #   
+  #   
+  #   tablerInfoCard(
+  #     width = 12,
+  #     value =  paste0(n_enhancers, '/', n_total_enhancers, ' target-genes'),
+  #     status = "warning",
+  #     icon = "database"
+  #     # description =  ''
+  #     
+  #   )
+  #   
+  # })
+  
+  output$n_target_enh <- renderUI({
     
     
-    if (is.null(input$df_enhancer_rows_all)) {
-      n_enhancers <- prev_enhancer()
-    } else {
-      n_enhancers <- prev_enhancer()[input$df_enhancer_rows_all,]
-    }
-    
-    n_total_enhancers <- prev_enhancer() %>% select(gene) %>% distinct() %>% nrow()
-    n_enhancers <- n_enhancers %>% select(gene) %>% distinct() %>% nrow()
-    
+    n_target_genes <- prev_enhancer() %>% select(gene) %>% distinct() %>% nrow()
     
     tablerInfoCard(
       width = 12,
-      value =  paste0(n_enhancers, '/', n_total_enhancers, ' target-genes'),
+      value =  paste(n_target_genes, 'unique target-genes'),
       status = "warning",
       icon = "database"
-      # description =  ''
-      
+    )
+    
+  })
+  
+  
+  output$n_target_mirna <- renderUI({
+    
+    
+    n_target_genes <- mirna_raw() %>% select(gene_symbol) %>% distinct() %>% nrow()
+    
+    tablerInfoCard(
+      width = 12,
+      value =  paste(n_target_genes, 'unique target-genes'),
+      status = "warning",
+      icon = "database"
+    )
+    
+  })
+  
+  output$n_target_tf <- renderUI({
+    
+    
+    n_target_genes <- tf_raw() %>% select(target) %>% distinct() %>% nrow()
+    
+    tablerInfoCard(
+      width = 12,
+      value =  paste(n_target_genes, 'unique target-genes'),
+      status = "warning",
+      icon = "database"
+    )
+    
+  })
+  
+  
+  output$n_target_lncrna <- renderUI({
+    
+    
+    n_target_genes <- lncrna_raw() %>% select(target_symbol) %>% distinct() %>% nrow()
+    
+    tablerInfoCard(
+      width = 12,
+      value =  paste(n_target_genes, 'unique target-genes'),
+      status = "warning",
+      icon = "database"
     )
     
   })
@@ -3986,6 +4068,7 @@ function(input, output, session) {
       width = 12,
       value =  paste(number_diseases, 'diseases'),
       status = "primary",
+      title = 'Diseases with HPO',
       icon = "database",
       description =  ''
     )
@@ -5214,31 +5297,19 @@ function(input, output, session) {
   })
   
   
-  output$ui_select_del_dup <- renderUI({
-    
-    # vector_n_dbs <- df_overlap_cnvs_running()  %>% filter(source != 'decipher') %>%
-    #   count(source) %>% 
-    #   mutate(new_one = paste0(source, ' (', n, ")")) %>%
-    #   pull(new_one)
-    # 
-    # test142412412 <<- vector_n_dbs
-    # 
-    # vector_n_dbs <- vector_n_dbs %>% 
-    #   str_replace('decipher_control', 'DECIPHER Control') %>% 
-    #   str_replace('dgv', 'DGV') %>%
-    #   str_replace('gnomad_v2.1', 'gnomAD v.2.1')
-    
-    vector_n_dbs <-    split(c('deletions', 'duplications'), c('Deletions', 'Duplications'))
-    
-    prettyRadioButtons(
-      inputId = "select_del_dup",
-      label = tags$b("Select one option:"),   
-      choices =  vector_n_dbs,
-      inline = TRUE, 
-      status = "primary",
-      fill = TRUE
-    )
-  })
+  # output$ui_select_del_dup <- renderUI({
+  #   
+  #   vector_n_dbs <-    split(c('deletions', 'duplications'), c('Deletions', 'Duplications'))
+  #   
+  #   prettyRadioButtons(
+  #     inputId = "select_del_dup",
+  #     label = tags$b("Select one option:"),   
+  #     choices =  split(c('deletions', 'duplications'), c('Deletions', 'Duplications')),
+  #     inline = TRUE, 
+  #     status = "primary",
+  #     fill = TRUE
+  #   )
+  # })
   
   
   
