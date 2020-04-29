@@ -38,6 +38,9 @@ library(TissueEnrich)
 library(arules)
 library(arulesCBA)
 library(shinyalert)
+library(ggraph)
+library(igraph) 
+library(widyr)
 library(tidyverse)
 
 
