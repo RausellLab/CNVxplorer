@@ -41,6 +41,7 @@ library(shinyalert)
 library(ggraph)
 library(igraph) 
 library(widyr)
+library(tidytext)
 library(tidyverse)
 
 
