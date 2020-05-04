@@ -148,7 +148,7 @@ get_upset <- function(df) {
   
   
   validate(
-    need(length(vector_hpo) > 1, "No intersection found")
+    need(length(vector_hpo) > 1, "No intersection found.")
   )
   
   vector_genes <- df %>% select(gene) %>% distinct() %>% pull()

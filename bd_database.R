@@ -264,7 +264,7 @@ vg <- vg_raw %>% left_join(test, by = c('gene' = 'ENSEMBL')) %>%
 # ------------------------------------------------------------------------------
 # Dataset: Pubmed articles associated with G-bands and "deletion" "duplication" keywords
 # ------------------------------------------------------------------------------
-
+library(glue)
 pubmed_bands <- chromPlot::hg_cytoBandIdeo %>% 
                   as_tibble() %>%
                   select(Name, Chrom)
@@ -282,9 +282,9 @@ get_band <- function(band_input, chrom_input) {
   chrom_tmp <- paste('chromosome', chrom_input)
 
   result_del <- length(entrez_search(db="pubmed", 
-                                     term= paste(chrom_tmp,'AND','(', band_tmp,'OR', band2_tmp,')', 'AND deletion AND homo sapiens'), retmax = 1000 )$ids)
+                                     term= paste('(','(', chrom_tmp,'AND', band_tmp, ')','OR', band2_tmp,')', 'AND (deletion OR microdeletion) AND homo sapiens'), retmax = 1000 )$ids)
   result_dup <- length(entrez_search(db="pubmed", 
-                                     term= paste(chrom_tmp,'AND', '(', band_tmp, 'OR', band2_tmp, ')', 'AND duplication  AND homo sapiens'), retmax = 1000 )$ids)
+                                     term= paste('(','(', chrom_tmp,'AND', band_tmp, ')','OR', band2_tmp,')', 'AND duplication AND homo sapiens'), retmax = 1000 )$ids)
   
   result <- tibble(band = band_tmp, chrom = chrom_input, hits_del = result_del, hits_dup = result_dup)
   
@@ -852,11 +852,9 @@ hpa <- hpa %>%
 mgi <- read_tsv('http://www.informatics.jax.org/downloads/reports/HMD_HumanPhenotype.rpt', col_names = FALSE)
 
 mgi <- mgi %>%
-  as_tibble() %>%
-  select(-X8, -X3) %>%
+  select(-X3, -X4, -X8) %>%
   rename(gene = X1, entrez_id = X2, gene_mouse = X5, pheno = X7, mgi = X6) %>%
   mutate(mgi = str_remove(mgi, pattern = '  ')) %>%
-  select(-X4) %>%
   filter(pheno != '')
 
 # ------------------------------------------------------------------------------
@@ -2109,7 +2107,6 @@ for (i in 1:nrow(coord_chrom_hg19)) {
 count_genes <- function(chrom, start, end) {
 
   result_tmp <- hgcn_genes %>% 
-    rename(start = start_position, end = end_position) %>%
     bed_intersect(tibble('chrom' = chrom, 'start' = start, 'end' = end)) %>%
     nrow()
   
@@ -2120,4 +2117,6 @@ count_genes <- function(chrom, start, end) {
 gene_density_tbl <- result_tbl %>% 
   mutate(is_end = if_else((end - start + 1) < 10**6, 'yes', 'no')) %>%
   mutate(gene_density = pmap_dbl(list(chrom, start, end), count_genes))
+
+# gene_density_tbl %>% mutate(mid_point = (end + start) /2) %>% filter(chrom == 5) %>% filter(is_end == 'no') %>% ggplot(aes(mid_point, gene_density)) + geom_point() + geom_path()
 

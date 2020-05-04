@@ -1,6 +1,20 @@
 
 
 
+
+
+
+test <- read_csv('documentation/upheno_equivalence_model_jaccard.csv')
+
+test <- test %>%
+  mutate(c2 = str_remove(c2, '<http://purl.obolibrary.org/obo/'),
+         c1 = str_remove(c1, '<http://purl.obolibrary.org/obo/'))
+
+
+test %>% filter(str_detect(c1_label, 'mortality')) %>% select(c1_label) %>% mutate(jeje = nchar(c1_label)) %>%
+  arrange(jeje) %>% distinct()
+##
+
 library(tidytext)
 library(widyr)
 library(igraph)

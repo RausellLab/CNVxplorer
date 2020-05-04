@@ -2425,24 +2425,8 @@ function(input, output, session) {
     
   })
   
+
   
-  # output$model_phenotype <- renderDT({
-  #   
-  #   test_tmp <- data_selected() %>% select(gene) %>% pull()
-  #   mgi_test <- mgi %>% filter(gene %in% test_tmp)
-  #   mgi_test <- mgi_test %>% separate(pheno, into = LETTERS[1:230], sep = ' ') %>%
-  #     gather('delete', 'mpo_id', -gene, -entrez_id, -gene_mouse, -mgi) %>%
-  #     filter(mpo_id != '') %>%
-  #     select(-delete)
-  #   
-  #   vector_mpo <- mgi_test %>% select(mpo_id) %>% unique() %>%
-  #     mutate(description = map_chr(vector_mpo$mpo_id, function(x) termLabel(term(go, x))))
-  #   
-  #   mgi_test <- mgi_test %>% left_join(vector_mpo) %>% select(gene, mpo_id, description) %>% count(description)
-  #   test16 <<- mgi_test
-  #   
-  #   
-  # })
   
   
   
@@ -3315,35 +3299,35 @@ function(input, output, session) {
   
   
   
-  agg_reg <- reactive({
-    
-    tmp_enh <- prev_enhancer() %>%
-      mutate(source = 'Enhancer') %>%
-      select(source, gene)
-    
-    tmp_mirna <- mirna_raw() %>%
-      mutate(source = 'miRNA') %>%
-      rename(gene = gene_symbol) %>%
-      select(source, gene)
-    
-    tmp_tf <- tf_raw() %>%
-      mutate(source = 'TF') %>%
-      rename(gene = target) %>%
-      select(source, gene)
-    
-    tmp_lncrna <- lncrna_raw() %>%
-      mutate(source = 'lncRNA') %>%
-      rename(gene = target_symbol) %>%
-      select(source, gene)
-    
-    tmp_total <- bind_rows(tmp_enh, tmp_mirna, tmp_tf, tmp_lncrna)
-    
-
-    test9929 <<- tmp_total
-    
-    
-    
-  })
+  # agg_reg <- reactive({
+  #   
+  #   tmp_enh <- prev_enhancer() %>%
+  #     mutate(source = 'Enhancer') %>%
+  #     select(source, gene)
+  #   
+  #   tmp_mirna <- mirna_raw() %>%
+  #     mutate(source = 'miRNA') %>%
+  #     rename(gene = gene_symbol) %>%
+  #     select(source, gene)
+  #   
+  #   tmp_tf <- tf_raw() %>%
+  #     mutate(source = 'TF') %>%
+  #     rename(gene = target) %>%
+  #     select(source, gene)
+  #   
+  #   tmp_lncrna <- lncrna_raw() %>%
+  #     mutate(source = 'lncRNA') %>%
+  #     rename(gene = target_symbol) %>%
+  #     select(source, gene)
+  #   
+  #   tmp_total <- bind_rows(tmp_enh, tmp_mirna, tmp_tf, tmp_lncrna)
+  #   
+  # 
+  #   test9929 <<- tmp_total
+  #   
+  #   
+  #   
+  # })
   
   prev_enhancer <- reactive({
     
@@ -4527,25 +4511,26 @@ function(input, output, session) {
       select(source, everything())
     
     
+    test990 <<- mgi_tmp
+    
+    
     mgi_tmp
     
   })
-  
-  
-  
-   
-  
-  
+
   output$agg_model <- renderPlot({
     
     
+    test99991 <<- model_genes_phenotype()
+    # tmp_df <- test99991 %>% count(source, description)
+
     tmp_df <- model_genes_phenotype() %>% 
-      count(description) %>% arrange(desc(n))
+      count(source, description) %>% arrange(desc(n))
     
-    if (nrow(tmp_df) > 10) {
-      
-      tmp_df <- tmp_df %>% slice(1:10)
-    }
+    # if (nrow(tmp_df) > 10) {
+    #   
+    #   tmp_df <- tmp_df %>% slice(1:10)
+    # }
     
     tmp_df %>%
       ggplot(aes(reorder(description, n), n)) + 
@@ -4560,7 +4545,9 @@ function(input, output, session) {
             axis.text.x = element_text(size = 16),
             axis.text.y = element_text(size = 16)) +
       labs(fill = NULL) +
-      scale_y_continuous(breaks = scales::pretty_breaks())
+      scale_y_continuous(breaks = scales::pretty_breaks()) +
+      facet_grid(~source)
+      
 
   })
 

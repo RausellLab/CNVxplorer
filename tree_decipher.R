@@ -46,15 +46,15 @@ input_check_cnv <-  read_tsv('/data-cbl/frequena_data/from_workstation/daa_decip
   # filter(inheritance == 'De novo constitutive') %>% 
   filter(variant_class %in% c('Deletion', 'Duplication'))
   # mutate(id_tmp = row_number())
-
-
-input_check_overlap <- input_check_cnv %>% select(id,pathogenicity,variant_class, 
-                                                  inheritance,chrom,start, end) %>%
-  bind_rows(gnomad_sv_raw %>% mutate(pathogenicity = 'benign_gnomad',
-                                     inheritance = NA) %>%
-              rename(variant_class = svtype) %>%
-              select(id,pathogenicity,
-                     chrom, start, end))
+# 
+# 
+# input_check_overlap <- input_check_cnv %>% select(id,pathogenicity,variant_class, 
+#                                                   inheritance,chrom,start, end) %>%
+#   bind_rows(gnomad_sv_raw %>% mutate(pathogenicity = 'benign_gnomad',
+#                                      inheritance = NA) %>%
+#               rename(variant_class = svtype) %>%
+#               select(id,pathogenicity,
+#                      chrom, start, end))
 
 
 check_cnv <- function(input_id, input_clinical, input_variant, input_inheritance,
@@ -104,7 +104,6 @@ check_cnv <- function(input_id, input_clinical, input_variant, input_inheritance
   # 
 
   vector_genes <- hgcn_genes %>%
-    rename(start = start_position, end = end_position) %>%
     bed_intersect(tmp_cnv ) %>%
     mutate(length_gene = end.x - start.x + 1) %>% 
     # mutate(perc_overlap = .overlap / length_gene)
@@ -112,7 +111,6 @@ check_cnv <- function(input_id, input_clinical, input_variant, input_inheritance
     pull(gene.x)
   
   vector_entrez <- hgcn_genes %>%
-    rename(start = start_position, end = end_position) %>%
     bed_intersect(tmp_cnv) %>%
     mutate(length_gene = end.x - start.x + 1) %>%
     # mutate(perc_overlap = .overlap / length_gene) %>%
@@ -174,7 +172,6 @@ result_n_disease_genes <- hgcn_genes %>%
   filter(gene %in% vector_genes) %>%
   filter(disease == 'Yes') %>%
   filter(chrom == chrom_tmp) %>%
-  rename(start = start_position, end = end_position) %>%
   nrow()
 
 
@@ -557,6 +554,9 @@ result_mirnas_gene_disease <-  bed_intersect(mirtarbase, tmp_cnv) %>%
 
 result_tmp <- tibble(
   'id' = id_tmp,
+  'chrom' = chrom_tmp,
+  'start' = start_tmp,
+  'end' = end_tmp,
   'clinical' = clinical_tmp,
   'type_variant' = type_variant_tmp,
   'type_inheritance' =   type_inheritance_tmp,
@@ -608,10 +608,7 @@ return(result_tmp)
 
 }
 
-plan("multiprocess", workers = 50)
-
-
-# test_before <- input_check_cnv %>% slice(sample(1:nrow(.), 100)) 
+plan("multiprocess", workers = 40)
 
 
 tic()
@@ -629,8 +626,23 @@ output_df <- bind_rows(lapply(output_list, as.data.frame.list)) %>% as_tibble()
 
 toc()
 
+
+plan("multiprocess", workers = 2)
+
+tic()
+
+
+xd <- output_df %>%
+  select(id, chrom, start, end) %>%
+  mutate(n_hits = future_pmap_chr(list(id, chrom, start, end),  get_enrich))
+
+toc()
+
+
 output_df %>% write_tsv('output_df.tsv')
 
+
+library(prettydoc)
 rmarkdown::render("output_annotation_cnvs.Rmd", 'html_document')
 
 # 
@@ -662,115 +674,115 @@ rmarkdown::render("output_annotation_cnvs.Rmd", 'html_document')
 # 
 
 
-
-output_df %>%
-  # mutate(n_systems = if_else(n_systems > 1, 'Yes', 'No')) %>%
-  mutate(max_pli = if_else(max_pli >= 90, 'Yes', 'No')) %>%
-  mutate(max_hi = if_else(max_hi >= 90, 'Yes', 'No')) %>%
-  mutate_if(is.integer, ~ if_else(. > 0, 'Yes', 'No')) %>%
-  mutate_if(is.double, ~ if_else(. > 0, 'Yes', 'No')) %>%
-  # mutate(clinical = if_else(clinical == 'Likely benign', 'Benign', clinical)) %>%
-  # mutate(clinical = if_else(clinical == 'Likely pathogenic', 'Pathogenic', clinical)) %>%
-
-  count(clinical,
-        n_cnv_syndromes,
-        disease_genes,
-        patho_cnv,
-        n_ohno,
-        n_tf,
-        n_target_drugs,
-        n_prot_complex,
-        n_tfbs,
-        n_ctcf,
-        pubmed_del,
-        pubmed_dup,
-        n_open,
-        max_pli,
-        max_ccr,
-        max_hi,
-        disease_variants,
-        nonpatho_cnv,
-        essent_cl,
-        essent_dl,
-        enh_gene_disease,
-        mirna_gene_disease,
-        tf_gene_disease,
-        n_genes_hpo,
-        n_blacklist) %>%
-  mutate(clinical = factor(clinical,levels = c("Pathogenic",'Likely pathogenic', "Unknown", "Uncertain",
-                                               'Likely benign', "Benign"))) %>%
-  group_by(clinical) %>%
-  mutate(perc = n / sum(n)*100) %>%
-  select(-n) %>%
-  pivot_longer(-c(clinical,perc),  names_to = 'rule', values_to = 'yes_no') %>%
-  ggplot(aes(clinical, perc)) +
-  geom_col(aes(fill = yes_no)) +
-  theme_fancy() +
-  facet_wrap(~ rule) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  xlab('Clinical significance') +
-  ylab('Percentage (%)')
+# 
+# output_df %>%
+#   # mutate(n_systems = if_else(n_systems > 1, 'Yes', 'No')) %>%
+#   mutate(max_pli = if_else(max_pli >= 90, 'Yes', 'No')) %>%
+#   mutate(max_hi = if_else(max_hi >= 90, 'Yes', 'No')) %>%
+#   mutate_if(is.integer, ~ if_else(. > 0, 'Yes', 'No')) %>%
+#   mutate_if(is.double, ~ if_else(. > 0, 'Yes', 'No')) %>%
+#   # mutate(clinical = if_else(clinical == 'Likely benign', 'Benign', clinical)) %>%
+#   # mutate(clinical = if_else(clinical == 'Likely pathogenic', 'Pathogenic', clinical)) %>%
+# 
+#   count(clinical,
+#         n_cnv_syndromes,
+#         disease_genes,
+#         patho_cnv,
+#         n_ohno,
+#         n_tf,
+#         n_target_drugs,
+#         n_prot_complex,
+#         n_tfbs,
+#         n_ctcf,
+#         pubmed_del,
+#         pubmed_dup,
+#         n_open,
+#         max_pli,
+#         max_ccr,
+#         max_hi,
+#         disease_variants,
+#         nonpatho_cnv,
+#         essent_cl,
+#         essent_dl,
+#         enh_gene_disease,
+#         mirna_gene_disease,
+#         tf_gene_disease,
+#         n_genes_hpo,
+#         n_blacklist) %>%
+#   mutate(clinical = factor(clinical,levels = c("Pathogenic",'Likely pathogenic', "Unknown", "Uncertain",
+#                                                'Likely benign', "Benign"))) %>%
+#   group_by(clinical) %>%
+#   mutate(perc = n / sum(n)*100) %>%
+#   select(-n) %>%
+#   pivot_longer(-c(clinical,perc),  names_to = 'rule', values_to = 'yes_no') %>%
+#   ggplot(aes(clinical, perc)) +
+#   geom_col(aes(fill = yes_no)) +
+#   theme_fancy() +
+#   facet_wrap(~ rule) +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+#   xlab('Clinical significance') +
+#   ylab('Percentage (%)')
 # 
 # Plotting distances (telomeric and centromeric regions)
-output_df %>% ggplot(aes(dist_cent)) + 
-  geom_histogram(binwidth = 5, fill = 'steelblue', color = 'black') + facet_grid(~ clinical) +
-  theme_bw()
-
-output_df %>% ggplot(aes(dist_tel)) + geom_histogram(binwidth = 5, fill = 'steelblue', color = 'black') + 
-  facet_grid(~ clinical) +
-  theme_bw()
-
-output_df %>% ggplot(aes(dist_cent)) + 
-  geom_density(aes(fill = clinical), color = 'black', show.legend = FALSE, alpha = 0.7) + facet_grid(~ clinical) +
-  theme_bw()
-
-output_df %>% ggplot(aes(dist_tel)) + 
-  geom_density(aes(fill = clinical), color = 'black', show.legend = FALSE) + facet_grid(~ clinical) +
-  theme_bw()
-
-# Gene density ~ clinical
-output_df %>% ggplot(aes(gene_density)) + 
-  geom_density(aes(fill = clinical), color = 'black', alpha = 0.6) + facet_grid(~ clinical) +
-  theme_bw()
-
-output_df %>% ggplot(aes(clinical, gene_density)) + 
-  geom_boxplot(aes(fill = clinical), color = 'black') +
-  theme_bw()
-
-# Plotting distance
-output_df %>% 
-  ggplot(aes(length_cnv, clinical)) + 
-  stat_density_ridges(quantile_lines = TRUE, quantiles = 2, aes(fill = clinical), 
-                      alpha = 0.6, show.legend = FALSE, size = 1.25) +
-  theme_ridges() +
-  scale_x_log10() +
-  xlab('log10(Length CNV)')
+# output_df %>% ggplot(aes(dist_cent)) + 
+#   geom_histogram(binwidth = 5, fill = 'steelblue', color = 'black') + facet_grid(~ clinical) +
+#   theme_bw()
+# 
+# output_df %>% ggplot(aes(dist_tel)) + geom_histogram(binwidth = 5, fill = 'steelblue', color = 'black') + 
+#   facet_grid(~ clinical) +
+#   theme_bw()
+# 
+# output_df %>% ggplot(aes(dist_cent)) + 
+#   geom_density(aes(fill = clinical), color = 'black', show.legend = FALSE, alpha = 0.7) + facet_grid(~ clinical) +
+#   theme_bw()
+# 
+# output_df %>% ggplot(aes(dist_tel)) + 
+#   geom_density(aes(fill = clinical), color = 'black', show.legend = FALSE) + facet_grid(~ clinical) +
+#   theme_bw()
+# 
+# # Gene density ~ clinical
+# output_df %>% ggplot(aes(gene_density)) + 
+#   geom_density(aes(fill = clinical), color = 'black', alpha = 0.6) + facet_grid(~ clinical) +
+#   theme_bw()
+# 
+# output_df %>% ggplot(aes(clinical, gene_density)) + 
+#   geom_boxplot(aes(fill = clinical), color = 'black') +
+#   theme_bw()
+# 
+# # Plotting distance
+# output_df %>% 
+#   ggplot(aes(length_cnv, clinical)) + 
+#   stat_density_ridges(quantile_lines = TRUE, quantiles = 2, aes(fill = clinical), 
+#                       alpha = 0.6, show.legend = FALSE, size = 1.25) +
+#   theme_ridges() +
+#   scale_x_log10() +
+#   xlab('log10(Length CNV)')
 
 
 
 
 
 # Plotting correlation with length_cnv
-
-output_df %>% select(-clinical, -type_variant, -type_inheritance, -id) %>% correlate(method = 'pearson') %>% select(rowname, length_cnv) %>% na.omit()  %>% ggplot(aes(reorder(rowname, length_cnv), length_cnv)) + 
-  geom_col(fill = 'steelblue', color = 'black') + coord_flip() + theme_bw()
-
-# PCA
-pca_output <- output_df %>% select(-clinical, -type_variant, -type_inheritance, -id, -dist_tel, -gene_density) %>% 
-  prcomp(scale = TRUE, center = TRUE)
-  
-a$x %>% 
-  as_tibble() %>% 
-  select(PC1, PC2) %>%  
-  bind_cols(output_df %>% select(clinical)) %>% 
-  ggplot(aes(PC1, PC2)) + 
-  geom_point(aes(fill = factor(clinical)), shape = 21, color = 'black', show.legend = FALSE) +
-  facet_grid(~ clinical) +
-  theme_bw()
-
-a %>%  fviz_contrib(choice = "var", axes = 1, top = 15)
-a %>%  fviz_contrib(choice = "var", axes = 2, top = 15)
-a %>%  fviz_eig(addlabels = TRUE, ylim = c(0, 50))
+# 
+# output_df %>% select(-clinical, -type_variant, -type_inheritance, -id) %>% correlate(method = 'pearson') %>% select(rowname, length_cnv) %>% na.omit()  %>% ggplot(aes(reorder(rowname, length_cnv), length_cnv)) + 
+#   geom_col(fill = 'steelblue', color = 'black') + coord_flip() + theme_bw()
+# 
+# # PCA
+# pca_output <- output_df %>% select(-clinical, -type_variant, -type_inheritance, -id, -dist_tel, -gene_density) %>% 
+#   prcomp(scale = TRUE, center = TRUE)
+#   
+# a$x %>% 
+#   as_tibble() %>% 
+#   select(PC1, PC2) %>%  
+#   bind_cols(output_df %>% select(clinical)) %>% 
+#   ggplot(aes(PC1, PC2)) + 
+#   geom_point(aes(fill = factor(clinical)), shape = 21, color = 'black', show.legend = FALSE) +
+#   facet_grid(~ clinical) +
+#   theme_bw()
+# 
+# a %>%  fviz_contrib(choice = "var", axes = 1, top = 15)
+# a %>%  fviz_contrib(choice = "var", axes = 2, top = 15)
+# a %>%  fviz_eig(addlabels = TRUE, ylim = c(0, 50))
 
 
 
