@@ -146,12 +146,11 @@ function(input, output, session) {
   
   observeEvent(input$input_geno_karyo, {
     
-    
     shinyjs::reset('int_start')
     shinyjs::reset('int_end')
     shinyjs::reset('input_chrom')
     shinyjs::reset('file_cnv')
-    shinyjs::reset('start_analysis')
+    # shinyjs::reset('start_analysis')
     
     
     
@@ -415,7 +414,7 @@ function(input, output, session) {
   
   # n_hpo_unique <- reactive({
   #   
-  #   req(input$start_analysis > 0)
+    # req(input$start_analysis > 0)
   #   
   # 
   #   # if (is.null(input$dgenes_rows_all)) {
@@ -435,7 +434,7 @@ function(input, output, session) {
   # 
   check_hp_genes <- reactive({
     
-    req(input$start_analysis > 0)
+    # req(input$start_analysis > 0)
     
     # go <- rols::Ontology("hp")
   
@@ -523,7 +522,7 @@ function(input, output, session) {
   
   output$check_genes_hp <- renderUI({
     
-    req(input$start_analysis > 0)
+    # req(input$start_analysis > 0)
     
     df_genes <- data_selected()
     
@@ -541,7 +540,7 @@ function(input, output, session) {
   
   output$df_check_hp_genes <- renderDataTable({
     
-    req(input$start_analysis > 0)
+    # req(input$start_analysis > 0)
     
 
     validate(
@@ -555,7 +554,7 @@ function(input, output, session) {
   
   output$n_hp_chosen <- renderUI({
     
-    req(input$start_analysis > 0)
+    # req(input$start_analysis > 0)
     
     
     tablerInfoCard(
@@ -578,7 +577,7 @@ function(input, output, session) {
   
   output$n_cnv_patho <- renderUI({
     
-    req(input$start_analysis > 0)
+    # req(input$start_analysis > 0)
     
     data_tmp <- check_cnv_df() %>% 
       filter(source == 'decipher' & pathogenicity %in% c('Pathogenic', 'Likely pathogenic')) %>% 
@@ -604,7 +603,7 @@ function(input, output, session) {
   
   output$n_cnv_nopatho <- renderUI({
     
-    req(input$start_analysis > 0)
+    # req(input$start_analysis > 0)
     
     data_tmp <- check_cnv_df() %>% filter(source != 'decipher') %>% nrow()
     
@@ -668,7 +667,7 @@ function(input, output, session) {
   
   # query_pubmed_dup <- reactive({
   #   
-  #   req(input$start_analysis > 0)
+    # req(input$start_analysis > 0)
   #   
   #   start_coordinates <- coord_user()[1]
   #   end_coordinates <- coord_user()[2]
@@ -807,7 +806,6 @@ function(input, output, session) {
     
     tmp_df <- tmp_df %>% separate_rows(omim_assoc, sep = ' ')
     
-    test12311 <<- tmp_df 
 
     validate(
       need(nrow(tmp_df  %>% filter(omim_assoc != '')) != 0, 'No articles associated with OMIM entries.')
@@ -1112,6 +1110,8 @@ function(input, output, session) {
   
   running_pubmed_del <- reactive({
     
+    req(coord_user())
+    
     tryCatch(
         query_tmp <- entrez_summary(db="pubmed", id= query_pubmed_del()[['ids']]),
       error= function(e) stop("Server error, please try later.")
@@ -1169,6 +1169,7 @@ function(input, output, session) {
     req(running_pubmed_del())
     req(running_pubmed_dup())
     req(input$select_del_dup)
+    req(input$only_omim)
     
     
     if (input$select_del_dup == 'deletions') {
@@ -1180,10 +1181,6 @@ function(input, output, session) {
       tmp_df <- running_pubmed_dup()
       
     }
-    
-    test0100 <<- running_pubmed_del()
-    test0010 <<- running_pubmed_dup()
-    
     
     
     if(input$only_omim == 'Yes') {
@@ -1372,19 +1369,22 @@ function(input, output, session) {
     if (!is.null(input$enhancers_on_off)) {
       if (input$enhancers_on_off) {
         
-        # Genes  mapped in CNV
-        genes_cnv <- data_selected_prev()
-        genes_cnv <- genes_cnv %>% select(gene) %>% pull()
-        # Genes NOT mapped in CNV
-        if (is.null(input$df_enhancer_rows_all)) {
-          enhancers_df <- prev_enhancer()
-        } else {
-          # enhancers_df <- prev_enhancer()[input$df_enhancer_rows_all,]
-          enhancers_df <- prev_enhancer()
-          #
-        }
-        genes_no_cnv <- enhancers_df %>% select(gene) %>% distinct() %>% pull()
-        genes_no_cnv <- genes_no_cnv[! genes_no_cnv %in% genes_cnv]
+        # # Genes  mapped in CNV
+        # genes_cnv <- data_selected_prev()
+        # genes_cnv <- genes_cnv %>% select(gene) %>% pull()
+        # # Genes NOT mapped in CNV
+        # if (is.null(input$df_enhancer_rows_all)) {
+        #   enhancers_df <- prev_enhancer()
+        # } else {
+        #   # enhancers_df <- prev_enhancer()[input$df_enhancer_rows_all,]
+        #   enhancers_df <- prev_enhancer()
+        #   #
+        # }
+        # genes_no_cnv <- enhancers_df %>% select(gene) %>% distinct() %>% pull()
+        # genes_no_cnv <- genes_no_cnv[! genes_no_cnv %in% genes_cnv]
+        
+        genes_no_cnv <- prev_enhancer() %>% filter(is_mapping == 'No') %>% pull(gene)
+        
         # ADAPT IT WHEN ADDING OMIM OR OTHERS!!!
         table_output <- hgcn_genes %>% filter(gene %in% genes_no_cnv) %>%
           select(-vg, -ensembl_gene_id) %>%
@@ -1440,21 +1440,23 @@ function(input, output, session) {
     if (!is.null(input$mirnas_on_off)) {
       if (input$mirnas_on_off) {
         
-        # Genes  mapped in CNV
-        genes_cnv <- data_selected_prev()
-        genes_cnv <- genes_cnv %>% select(gene) %>% pull()
-        # Genes NOT mapped in CNV
+        # # Genes  mapped in CNV
+        # genes_cnv <- data_selected_prev()
+        # genes_cnv <- genes_cnv %>% select(gene) %>% pull()
+        # # Genes NOT mapped in CNV
+        # 
+        # if (is.null(input$df_mirna_rows_all)) {
+        #   mirnas_df <- mirna_raw()
+        # } else {
+        #   mirnas_df <- mirna_raw()
+        #   # mirnas_df <- mirna_raw()[input$df_mirna_rows_all,]
+        # }
+        # 
+        # 
+        # genes_no_cnv <- mirnas_df %>% select(gene_symbol) %>% distinct() %>% pull()
+        # genes_no_cnv <- genes_no_cnv[! genes_no_cnv %in% genes_cnv]
         
-        if (is.null(input$df_mirna_rows_all)) {
-          mirnas_df <- mirna_raw()
-        } else {
-          mirnas_df <- mirna_raw()
-          # mirnas_df <- mirna_raw()[input$df_mirna_rows_all,]
-        }
-        
-        
-        genes_no_cnv <- mirnas_df %>% select(gene_symbol) %>% distinct() %>% pull()
-        genes_no_cnv <- genes_no_cnv[! genes_no_cnv %in% genes_cnv]
+        genes_no_cnv <- mirna_raw() %>% filter(is_mapping == 'No') %>% pull(gene_symbol)
         
         table_output <- hgcn_genes %>% filter(gene %in% genes_no_cnv) %>%
           select(-vg, -ensembl_gene_id) %>%
@@ -1479,21 +1481,24 @@ function(input, output, session) {
     if (!is.null(input$lncrnas_on_off)) {
       if (input$lncrnas_on_off) {
         
-        # Genes  mapped in CNV
-        genes_cnv <- data_selected_prev()
-        genes_cnv <- genes_cnv %>% select(gene) %>% pull()
-        # Genes NOT mapped in CNV
+        # # Genes  mapped in CNV
+        # genes_cnv <- data_selected_prev()
+        # genes_cnv <- genes_cnv %>% select(gene) %>% pull()
+        # # Genes NOT mapped in CNV
+        # 
+        # if (is.null(input$lncrna_df_rows_all)) {
+        #   lncrnas_df <- lncrna_raw()
+        # } else {
+        #   lncrnas_df <- lncrna_raw()
+        #   # mirnas_df <- mirna_raw()[input$df_mirna_rows_all,]
+        # }
+        # 
+        # 
+        # genes_no_cnv <- lncrnas_df %>% select(target_symbol) %>% distinct() %>% pull()
+        # genes_no_cnv <- genes_no_cnv[! genes_no_cnv %in% genes_cnv]
         
-        if (is.null(input$lncrna_df_rows_all)) {
-          lncrnas_df <- lncrna_raw()
-        } else {
-          lncrnas_df <- lncrna_raw()
-          # mirnas_df <- mirna_raw()[input$df_mirna_rows_all,]
-        }
+        genes_no_cnv <- lncrna_raw() %>% filter(is_mapping == 'No') %>% pull(target_symbol)
         
-        
-        genes_no_cnv <- lncrnas_df %>% select(target_symbol) %>% distinct() %>% pull()
-        genes_no_cnv <- genes_no_cnv[! genes_no_cnv %in% genes_cnv]
         
         table_output <- hgcn_genes %>% filter(gene %in% genes_no_cnv) %>%
           select(-vg, -ensembl_gene_id) %>%
@@ -1517,22 +1522,28 @@ function(input, output, session) {
     if (!is.null(input$tfs_on_off)) {
       if (input$tfs_on_off) {
         
-        # Genes  mapped in CNV
-        genes_cnv <- data_selected_prev()
-        genes_cnv <- genes_cnv %>% select(gene) %>% pull()
-        # Genes NOT mapped in CNV
+        # # Genes  mapped in CNV
+        # genes_cnv <- data_selected_prev()
+        # genes_cnv <- genes_cnv %>% select(gene) %>% pull()
+        # # Genes NOT mapped in CNV
+        # 
+        # if (is.null(input$tf_df_rows_all)) {
+        #   tfs_df <- tf_raw()
+        # } else {
+        #   # tfs_df <- tf_raw()[input$tf_df_rows_all,]
+        #   tfs_df <- tf_raw()
+        #   
+        # }
+        # 
+        # 
+        # 
+        # 
+        # genes_no_cnv <- tfs_df %>% select(target) %>% distinct() %>% pull()
+        # genes_no_cnv <- genes_no_cnv[! genes_no_cnv %in% genes_cnv]
         
-        if (is.null(input$tf_df_rows_all)) {
-          tfs_df <- tf_raw()
-        } else {
-          # tfs_df <- tf_raw()[input$tf_df_rows_all,]
-          tfs_df <- tf_raw()
-          
-        }
         
+        genes_no_cnv <- tf_raw() %>% filter(is_mapping == 'No') %>% pull(target)
         
-        genes_no_cnv <- tfs_df %>% select(target) %>% distinct() %>% pull()
-        genes_no_cnv <- genes_no_cnv[! genes_no_cnv %in% genes_cnv]
         
         table_output <- hgcn_genes %>% filter(gene %in% genes_no_cnv) %>%
           select(-vg, -ensembl_gene_id) %>%
@@ -1668,7 +1679,9 @@ function(input, output, session) {
     req(running_cnv_syndromes())
     
     validate(
-      need(nrow(running_cnv_syndromes()) != 0, "No CNV syndromes found.")
+      need(nrow(running_cnv_syndromes()) != 0, "No CNV syndromes found."),
+      need(!is.null(running_cnv_syndromes()), "No CNV syndromes found.")
+      
     )
     
     
@@ -1996,7 +2009,8 @@ function(input, output, session) {
     
     validate(
       need(input$dgenes_reg_rows_selected != '', 'Please, select a disease gene on the left panel.'),
-      need(!is.null(input$dgenes_reg_rows_selected), '0 disease genes found.')
+      need(!is.null(input$dgenes_reg_rows_selected), '0 disease genes found.'),
+      need(!is.null(input$select_source_reg), '0 disease genes found.')
       
     )
     
@@ -2166,6 +2180,8 @@ function(input, output, session) {
   
   
   
+  
+  
   output$genes_from_reg_regions <- renderDataTable({
     
     # if (!is.null(input$enhancers_on_off)) {
@@ -2173,7 +2189,8 @@ function(input, output, session) {
     
     
     validate(
-      need(!is.null(input$select_reg_region), "0 non-disease target genes found.")
+      need(!is.null(input$select_reg_region), "0 non-disease target genes found."),
+      need(length(input$select_reg_region) != 0, "0 non-disease target genes found.")
     )
     
     server <- TRUE
@@ -2243,20 +2260,7 @@ function(input, output, session) {
               ))
   })
   
-  output$plotp_overlap <- renderPlot({
-    
-    
-    data_selected() %>%
-      ggplot(aes(p_overlap)) +
-      geom_histogram(binwidth = 10, fill = '#FDE725FF', color = 'black', alpha = 0.6) +
-      theme_fancy() +
-      xlab('Percentage of overlapping (%)') +
-      ylab('Number of genes')
-    
-    
-    
-    
-  })
+
   
   output$plot_size <- renderPlot({
     
@@ -2414,13 +2418,7 @@ function(input, output, session) {
       filtered_tissue <- input$input_tissue
       tmp_df <- tmp_df %>% filter(tissue == !!filtered_tissue)
     }
-    
-    # 
-    # observe({
-    #   if (input$choice == 'Hello') {
-    #     getStatus <- 'Hi there'
-    #   }
-    
+
     datatable(tmp_df, filter = 'top')
     
     
@@ -2453,16 +2451,14 @@ function(input, output, session) {
     df_tmp <- model_genes_phenotype() %>% 
       select(-entrez_id, -gene_mouse) %>%
       mutate(mgi = paste0("<a href='", paste0('http://www.informatics.jax.org/marker/', mgi),"' target='_blank'>", mgi,"</a>")) %>%
-      mutate(mpo_id = paste0("<a href='", paste0('http://www.informatics.jax.org/vocab/mp_ontology/', mpo_id),"' target='_blank'>", mpo_id,"</a>"))
+      mutate(term = paste0("<a href='", paste0('http://www.informatics.jax.org/vocab/mp_ontology/', term),"' target='_blank'>", term,"</a>"))
     
     
     datatable(df_tmp, escape = FALSE, rownames = FALSE, 
               colnames = c('Source','Human ortholog gene', 'Mouse gene', 'Mouse phenotype id', 'Phenotype description'),
               options = list(
                 columnDefs = list(list(className = 'dt-center', targets = 0:4) )))
-    
-    
-    
+
   })
   
   
@@ -2785,58 +2781,58 @@ function(input, output, session) {
     
   })
   
-  output$score_rf <- renderUI({
-    
-    start_coordinates <- coord_user()[1]
-    end_coordinates <- coord_user()[2]
-    
-    start_coordinates <- as.numeric(start_coordinates)
-    end_coordinates <- as.numeric(end_coordinates)
-    
-    length_input_cnv <- end_coordinates - start_coordinates + 1
-    tmp_df <- data_selected()
-    
-    input_model <- tibble(n_genes = NA, pli = NA, rvis = NA, omim = NA, 
-                          length_cnv =  length_input_cnv)
-    
-    if (nrow(tmp_df) == 0) {
-      
-      input_model$n_genes[1]  <- 0
-      input_model$pli[1]  <- 0
-      input_model$rvis[1]  <- 0
-      input_model$omim[1] <- 0
-      
-    } else {
-      
-      # Variable: number of genes disrupted
-      input_model$n_genes[1]  <- nrow(tmp_df)
-      # Variable: sum pLI score
-      input_model$pli[1]  <- tmp_df %>% pull(pLI) %>% sum(na.rm = TRUE)
-      # Variable: sum rvis score
-      input_model$rvis[1]  <- tmp_df %>% pull(rvis) %>% sum(na.rm = TRUE)
-      # Variable: nº genes included in OMIM
-      tmp_omim<- tmp_df %>% count(omim) %>% filter(omim == 'Yes') %>% pull(n)
-      if (length(tmp_omim) == 0) {
-        input_model$omim[1] <- 0
-      } else {
-        input_model$omim[1] <- tmp_omim
-        
-      }
-    }
-    
-    test9866 <<- input_model
-    
-    score_predicted <- predict(model1, input_model, type = "prob") %>% 
-      as_tibble() %>% pull(decipher) %>% as.numeric() * 100
-    
-    tablerStatCard(
-      value = score_predicted,
-      title = 'Score pathogenicty (0-100) (JUST AN EXAMPLE)',
-      # trend = 19192,
-      width = 12
-    )
-    
-  })
+  # output$score_rf <- renderUI({
+  #   
+  #   start_coordinates <- coord_user()[1]
+  #   end_coordinates <- coord_user()[2]
+  #   
+  #   start_coordinates <- as.numeric(start_coordinates)
+  #   end_coordinates <- as.numeric(end_coordinates)
+  #   
+  #   length_input_cnv <- end_coordinates - start_coordinates + 1
+  #   tmp_df <- data_selected()
+  #   
+  #   input_model <- tibble(n_genes = NA, pli = NA, rvis = NA, omim = NA, 
+  #                         length_cnv =  length_input_cnv)
+  #   
+  #   if (nrow(tmp_df) == 0) {
+  #     
+  #     input_model$n_genes[1]  <- 0
+  #     input_model$pli[1]  <- 0
+  #     input_model$rvis[1]  <- 0
+  #     input_model$omim[1] <- 0
+  #     
+  #   } else {
+  #     
+  #     # Variable: number of genes disrupted
+  #     input_model$n_genes[1]  <- nrow(tmp_df)
+  #     # Variable: sum pLI score
+  #     input_model$pli[1]  <- tmp_df %>% pull(pLI) %>% sum(na.rm = TRUE)
+  #     # Variable: sum rvis score
+  #     input_model$rvis[1]  <- tmp_df %>% pull(rvis) %>% sum(na.rm = TRUE)
+  #     # Variable: nº genes included in OMIM
+  #     tmp_omim<- tmp_df %>% count(omim) %>% filter(omim == 'Yes') %>% pull(n)
+  #     if (length(tmp_omim) == 0) {
+  #       input_model$omim[1] <- 0
+  #     } else {
+  #       input_model$omim[1] <- tmp_omim
+  #       
+  #     }
+  #   }
+  #   
+  #   test9866 <<- input_model
+  #   
+  #   score_predicted <- predict(model1, input_model, type = "prob") %>% 
+  #     as_tibble() %>% pull(decipher) %>% as.numeric() * 100
+  #   
+  #   tablerStatCard(
+  #     value = score_predicted,
+  #     title = 'Score pathogenicty (0-100) (JUST AN EXAMPLE)',
+  #     # trend = 19192,
+  #     width = 12
+  #   )
+  #   
+  # })
   
   # output$n_snv <- renderUI({
   #   
@@ -2976,41 +2972,14 @@ function(input, output, session) {
   
   output$ref_user_genes_cnv <- renderUI({
     
-    # shinyjs::reset('dgenes_rows_all')
-    
     
     rows_selected <- input$dgenes_rows_all
-    
-    
-    # observeEvent(input$start_analysis, {
-    #   
-    #   # shinyjs::hide("dgenes")
-    #   rows_selected <- input$dgenes_rows_all
-    #   
-    # })
-    
-    
-    
-    
-    
-    # observeEvent(input$start_analysis, {
-    #   proxy <- dataTableProxy('dgenes', session = session)
-    #   selectRows(proxy, selected = NULL)
-    #   # rows_selected2 <- input$dgenes_rows_all
-    #   rows_selected2 <- NULL
-    #   test311113 <<- rows_selected2
-    #   rows_selected <- rows_selected2
-    # })
-    
-    
-    
+
     
     tmp_df <- data_selected() %>% 
       select(-start, -end, -chrom) %>%
       filter(source == 'CNV')
     
-    
-    test777777 <<- rows_selected
     
     if (length(rows_selected) == nrow(tmp_df) | is.null(rows_selected)) {
       tablerInfoCard(
@@ -3023,9 +2992,7 @@ function(input, output, session) {
     } else {
       tablerInfoCard(
         width = 12,
-        # value = paste0(length(rows_selected), '/', nrow(tmp_df) , " genes"),
         value = paste0(nrow(tmp_df), " genes"),
-        
         status = "success",
         icon = "database",
         description = 'Genes found in CNV'
@@ -3199,12 +3166,19 @@ function(input, output, session) {
   
   mirna_raw <- reactive({
     
-    req(input$start_analysis > 0)
+    # req(input$start_analysis > 0)
 
+    genes_cnv <- data_selected_prev() %>% pull(gene)
+    
+    
     data_tmp <- mirtarbase %>% 
       bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
+      filter(gene_symbol %in% hgcn_genes$gene) %>%
       select(-startdelete, -enddelete, -.overlap) %>%
-      select(-contains('.source'))
+      select(-contains('.source')) %>%
+      mutate(is_mapping = if_else(gene_symbol %in% genes_cnv, 'Yes', 'No'))
+      
+      
     
     test999999999913 <<- data_tmp
     
@@ -3231,7 +3205,7 @@ function(input, output, session) {
 
     datatable(tmp_df, rownames = FALSE, escape = FALSE,
               colnames = c('ID', 'Name', 'Chrom', 'Start', 'End',
-                           'Target-gene', 'Validation experiment', 'Reference'))
+                           'Target-gene', 'Validation experiment', 'Reference', 'Mapping query?'))
     
     
     
@@ -3239,15 +3213,20 @@ function(input, output, session) {
   
   tf_raw <- reactive({
     
-    req(input$start_analysis > 0)
+    # req(input$start_analysis > 0)
+    
+    genes_cnv <- data_selected_prev() %>% pull(gene)
 
 
     data_tmp <- trrust %>% 
       bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
+      filter(target %in% hgcn_genes$gene) %>%
       select(-startdelete, -enddelete, -.overlap) %>%
       select(-target_chrom, -target_start, -target_end) %>%
       mutate(reference = paste0("<a href='", paste0('https://pubmed.ncbi.nlm.nih.gov/', reference),"' target='_blank'>", reference,"</a>")) %>%
-      select(-contains('.source'))
+      select(-contains('.source')) %>%
+      mutate(is_mapping = if_else(target %in% genes_cnv, 'Yes', 'No'))
+    
 
   })
   
@@ -3259,18 +3238,24 @@ function(input, output, session) {
     )
     
     datatable(tf_raw(), rownames = FALSE, escape = FALSE,  
-              colnames = c('TF', 'Chrom', 'Start', 'End', 'Target-gene', 'Mechanism', 'Reference'))
+              colnames = c('TF', 'Chrom', 'Start', 'End', 'Target-gene', 'Mechanism', 'Reference', 'Mapping query?'))
 
   })
   
   
   lncrna_raw <- reactive({
     
-    req(input$start_analysis > 0)
+    # req(input$start_analysis > 0)
+    
+    genes_cnv <- data_selected_prev() %>% pull(gene)
+    
 
     data_tmp <- lncrna_target %>%
       bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
-      select(-startdelete, -enddelete, -.overlap)
+      filter(target_symbol %in% hgcn_genes$gene) %>%
+      select(-startdelete, -enddelete, -.overlap) %>%
+      mutate(is_mapping = if_else(target_symbol %in% genes_cnv, 'Yes', 'No'))
+    
     
     
     
@@ -3286,7 +3271,7 @@ function(input, output, session) {
 
     datatable(lncrna_raw(), rownames = FALSE,
               colnames = c('Symbol', 'Chromosome', 'Start', 'End', 'Ensembl ID', 'Target symbol', 
-                           'Tissue origin', 'Disease state', 'PMID'),
+                           'Tissue origin', 'Disease state', 'PMID', 'Mapping query'),
               options = list(
                 pageLength = 5, autoWidth = TRUE, list(searchHighlight = TRUE)))
     
@@ -3328,47 +3313,56 @@ function(input, output, session) {
     
   })
   
-  prev_enhancer <- reactive({
+  
+  
+  agg_reg <- reactive({
     
-    req(input$start_analysis > 0)
+    tmp_enh <- prev_enhancer() %>%
+      mutate(source = 'Enhancer') %>%
+      select(source, gene)
     
-    data_tmp <- df_enhancers %>% 
-      bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
-      select(-startdelete, -enddelete, -.overlap)
+    tmp_mirna <- mirna_raw() %>%
+      mutate(source = 'miRNA') %>%
+      rename(gene = gene_symbol) %>%
+      select(source, gene)
     
+    tmp_tf <- tf_raw() %>%
+      mutate(source = 'TF') %>%
+      rename(gene = target) %>%
+      select(source, gene)
     
-    # data_tmp <- data_tmp %>% 
-    #   left_join(hgcn_genes %>% select(gene, chrom, start, end) %>% 
-    #               rename(chrom_gene = chrom), by = 'gene') %>%
-    #   rowwise() %>%
-    #   mutate(inside_cnv = c(start_gene, end_gene) %overlaps% c(start_coordinates, end_coordinates)) %>%
-    #   mutate(inside_cnv = if_else(chrom_gene == chrom_coordinates, inside_cnv, FALSE)) %>%
-    #   select(-chrom_gene, -start_gene, -end_gene) %>%
-    #   distinct() %>%
-    #   filter(!is.na(inside_cnv))
+    tmp_lncrna <- lncrna_raw() %>%
+      mutate(source = 'lncRNA') %>%
+      rename(gene = target_symbol) %>%
+      select(source, gene)
     
-    # test1946 <<- data_tmp
+    tmp_total <- bind_rows(tmp_enh, tmp_mirna, tmp_tf, tmp_lncrna)
+    
 
-    data_tmp
+    test9929 <<- tmp_total
+    
     
     
   })
   
-  # output$n_enhancer_inside <- renderUI({
-  #   
-  #   test1936 <<- prev_enhancer()
-  #   
-  #   list_genes_total <- prev_enhancer() %>% select(gene) %>% distinct() %>% pull(gene)
-  #   data_tmp <- data_selected() %>% filter(gene %in% list_genes_total) %>% pull(gene)
-  #   
-  #   tablerStatCard(
-  #     value =  paste(length(data_tmp), length(list_genes_total), sep = '/'),
-  #     title = "Number of target genes inside CNV",
-  #     width = 12
-  #   )
-  # })
-  
-  
+  prev_enhancer <- reactive({
+    
+    # req(input$start_analysis > 0)
+    
+    genes_cnv <- data_selected_prev() %>% pull(gene)
+    
+    
+    data_tmp <- df_enhancers %>% 
+      bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
+      filter(gene %in% hgcn_genes$gene) %>%
+      select(id,chrom, start, end, gene, everything()) %>%
+      mutate(is_mapping = if_else(gene %in% genes_cnv, 'Yes', 'No')) %>%
+      select(-contains('source'), -contains('delete'),-oe, -.overlap, -score_enh, -score)
+    
+    test9014 <<- data_tmp
+    
+    data_tmp
+  })
   
   output$n_enhancer <- renderUI({
     
@@ -3382,17 +3376,10 @@ function(input, output, session) {
       # trend = -10,
       width = 12
     )
-    
-    
-    # tablerInfoCard(
-    #   value =  length(data_tmp),
-    #   status = "primary",
-    #   icon = 'book',
-    #   description = "Number of Enhancers disrupted",
-    #   width = 12
-    # )
-    
   })
+  
+  
+
   
   
   # redundancy_enhancers <- reactive({
@@ -3476,21 +3463,15 @@ function(input, output, session) {
   })
   
   output$df_enhancer <- renderDataTable({
+    
 
-    df_tmp <- prev_enhancer()  %>% select(-score_enh, -score) %>%
-      select(id,chrom, start, end, gene, everything()) %>%
-      select(-contains('source'))
 
-    datatable(df_tmp, rownames = FALSE, filter = 'top', selection = 'single',
+    datatable(prev_enhancer(), rownames = FALSE, filter = 'top', selection = 'single',
               colnames = c('ID Enhancer', 'Chrom',
-                           'Start',  'End','Target-gene', 'Phast100way', 'Phast46way Placental', 'Phast46way Primates','o/e gnomad'),
+                           'Start',  'End','Target-gene', 'Phast100way', 'Phast46way Placental', 'Phast46way Primates', 'Mapping query?'),
               options = list(
                 pageLength = 5, 
-                # autoWidth = TRUE,
-                # style = 'bootstrap',
                 list(searchHighlight = TRUE)
-                # selection = 'single'
-                # columnDefs = list(list(className = 'dt-center', targets = '_all'))
               ))
     
     
@@ -3498,7 +3479,7 @@ function(input, output, session) {
   
   number_tads <- reactive({
 
-    req(input$start_analysis > 0)
+    # req(input$start_analysis > 0)
 
     n_tads <- check_tads(coord_user(), tad )
     n_tads <- nrow(n_tads)
@@ -3562,14 +3543,37 @@ function(input, output, session) {
     
     
     n_target_genes <- prev_enhancer() %>% select(gene) %>% distinct() %>% nrow()
+
+    tablerInfoCard(
+      width = 12,
+      value =  paste(n_target_genes, 'target-genes'),
+      status = "primary",
+      icon = "database",
+      description =  'Unique target-genes of enhancers'
+      
+    )
+    
+  })
+  
+  output$n_target_enh_notmap <- renderUI({
+    
+    
+    n_target_genes <- prev_enhancer() %>% 
+      filter(is_mapping == 'No') %>% 
+      select(gene) %>% 
+      distinct() %>% 
+      nrow()
+    
     
     tablerInfoCard(
       width = 12,
-      value =  paste(n_target_genes, 'unique target-genes'),
-      status = "warning",
-      icon = "database"
+      value =  paste(n_target_genes, 'target-genes'),
+      status = "primary",
+      icon = "database",
+      description =  'Not mapping with the variant(s)'
+      
     )
-    
+
   })
   
   
@@ -3580,12 +3584,35 @@ function(input, output, session) {
     
     tablerInfoCard(
       width = 12,
-      value =  paste(n_target_genes, 'unique target-genes'),
-      status = "warning",
-      icon = "database"
+      value =  paste(n_target_genes, 'target-genes'),
+      status = "primary",
+      icon = "database",
+      description =  'Unique target-genes of miRNAs'
+      
     )
     
   })
+  
+  output$n_target_mirna_notmap <- renderUI({
+    
+    
+    n_target_genes <- mirna_raw() %>% filter(is_mapping == 'No') %>% select(gene_symbol) %>% distinct() %>% nrow()
+    
+    
+    tablerInfoCard(
+      width = 12,
+      value =  paste(n_target_genes, 'target-genes'),
+      status = "primary",
+      icon = "database",
+      description =  'Not mapping with the variant(s)'
+      
+    )
+    
+    
+  })
+  
+  
+  
   
   output$n_target_tf <- renderUI({
     
@@ -3594,10 +3621,31 @@ function(input, output, session) {
     
     tablerInfoCard(
       width = 12,
-      value =  paste(n_target_genes, 'unique target-genes'),
-      status = "warning",
-      icon = "database"
+      value =  paste(n_target_genes, 'target-genes'),
+      status = "primary",
+      icon = "database",
+      description =  'Unique target-genes of TFs'
+      
     )
+    
+  })
+  
+  output$n_target_tf_notmap <- renderUI({
+    
+    
+    n_target_genes <- tf_raw() %>% filter(is_mapping == 'No') %>% 
+      select(target) %>% distinct() %>% nrow()
+    
+    
+    tablerInfoCard(
+      width = 12,
+      value =  paste(n_target_genes, 'target-genes'),
+      status = "primary",
+      icon = "database",
+      description =  'Not mapping with the variant(s)'
+      
+    )
+
     
   })
   
@@ -3609,10 +3657,33 @@ function(input, output, session) {
     
     tablerInfoCard(
       width = 12,
-      value =  paste(n_target_genes, 'unique target-genes'),
-      status = "warning",
-      icon = "database"
+      value =  paste(n_target_genes, 'target-genes'),
+      status = "primary",
+      icon = "database",
+      description =  'Unique target-genes of lncRNAs'
+      
     )
+    
+  })
+  
+  
+  output$n_target_lncrna_notmap <- renderUI({
+    
+    n_target_genes <- lncrna_raw() %>% 
+      filter(is_mapping == 'No') %>% 
+      select(target_symbol) %>% 
+      distinct() %>% 
+      nrow()
+
+    tablerInfoCard(
+      width = 12,
+      value =  paste(n_target_genes, 'target-genes'),
+      status = "primary",
+      icon = "database",
+      description =  'Not mapping with the variant(s)'
+      
+    )
+    
     
   })
   
@@ -3677,7 +3748,7 @@ function(input, output, session) {
   
   prev_tads <- reactive({
     
-    req(input$start_analysis > 0)
+    # req(input$start_analysis > 0)
     
 
     tmp_df <- data_selected_prev()
@@ -3957,7 +4028,7 @@ function(input, output, session) {
   
   running_sim_score <- reactive({
     
-    req(input$start_analysis > 0)
+    # req(input$start_analysis > 0)
     
     req(input$input_inheritance != '')
     
@@ -4068,9 +4139,8 @@ function(input, output, session) {
       width = 12,
       value =  paste(number_diseases, 'diseases'),
       status = "primary",
-      title = 'Diseases with HPO',
-      icon = "database",
-      description =  ''
+      description = 'Diseases with HPO',
+      icon = "database"
     )
     
   })
@@ -4438,22 +4508,21 @@ function(input, output, session) {
   model_genes_phenotype <- reactive({
     
     
-    test_tmp <- data_selected() %>% select(gene) %>% pull()
-    mgi_tmp <- mgi %>% filter(gene %in% test_tmp)
-    mgi_tmp <- mgi_tmp %>% separate(pheno, into = LETTERS[1:230], sep = ' ') %>%
-      gather('delete', 'mpo_id', -gene, -entrez_id, -gene_mouse, -mgi) %>%
-      filter(mpo_id != '') %>%
-      select(-delete)
+    chosen_genes <- data_selected() %>% select(gene) %>% pull()
+    
+    mgi_tmp <- mgi %>% filter(gene %in% chosen_genes) %>%
+      separate_rows(pheno, sep = ' ') %>%
+      rename(term = pheno)
     
 
     vector_mpo <- mgi_tmp %>% 
-      select(mpo_id) %>% 
+      select(term) %>% 
       distinct() %>%
-      left_join(mpo_dbs, by = c('mpo_id' = 'term'))
+      left_join(mpo_dbs, by = 'term')
     
-    mgi_tmp <- mgi_tmp %>% left_join(vector_mpo, by = 'mpo_id')
-    
+
     mgi_tmp <- mgi_tmp %>% 
+      left_join(vector_mpo, by = 'term') %>%
       left_join(data_selected() %>% select(gene, source), by = 'gene') %>%
       select(source, everything())
     
@@ -4461,6 +4530,10 @@ function(input, output, session) {
     mgi_tmp
     
   })
+  
+  
+  
+   
   
   
   output$agg_model <- renderPlot({
@@ -4476,8 +4549,7 @@ function(input, output, session) {
     
     tmp_df %>%
       ggplot(aes(reorder(description, n), n)) + 
-      geom_col(aes(fill = n), color = 'black') +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+      geom_col(aes(fill = n), color = 'black', show.legend = FALSE) +
       coord_flip() +
       scale_fill_viridis_c() +
       ylab('Number of genes') +
@@ -4491,30 +4563,7 @@ function(input, output, session) {
       scale_y_continuous(breaks = scales::pretty_breaks())
 
   })
-  
-  # output$funnel_genes <- renderEcharts4r({
-  #   
-  #   genes_selected <- paste(nrow(data_selected()), 'genes found in CNV') 
-  #   
-  #   test1000 <<- input$dgenes_rows_all
-  #   
-  #   if (nrow(data_selected()) == length(input$dgenes_rows_all)) {
-  #     genes_filtered <-data_selected()
-  #     funnel <- data.frame(stage = c("19,146 genes", genes_selected), value = c(1, 0.5))
-  #     
-  #   } else {
-  #     genes_filtered <-  paste(nrow(data_selected()[input$dgenes_rows_all,]), 'genes filtered')
-  #     funnel <- data.frame(stage = c("19,146 genes", genes_selected, genes_filtered), value = c(1, 0.5, 0.25))
-  #   }
-  #   
-  #   funnel %>% 
-  #     e_charts() %>% 
-  #     e_funnel(value, stage) %>% 
-  #     e_title("")
-  #   
-  # })
 
-  
   running_enrich_go <- reactive({
     
     req(isTRUE(input$enable_func_analysis))
@@ -4601,9 +4650,10 @@ function(input, output, session) {
       as_tibble() %>%
       filter(Count != 0) %>%
       arrange(desc(Count)) %>%
-      separate(geneID, sep = '/', into = as.character(1:1000)) %>%
-      gather('delete', 'gene', -ID, -Description, -Count, -GeneRatio, -pvalue, -p.adjust, -qvalue, -BgRatio) %>%
-      select(-delete) %>%
+      # separate(geneID, sep = '/', into = as.character(1:1000)) %>%
+      # gather('delete', 'gene', -ID, -Description, -Count, -GeneRatio, -pvalue, -p.adjust, -qvalue, -BgRatio) %>%
+      # select(-delete) %>%
+      separate_rows(geneID,sep = '/') %>%
       na.omit() %>%
       distinct() %>%
       mutate(pvalue = round(pvalue, 3)) %>%
@@ -4722,16 +4772,14 @@ function(input, output, session) {
   output$df_go  <- renderDT({
     
     
-    
-    test222 <<- running_go()
-    
     df <- running_go() %>%
       as_tibble() %>%
       filter(Count != 0) %>%
       arrange(desc(Count)) %>%
-      separate(geneID, sep = '/', into = as.character(1:1000)) %>%
-      gather('delete', 'gene', -ID, -Description, -Count, -GeneRatio) %>%
-      select(-delete) %>%
+      # separate(geneID, sep = '/', into = as.character(1:1000)) %>%
+      # gather('delete', 'gene', -ID, -Description, -Count, -GeneRatio) %>%
+      # select(-delete) %>%
+      separate_rows(geneID, sep ='/') %>%
       na.omit() %>%
       distinct()
     
@@ -4810,12 +4858,12 @@ function(input, output, session) {
   output$df_path  <- renderDT({
     
     test9991 <<- running_path()
-    df <- test9991  %>%
-      # filter(Count != 0) %>%
+    df <-  running_path()  %>%
       arrange(desc(Count)) %>%
-      separate(geneID, sep = '/', into = as.character(1:1000)) %>%
-      gather('delete', 'gene', -ID, -Description, -Count, -GeneRatio, -pvalue, -p.adjust, -qvalue, -BgRatio) %>%
-      select(-delete) %>%
+      # separate(geneID, sep = '/', into = as.character(1:1000)) %>%
+      # gather('delete', 'gene', -ID, -Description, -Count, -GeneRatio, -pvalue, -p.adjust, -qvalue, -BgRatio) %>%
+      # select(-delete) %>%
+      separate_rows(geneID, sep = '/') %>%
       distinct()
     
     datatable(df, escape = FALSE)
@@ -4913,9 +4961,10 @@ function(input, output, session) {
       as_tibble() %>%
       filter(Count != 0) %>%
       arrange(desc(Count)) %>%
-      separate(geneID, sep = '/', into = as.character(1:1000)) %>%
-      gather('delete', 'gene', -ID, -Description, -Count, -GeneRatio, -pvalue, -p.adjust, -qvalue, -BgRatio) %>%
-      select(-delete, -qvalue) %>%
+      # separate(geneID, sep = '/', into = as.character(1:1000)) %>%
+      # gather('delete', 'gene', -ID, -Description, -Count, -GeneRatio, -pvalue, -p.adjust, -qvalue, -BgRatio) %>%
+      # select(-delete, -qvalue) %>%
+      separate_rows(geneID, sep = '/') %>%
       na.omit() %>%
       distinct() %>%
       mutate(pvalue = round(pvalue, 3)) %>%
@@ -5071,7 +5120,7 @@ function(input, output, session) {
   
   df_overlap_cnvs_running <- reactive({
     
-    req(input$start_analysis > 0)
+    # req(input$start_analysis > 0)
 
     tmp_df <-  get_perc_overlap(check_cnv_df(),
                                 coord_user())
@@ -5316,7 +5365,7 @@ function(input, output, session) {
   
   running_dgv <- reactive({
     
-    req(input$start_analysis > 0)
+    # req(input$start_analysis > 0)
 
     filter_id <-  df_overlap_cnvs_running() %>%
       filter(source == 'dgv') %>% pull(id)
@@ -5336,7 +5385,7 @@ function(input, output, session) {
   
   running_decipher_c <- reactive({
     
-    req(input$start_analysis > 0)
+    # req(input$start_analysis > 0)
     
     filter_id <-  df_overlap_cnvs_running() %>%
       filter(source == 'decipher_control') %>% pull(id)
@@ -5356,7 +5405,7 @@ function(input, output, session) {
   
   running_gnomad <- reactive({
     
-    req(input$start_analysis > 0)
+    # req(input$start_analysis > 0)
 
     filter_id <-  df_overlap_cnvs_running() %>%
       filter(source == 'gnomad_v2.1') %>% pull(id)
@@ -5509,7 +5558,7 @@ function(input, output, session) {
   # })
   running_gwas <- reactive({
     
-    req(input$start_analysis > 0)
+    # req(input$start_analysis > 0)
 
     tmp_df <- gwas_variants %>%
       rename(chrom = CHR_ID, start = CHR_POS) %>%
@@ -5540,7 +5589,7 @@ function(input, output, session) {
   
   running_de_novo <- reactive({
     
-    req(input$start_analysis > 0)
+    # req(input$start_analysis > 0)
 
     tmp_df <- denovo %>%
       rename(start = Position) %>%
@@ -5556,7 +5605,7 @@ function(input, output, session) {
   
   running_clinvar <- reactive({
     
-    req(input$start_analysis > 0)
+    # req(input$start_analysis > 0)
     
     
 

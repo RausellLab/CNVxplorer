@@ -1391,6 +1391,7 @@ tablerDashPage(
                      dataTableOutput('df_enhancer') %>% withSpinner(type = 5),
                      width = 12,
                      options = tagList(
+                       uiOutput('n_target_enh_notmap'),
                        uiOutput('n_target_enh'),
                        uiOutput('switch_enhancers')
                        
@@ -1415,6 +1416,7 @@ tablerDashPage(
                    closable = FALSE,
                    width = 12,
                    options = tagList(
+                     uiOutput('n_target_mirna_notmap'),
                      uiOutput('n_target_mirna'),
                      uiOutput('switch_mirnas')
                    )),
@@ -1424,6 +1426,7 @@ tablerDashPage(
                    closable = FALSE,
                    width = 12,
                    options = tagList(
+                     uiOutput('n_target_tf_notmap'),
                      uiOutput('n_target_tf'),
                      uiOutput('switch_tfs')
                    )),
@@ -1434,6 +1437,7 @@ tablerDashPage(
                    closable = FALSE,
                    width = 12,
                    options = tagList(
+                     uiOutput('n_target_lncrna_notmap'),
                      uiOutput('n_target_lncrna'),
                      uiOutput('switch_lncrnas')
                    )),
@@ -1792,13 +1796,19 @@ tablerDashPage(
       ),
       tablerTabItem(
         tabName = "docu",
-        fluidRow(
-          # tablerCard(title = 'Select a gene:',
-          #            uiOutput('gene_model'),
-          #            width = 3),
-          tablerCard(title = 'Documentation',
-                     DTOutput('model55_genes'),
-                     width = 12))
+      
+          tablerCard(
+            collapsible = FALSE,
+            closable = FALSE,
+            title = 'Overview',
+            # includeHTML("documentation/documenta2tion.html"),
+                     width = 12),
+        tablerCard(
+          collapsible = FALSE,
+          closable = FALSE,
+          title = 'FAQs',
+          # includ("documentation/documentation.html"),
+          width = 12)
         
       ),
       tablerTabItem(

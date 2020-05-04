@@ -87,58 +87,49 @@ library(tidyverse)
 # 
 # file.remove('local_data.RData.gz')
 # file.remove('local_data.RData')
-# save(hgcn_genes, 
-#     df_enhancers, 
-#     tad, 
-#     gtex, 
-#     hpa, 
-#     hpo_genes, 
-#     cnv_df, 
-#     vector_total_terms,
-#     gnomad_sv_raw, 
-#     decipher_control_raw, 
-#     dgv_df_raw, 
-#     hpo_omim, 
-#     anato_df, 
-#     mirtarbase,
-#     vector_inheritance, 
-#     trrust, 
-#     tf_genes, 
-#     drugbank,
-#     prot_complex,
-#     ohno_genes,
-#     genes_promoter,
-#     para_genes,
-#     string_db,
-#     region_gaps, 
-#     fusil_score, 
-#     coord_chrom_hg19,
-#     select, 
+# save(hgcn_genes, ## hg19
+#     df_enhancers, ## hg19
+#     tad, ## hg19
+#     gtex, ## -
+#     hpa, ## -
+#     hpo_genes, ## -
+#     cnv_df, ## hg19
+#     vector_total_terms, ## -
+#     gnomad_sv_raw, ## hg19
+#     decipher_control_raw, ## hg19
+#     dgv_df_raw, ## hg19
+#     hpo_omim, ## -
+#     anato_df, ## -
+#     mirtarbase, ## hg19
+#     vector_inheritance, ## -
+#     trrust, ## hg19
+#     tf_genes, ## -
+#     drugbank, ## -
 #     dev_raw, 
 #     panel_total, 
 #     omim, 
 #     orphanet_raw,  
 #     hpo_dbs, 
-#     model1, 
-#     lncrna,
-#     lncrna_target,
-#     denovo, 
-#     clinvar_variants, 
-#     plot_p100, 
-#     plot_p46pla,
-#     lncrna_coord,
-#     blacklist_encode, 
-#     mpo_dbs, 
-#     gwas_variants,
-#     mgi, 
-#     syndromes_total, file = "local_data.RData")
+#     lncrna, ## hg19
+#     lncrna_target, ## hg19
+#     denovo, ## hg19
+#     clinvar_variants,  ## hg19
+#     plot_p100, ## -
+#     plot_p46pla, ## -
+#     lncrna_coord, ## hg19
+#     blacklist_encode, ## hg19
+#     mpo_dbs, ## -
+#     gwas_variants, ## -
+#     mgi, ## -
+#     syndromes_total, ## hg19
+#     file = "local_data.RData")
 
 # system("gzip local_data.RData")
 
 source('functions.R')
 
 #  system('gunzip -c local_data.RData.gz > local_data.RData')
-load('local_data.RData')
+# load('local_data.RData')
 
 ridges_home <- cnv_df %>%
   filter(length_cnv >= 50) %>%
@@ -151,11 +142,9 @@ ridges_home <- cnv_df %>%
            )) %>%
   ggplot(aes(length_cnv, y = source)) +
   stat_density_ridges(quantile_lines = TRUE, quantiles = 2, aes(fill = source), alpha = 0.6, show.legend = FALSE, size = 1.25) +
-  # geom_vline(aes(xintercept = size_cnv_query), linetype = 2, color = 'red', size = 1.5) +
   scale_x_log10() +
   scale_y_discrete(expand = c(0.01, 0)) +
   scale_fill_viridis_d() +
-  # scale_fill_manual(values = c('#CD5C5C','#32CD32', '#32CD32')) +
   xlab('log10(CNVs size)') +
   ylab('Database') +
   theme_ridges()
