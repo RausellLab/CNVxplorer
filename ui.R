@@ -214,7 +214,7 @@ tablerDashPage(
                             zoomable = FALSE,
                             statusSide = 'left',
                             options = tagList(
-                              selectizeInput(inputId = 'select_all_cnvs',
+                              selectizeInput(inputId = 'select2_all_cnvs',
                                              label = 'Select all the variants?',
                                              choices = c('Yes' = 'yes', 'No' = 'no'),
                                              selected = NULL,
@@ -291,6 +291,30 @@ tablerDashPage(
             #   status = "danger"
             # ),
             # ), 
+            conditionalPanel(
+              condition = "input.input_geno_karyo == 'Multiple coordinates'",
+
+              tablerCard(width = 12,
+                         title = NULL,
+                         collapsible = FALSE,
+                         closable = FALSE,
+                         zoomable = FALSE,
+                         statusSide = 'left',
+                         selectizeInput(inputId = 'select_all_cnvs',
+                                        label = tags$b('Select all the variants?'),
+                                        choices = c('Yes' = 'yes', 'No' = 'no'),
+                                        selected = NULL,
+                                        multiple = FALSE,
+                                        options = NULL),
+           uiOutput('n_variants')
+                         
+              ), 
+              
+              
+              
+              
+              
+              ),
             tablerCard(width = 12,
                        title = NULL,
                        collapsible = FALSE,
@@ -1726,6 +1750,7 @@ tablerDashPage(
                      highchartOutput('plot_anatomy'),
                      width = 12),
           tablerCard(title = 'Phenotypic similarity score',
+                     
                      plotOutput('plot_similarity_genes'),
                      width = 12,
                      options = tagList( 
@@ -1801,7 +1826,7 @@ tablerDashPage(
             collapsible = FALSE,
             closable = FALSE,
             title = 'Overview',
-            # includeHTML("documentation/documenta2tion.html"),
+            includeHTML("documentation/documentation.html"),
                      width = 12),
         tablerCard(
           collapsible = FALSE,

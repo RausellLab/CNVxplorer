@@ -240,13 +240,7 @@ function(input, output, session) {
     coord_start <- as.numeric(input$int_start)
     coord_end <-  as.numeric(input$int_end)
     coord_chrom <- input$input_chrom
-    
-    
-    # observeEvent(TRUE, {
-    #   # Show a modal when the button is pressed
-    #   shinyalert("Oops!", "Something went wrong.", type = "error")
-    # })
-    
+
     
     if (input$input_geno_karyo == 'Genomic coordinates') {
       
@@ -1659,9 +1653,7 @@ function(input, output, session) {
       
       
     }
-    
-    
-    
+
     prettyRadioButtons(
       inputId = "select_cnv_syndrome",
       label = '', 
@@ -1677,6 +1669,7 @@ function(input, output, session) {
   output$cnv_syndromes <- renderDataTable({
     
     req(running_cnv_syndromes())
+    req(input$select_cnv_syndrome)
     
     validate(
       need(nrow(running_cnv_syndromes()) != 0, "No CNV syndromes found."),
@@ -2311,10 +2304,12 @@ function(input, output, session) {
   
   output$tissue_gtex <- renderPlot({
     
-    req(input$gtex_gene_tissue)
-    
-    
+    req(!is.null(input$gtex_gene_tissue))
+
     if (input$gtex_gene_tissue == 'Gene' ) {
+      
+      req(!is.null(input$input_gtex_gene))
+      
       
       filtered_gene <- input$input_gtex_gene
       
@@ -2330,6 +2325,8 @@ function(input, output, session) {
         ggtitle(paste('Gene expression: ', filtered_gene))
       
     } else {
+      
+      req(!is.null(input$input_gtex_tissue))
       
       filtered_genes_cnv <- data_selected() %>% pull(gene)
       filtered_tissue <- input$input_gtex_tissue
@@ -2983,6 +2980,18 @@ function(input, output, session) {
       )
     }
     
+  })
+  
+  
+  output$n_variants <- renderUI({
+    
+    tablerInfoCard(
+      width = 12,
+      value = paste0(nrow(cnv_file_to_analyze()), " variants"),
+      status = "success",
+      icon = "database",
+      description = 'Nº of variants selected'
+    )
   })
   
   output$ref_user_length <- renderUI({
