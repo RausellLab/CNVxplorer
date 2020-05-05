@@ -3,15 +3,20 @@
 
 ### Overview
 
-### Features
+### Installation
 
 
 
 
-### Docker installation
+## Docker installation
 
-### git clone https://github.com/frequena/cnvxplorer.git
-### docker build -t cnvxplorer .
-### docker run -p 3838:3838 cnvxplorer
 
+
+```{bash}
+
+git clone https://github.com/frequena/cnvxplorer.git
+docker build -t cnvxplorer .
+docker run -p 3838:3838 cnvxplorer
+
+```
 
