@@ -3,6 +3,10 @@
 
 ## Overview
 
+<p align="center">
+  <img  src="https://github.com/frequena/cnvxplorer/blob/master/www/overview.jpg">
+</p>
+
 ### Access
 
 You can find an instance of CNVxplorer running at this address:

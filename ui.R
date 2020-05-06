@@ -1826,13 +1826,21 @@ tablerDashPage(
             collapsible = FALSE,
             closable = FALSE,
             title = 'Overview',
-            includeHTML("documentation/documentation.html"),
+            tags$img(src='test.jpg'),
+          
                      width = 12),
+        
+        tablerCard(
+          collapsible = FALSE,
+          closable = FALSE,
+          title = 'Features',
+          width = 12),
         tablerCard(
           collapsible = FALSE,
           closable = FALSE,
           title = 'FAQs',
-          # includ("documentation/documentation.html"),
+          tags$b('-How the percentage of overlapping is calculated?'),
+          tags$p('On the one hand, if the overlapping measured is between the query region and any CNV, the reference region is the query from the user. On the other hand, if the overlapping measured is between the query region and any gene, in this case, the reference region is the gene.'),
           width = 12)
         
       ),
