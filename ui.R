@@ -55,19 +55,6 @@ tablerDashPage(
         "Functional analysis"
       ),
       
-      
-      
-      # tablerNavMenuItem(
-      #   tabName = "cnv_ngs",
-      #   icon = "book",
-      #   "CNVs NGS"
-      # ),
-      
-      # tablerNavMenuItem(
-      #   tabName = "down_report",
-      #   icon = "download",
-      #   "Automated report"
-      # )
       tablerNavMenuItem(
         tabName = "drugs",
         icon = 'book',
@@ -78,15 +65,6 @@ tablerDashPage(
         icon = "book",
         'Documentation'
       )
-      
-      
-      # a("Computation Completed", href="#shiny-tab-disease", "data-toggle" = "tab")
-      # tablerNavMenuItem(
-      #   tabName = "feedback",
-      #   icon = "book",
-      #   a("Feedback", href="www.google.com")
-      # )
-      
       
     ),
     id = "mymenu",
@@ -142,9 +120,6 @@ tablerDashPage(
         tabName = "overview",
         shinyjs::useShinyjs(),
         use_waiter(),
-        # verbatimTextOutput("auth_output"),
-        
-        # setZoom(class = "card"),
         setShadow(class = 'card'),
         chooseSliderSkin("Nice"),
         
@@ -176,30 +151,21 @@ tablerDashPage(
                        conditionalPanel(
                          condition = "input.input_geno_karyo == 'Multiple coordinates'",
                          fileInput("file_cnv", label = h5("Upload file:")),
-                         downloadLink('download_file_1', label = "Download file example")
+                         downloadLink('download_file_1', label = "Download file example [#1]")
                        ),
                        
                        
             ),
-            # tablerCard(width = 12,
-            #            title = NULL,
-            #            collapsible = FALSE,
-            #            closable = FALSE,
-            #            zoomable = FALSE,
-            #            statusSide = 'left',
-            
+
             actionBttn(
               inputId = "start_analysis",
               label = "Run!",
               color = "success",
               style = "material-flat",
               size = 'lg',
-              # icon = icon("sliders"),
               block = TRUE
             ),
-            # ), 
-            # tags$hr(),
-            
+
             tags$br(),
             tags$br(),
             tags$br()
@@ -213,27 +179,13 @@ tablerDashPage(
                             closable = FALSE,
                             zoomable = FALSE,
                             statusSide = 'left',
-                            options = tagList(
-                              selectizeInput(inputId = 'select2_all_cnvs',
-                                             label = 'Select all the variants?',
-                                             choices = c('Yes' = 'yes', 'No' = 'no'),
-                                             selected = NULL,
-                                             multiple = FALSE,
-                                             options = NULL)),
 
 
                      DTOutput('cnv_file')),
    
                  ),
                  plotOutput('plot_chrom', height = 200)
-                 # tags$hr(),
-                 # uiOutput("ui_run_arules"),
-                 # uiOutput('ui_confidence')
-                 # tablerCard(width = 12,
-                 #   title = NULL,
-                 # DTOutput('rules_arules')
-                 # )
-                 
+
                  
                  
                  
@@ -243,54 +195,6 @@ tablerDashPage(
           column(
             width = 3,
             
-            # prettyRadioButtons(
-            #   inputId = "snv_yes_no",
-            #   label = "Upload SNVs file (.bed)?",
-            #   choices = c("No", "Yes"),
-            #   inline = TRUE,
-            #   status = "primary",
-            #   fill = TRUE
-            # ),
-            # conditionalPanel(
-            #   condition = "input.snv_yes_no == 'Yes'",
-            #   fileInput("file_snv", label = h5("Upload file:"))
-            # ),
-            # hr(),
-            # uiOutput('n_snv'),
-            # tablerCard(width = 12,
-            #            collapsible = FALSE,
-            #            closable = FALSE,
-            #            zoomable = FALSE,
-            #            status = 'success',
-            #            statusSide = 'left',
-            # title = tagList(shiny::icon("database"), "Overlap"),
-            # tablerCard(width = 12,
-            #             title = NULL,
-            #            collapsible = FALSE,
-            #            closable = FALSE,
-            #            zoomable = FALSE,
-            #            statusSide = 'left',
-            #   pickerInput(
-            #   inputId = "type_cnv",
-            #   label = tags$b("Type of CNV"), 
-            #   choices = list("Deletion" = 1, "Duplication" = 0)
-            # ),
-            # pickerInput(
-            #   inputId = "denovo_yes_no",
-            #   label = tags$b("de novo CNV?"), 
-            #   choices = list('Yes' = 1, 'No' = 0)
-            # )
-            #   ), 
-            
-            # awesomeRadio(
-            #   inputId = "Id047",
-            #   label = tags$b("Type of CNV"), 
-            #   choices = c("Deletion", "Duplication"),
-            #   selected = "Deletion",
-            #   inline = TRUE, 
-            #   status = "danger"
-            # ),
-            # ), 
             conditionalPanel(
               condition = "input.input_geno_karyo == 'Multiple coordinates'",
 
@@ -306,7 +210,8 @@ tablerDashPage(
                                         selected = NULL,
                                         multiple = FALSE,
                                         options = NULL),
-           uiOutput('n_variants')
+           uiOutput('n_variants'),
+           uiOutput('checking_quality_file')
                          
               ), 
               
@@ -336,49 +241,10 @@ tablerDashPage(
             uiOutput('ref_user_length'),
             uiOutput('ref_user_cytoband'),
             uiOutput('check_blacklist')
-            
-            # uiOutput('n_genes')
-            # uiOutput('score_rf')
-            
-            # uiOutput("info")
+
           )
         ),
         
-        # fluidRow(
-        # column(
-        #   width = 6,
-        #   tablerCard(
-        #     title = "Plots",
-        #     zoomable = FALSE,
-        #     closable = FALSE,
-        #     options = tagList(
-        #       switchInput(
-        #         inputId = "enable_distPlot",
-        #         label = "Plot?",
-        #         value = TRUE,
-        #         onStatus = "success",
-        #         offStatus = "danger"
-        #       )
-        #     ),
-        #     plotOutput("distPlot"),
-        #     status = "info",
-        #     statusSide = "left",
-        #     width = 12,
-        #     footer = tagList(
-        #       column(
-        #         width = 12,
-        #         align = "center",
-        #         sliderInput(
-        #           "obs",
-        #           "Number of observations:",
-        #           min = 0,
-        #           max = 1000,
-        #           value = 500
-        #         )
-        #       )
-        #     )
-        #   )
-        # ),
         tags$hr(),
         fluidRow(
           column(width = 6,
@@ -398,10 +264,6 @@ tablerDashPage(
                               column(width = 4,
                                      uiOutput('n_cnv_nopatho'))))
           ),
-          
-          
-          
-          # fluidRow(
           
           column(width = 6,
                  
@@ -456,20 +318,7 @@ tablerDashPage(
                                 column(width = 6,
                                        uiOutput('hpo_unique_genes') 
                                 ))))
-                 # tablerCard(width = 12,
-                 #            collapsible = FALSE,
-                 #            closable = FALSE,
-                 #            zoomable = FALSE,
-                 #            status = 'success',
-                 #            statusSide = 'left',
-                 #            title = tagList(shiny::icon("hospital"), "Clinicalaaa annotation"),
-                 #            fluidRow(
-                 #              column(width = 6,
-                 # 
-                 #                     uiOutput('hpo_unaique')),
-                 #              column(width = 6,
-                 #                     uiOutput('hpo_uaanique_genes')
-                 #              )))
+
                  
           ),
           column(width = 6,
@@ -557,29 +406,6 @@ tablerDashPage(
                      
                    )
                  )
-                 
-                 # tablerCard(width = 6,
-                 #            collapsible = FALSE,
-                 #            closable = FALSE,
-                 #            zoomable = FALSE,
-                 #            status = 'primary',
-                 #            statusSide = 'left',
-                 #            title = tagList(shiny::icon("book"), "Overlap with disease associated genes"),
-                 # 
-                 # 
-                 # 
-                 # fluidRow(
-                 # column(width = 6,
-                 # uiOutput('dasdadadada'),
-                 # uiOutput('n_pubmdasdaed_del'),
-                 # uiOutput('n_gwsdawas')),
-                 # # uiOutput('n_dev'),
-                 # # uiOutput('n_pli')),
-                 # column(width = 6,
-                 # # uiOutput('n_hi'),
-                 # uiOutput('n_dasomim'))
-                 # # uiOutput('n_gwas'))
-                 # ) )
           )
         ),
         fluidRow(
@@ -598,283 +424,11 @@ tablerDashPage(
           
         )
         
-        
-        #   tablerCard(
-        #     title = "Gene panel from CNV",
-        #     DTOutput("11dgenes"),
-        #     width = 12,
-        #     collapsible = FALSE,
-        #     closable = FALSE,
-        #     overflow = TRUE,
-        #     options = tagList(
-        #       # actionBttn(
-        #       #   inputId = "Id111",
-        #       #   label = "Reset table", 
-        #       #   style = "minimal",
-        #       #   color = "primary"
-        #       # ),
-        #       downButton("11download_dgenes", "Download table")
-        #   )
-        #   ),
-        # tablerCard(
-        #   title = "Target-genes from disrupted enhancers",
-        #   DTOutput("11genes_from_enhancers"),
-        #   width = 12,
-        #   collapsible = FALSE,
-        #   closable = FALSE,
-        #   overflow = TRUE,
-        #   options = tagList(
-        #     # actionBttn(
-        #     #   inputId = "Id111",
-        #     #   label = "Reset table", 
-        #     #   style = "minimal",
-        #     #   color = "primary"
-        #     # ),
-        #     downloadButton("11downloa3d_dgenes", "Download table")
-        #   )
-        # ),
-        #   tablerCard(
-        #     title = "Comparison scores",
-        #     collapsible = FALSE,
-        #     closable = FALSE,
-        #     
-        #     plotlyOutput("11dot_comparison"),
-        #     width = 12,
-        #     overflow = TRUE
-        #   ),
-        #   # column(6,
-        #   # tablerCard(
-        #   #   title = "Clinical panels (Genomics England PanelApp)",
-        #   #   DTOutput("df_fisher"),
-        #   #   width = 12,
-        #   #   collapsible = FALSE,
-        #   #   closable = FALSE,
-        #   #   overflow = TRUE,
-        #   #   options = tagList(
-        #   #     # actionBttn(
-        #   #     #   inputId = "Id111",
-        #   #     #   label = "Reset table", 
-        #   #     #   style = "minimal",
-        #   #     #   color = "primary"
-        #   #     # ),
-        #   #   )
-        #   # ),
-        #   # 
-        #   # 
-        #   # 
-        #   # tablerCard(
-        #   #   title = "Gene(s) selected",
-        #   #   # DTOutput("df_fisher_selected"),
-        #   #   textOutput("df_fisher_selected"),
-        #   #   width = 12,
-        #   #   collapsible = FALSE,
-        #   #   closable = FALSE,
-        #   #   overflow = TRUE
-        #   # 
-        #   #   
-        #   # )),
-        #   
-        #   # tablerCard(
-        #   #   title = "Gene-level databases",
-        #   #   DTOutput("df_fisher_two"),
-        #   #   width = 6,
-        #   #   collapsible = FALSE,
-        #   #   closable = FALSE,
-        #   #   overflow = TRUE,
-        #   #   options = tagList(
-        #   #   )
-        #   # ),
-        #   # 
-        #   # column(width = 6,
-        #   #        
-        #   #        uiOutput('n_cnv_patho'),
-        #   #        uiOutput('n_cnv_nopatho'),
-        #   #        uiOutput('n_clinvar'),
-        #   #        uiOutput('n_gwas')),
-        #   # column(width = 6,
-        #   #        
-        #   #        uiOutput('n_dev'),
-        #   #        uiOutput('n_omim'),
-        #   #        # uiOutput('n_pubmed'),
-        #   #        uiOutput('n_pli'),
-        #   #        uiOutput('n_hi'))
-        #   
-        #   
-        # # ),
-        # fluidRow(
-        #   # tablerCard(
-        #   #   title = "Heatmap - Genome-wide percentile",
-        #   #   plotlyOutput('heatmap'),
-        #   #   width = 12,
-        #   #   overflow = TRUE
-        #   # ),
-        #   # tablerCard(
-        #   #   title = "Overlapping of genes and CNV",
-        #   #   plotOutput('plotp_overlap'),
-        #   #   width = 6,
-        #   #   overflow = TRUE
-        #   # ),
-        #   tablerCard(
-        #     title = "De novo variants (denovo-db)",
-        #     DTOutput('11df_de_novo'),
-        #     width = 12,
-        #     collapsible = FALSE,
-        #     closable = FALSE,            
-        #     overflow = TRUE,
-        #     options = tagList(
-        #       downloadButton("11download_de_novos", "Download table")
-        #       
-        #     )
-        #   ),
-        #   # tablerCard(
-        #   #   title = "Comparison CNV size with other CNVs databases (gnomAD, DGV and DECIPHER)",
-        #   #   plotOutput('plot_size'),
-        #   #   width = 12,
-        #   #   overflow = TRUE,
-        #   #   collapsible = FALSE,
-        #   #   closable = FALSE,       
-        #   #   options = tagList(
-        #   # 
-        #   #     pickerInput(
-        #   #       inputId = "select_density",
-        #   #       width = 'fit',
-        #   #       # label = "sdasda", 
-        #   #       choices = c("global", "local")
-        #   #     )
-        #   #     
-        #   #   )
-        #   # ),
-        #   tablerCard(
-        #     title = "Overlapping with pathogenic CNVs (DECIPHER)",
-        #     DTOutput('11df_overlap_cnvs'),
-        #     width = 12,
-        #     collapsible = FALSE,
-        #     closable = FALSE,            
-        #     overflow = TRUE,
-        #     options = tagList(
-        #       downloadButton("11download_df_overlap_cnvs", "Download table")
-        #       
-        #     )
-        #   ),
-        #   tablerCard(
-        #     title = "Overlapping with non-pathogenic CNVs (gnomAD, DGV)",
-        #     DTOutput('11df_overlap_cnvs_nonpatho'),
-        #     width = 12,
-        #     collapsible = FALSE,
-        #     closable = FALSE,            
-        #     overflow = TRUE,
-        #     options = tagList(
-        #       downloadButton("11download_df_overlap_cnvs_nonpatho", "Download table")
-        #       
-        #     )
-        #   ),
-        #   # tablerCard(
-        #   #   title = "Barplot ",
-        #   #   plotOutput('plot_cnv_bar'),
-        #   #   width = 12,
-        #   #   collapsible = FALSE,
-        #   #   closable = FALSE,            
-        #   #   overflow = TRUE
-        #   # ),
-        #   # column(9,
-        #   tablerCard(
-        #     title = "Intersection - CNV and CNV pathogenics",
-        #     DTOutput('11df_intersection'),
-        #     width = 4,
-        #     collapsible = FALSE,
-        #     closable = FALSE,            
-        #     overflow = TRUE,
-        #     options = tagList(
-        #       uiOutput('11ui_intersect')
-        #     )
-        #   ),
-        #   # useShinyjs()
-        #   # ),
-        #   tablerCard(
-        #     title = "Plot intersection",
-        #     plotOutput('11plot_intersection'),
-        #     width = 8,
-        #     collapsible = FALSE,
-        #     closable = FALSE,            
-        #     overflow = TRUE
-        #   )
-        #   # tablerCard(
-        #   #   title = "Comparison CNV size with other CNVs (gnomAD, DGV and DECIPHER)",
-        #   #   DTOutput('test_reading_snv_file'),
-        #   #   width = 12,
-        #   #   overflow = TRUE
-        #   # )
-        # 
-        # )
-        # tablerCard(
-        #   title = "Functional analysis",
-        #   width = 12,
-        #   zoomable = FALSE,
-        #   closable = FALSE,
-        #   plotOutput('func_an1alysis') %>% withSpinner(type = 5),
-        #   options = tagList(
-        #     switchInput(
-        #       inputId = "enable1_func_analysis",
-        #       label = "Run?",
-        #       value = FALSE,
-        #       onStatus = "success",
-        #       offStatus = "danger"
-        # 
-        #     ),
-        #     pickerInput(
-        #       inputId = "sign_1vline",
-        #       label = tags$b("P.value threshold:"),
-        #       choices = c("0.05", "0.01", "0.005"),
-        #       width = 130),
-        #     prettyRadioButtons(
-        #       inputId = "choos1e_go",
-        #       label = tags$b("Select one option:"),
-        #       choices = c("biological process", "molecular function", "cellular component"),
-        #       inline = TRUE,
-        #       status = "primary",
-        #       fill = TRUE
-        #     )
-        #   )),
-        # tablerCard(
-        #   title = "Gene-disease association",
-        #   plotOutput('func_anal1ysis_diseases') %>% withSpinner(type = 5),
-        #   width = 12,
-        #   zoomable = FALSE,
-        #   closable = FALSE
-        # 
-        # 
-        # )
-        # tablerCard(
-        #   title = "Gene-disease association",
-        #   plotOutput('func_2nalysis_mesh') %>% withSpinner(type = 5),
-        #   width = 12,
-        #   zoomable = FALSE,
-        #   closable = FALSE
-        #   
-        #   
-        # )
-        
       ),
       
       tablerTabItem(
         tabName = "fa",
-        # fluidRow(
-        #   
-        #   tablerCard(
-        #     
-        #     title = 'P.value threshold',
-        #     width = 3,
-        #     pickerInput(
-        #       inputId = "sign_vline",
-        #       label = tags$b("P.value threshold:"), 
-        #       choices = c("0.05", "0.01", "0.005"),
-        #       width = 12)
-        #     
-        #     
-        #   )
-        #   
-        #   
-        # ),
+
         tablerCard(
           title = "Functional Profile",
           width = 12,
@@ -882,17 +436,6 @@ tablerDashPage(
           closable = FALSE,
           uiOutput('plot_df') ,
           options = tagList(
-            # column(width = 1
-            # 
-            #   # switchInput(
-            #   #   inputId = "user_df_plot",
-            #   #   label = "Table?",
-            #   #   value = FALSE,
-            #   #   onStatus = "success",
-            #   #   offStatus = "danger"
-            #   # )
-            #   ),
-            
             pickerInput(
               inputId = "user_level",
               label = tags$b("Level:"), 
@@ -934,13 +477,6 @@ tablerDashPage(
             
           )
         ),
-        # tablerCard(
-        #   title = "Gene ontology",
-        #   width = 12,
-        #   zoomable = FALSE,
-        #   closable = FALSE,
-        #   DTOutput('df_22go') %>% withSpinner(type = 5)
-        # ),
         tablerCard(
           title = "Gene Ontology",
           width = 12,
@@ -1109,16 +645,7 @@ tablerDashPage(
             width = 4,
             collapsible = FALSE,
             closable = FALSE,
-            overflow = TRUE,
-            options = tagList(
-              # actionBttn(
-              #   inputId = "Id111",
-              #   label = "Reset table",
-              #   style = "minimal",
-              #   color = "primary"
-              # ),
-              # downloadButton("download_dgenes", "Download table")
-            )
+            overflow = TRUE
           ),
           tablerCard(
             title = "Disease evidences",
@@ -1144,104 +671,9 @@ tablerDashPage(
           )
         ),
 
-        # tablerCard(
-        #   title = "Target-genes from disrupted TADs",
-        #   DTOutput("genes_from_tads") %>% withSpinner(type = 5),
-        #   width = 12,
-        #   collapsible = FALSE,
-        #   closable = FALSE,
-        #   overflow = TRUE,
-        #   options = tagList(
-        #     # actionBttn(
-        #     #   inputId = "Id111",
-        #     #   label = "Reset table",
-        #     #   style = "minimal",
-        #     #   color = "primary"
-        #     # ),
-        #     # downloadButton("downloa33341dssss_dgenes", "Download table")
-        #   )
-        # ),
-        # tablerCard(
-        #   title = "Comparison scores",
-        #   collapsible = FALSE,
-        #   closable = FALSE,
-        # 
-        #   plotlyOutput("dot_comparison"),
-        #   width = 12,
-        #   overflow = TRUE
-        # ),
-        # column(6,
-        # tablerCard(
-        #   title = "Clinical panels (Genomics England PanelApp)",
-        #   DTOutput("df_fisher"),
-        #   width = 12,
-        #   collapsible = FALSE,
-        #   closable = FALSE,
-        #   overflow = TRUE,
-        #   options = tagList(
-        #     # actionBttn(
-        #     #   inputId = "Id111",
-        #     #   label = "Reset table",
-        #     #   style = "minimal",
-        #     #   color = "primary"
-        #     # ),
-        #   )
-        # ),
-        #
-        #
-        #
-        # tablerCard(
-        #   title = "Gene(s) selected",
-        #   # DTOutput("df_fisher_selected"),
-        #   textOutput("df_fisher_selected"),
-        #   width = 12,
-        #   collapsible = FALSE,
-        #   closable = FALSE,
-        #   overflow = TRUE
-        #
-        #
-        # )),
-        
-        # tablerCard(
-        #   title = "Gene-level databases",
-        #   DTOutput("df_fisher_two"),
-        #   width = 6,
-        #   collapsible = FALSE,
-        #   closable = FALSE,
-        #   overflow = TRUE,
-        #   options = tagList(
-        #   )
-        # ),
-        #
-        # column(width = 6,
-        #
-        #        uiOutput('n_cnv_patho'),
-        #        uiOutput('n_cnv_nopatho'),
-        #        uiOutput('n_clinvar'),
-        #        uiOutput('n_gwas')),
-        # column(width = 6,
-        #
-        #        uiOutput('n_dev'),
-        #        uiOutput('n_omim'),
-        #        # uiOutput('n_pubmed'),
-        #        uiOutput('n_pli'),
-        #        uiOutput('n_hi'))
-        
-        
-        # ),
+
         fluidRow(
-          # tablerCard(
-          #   title = "Heatmap - Genome-wide percentile",
-          #   plotlyOutput('heatmap'),
-          #   width = 12,
-          #   overflow = TRUE
-          # ),
-          # tablerCard(
-          #   title = "Overlapping of genes and CNV",
-          #   plotOutput('plotp_overlap'),
-          #   width = 6,
-          #   overflow = TRUE
-          # ),
+
           tablerCard(
             title = "Disease-associated variants",
             DTOutput('df_variants'),
@@ -1266,96 +698,14 @@ tablerDashPage(
               
             )
           )
-          # tablerCard(
-          #   title = "GWAS variants",
-          #   DTOutput('df_asagwas'),
-          #   width = 12,
-          #   collapsible = FALSE,
-          #   closable = FALSE,
-          #   overflow = TRUE,
-          #   options = tagList(
-          #     downloadButton("download_gwas", "Download table")
-          #     
-          #   )
-          # ),
-          # tablerCard(
-          #   title = "Comparison CNV size with other CNVs databases (gnomAD, DGV and DECIPHER)",
-          #   plotOutput('plot_size'),
-          #   width = 12,
-          #   overflow = TRUE,
-          #   collapsible = FALSE,
-          #   closable = FALSE,
-          #   options = tagList(
-          # 
-          #     pickerInput(
-          #       inputId = "select_density",
-          #       width = 'fit',
-          #       # label = "sdasda",
-          #       choices = c("global", "local")
-          #     )
-          # 
-          #   )
-          # ),
-          
-          # tablerCard(
-          #   title = "Barplot ",
-          #   plotOutput('plot_cnv_bar'),
-          #   width = 12,
-          #   collapsible = FALSE,
-          #   closable = FALSE,
-          #   overflow = TRUE
-          # ),
-          # column(9,
-          # tablerCard(
-          #   title = "Intersection - CNV and CNV pathogenics",
-          #   DTOutput('df_intersection'),
-          #   width = 4,
-          #   collapsible = FALSE,
-          #   closable = FALSE,
-          #   overflow = TRUE,
-          #   options = tagList(
-          #     uiOutput('ui_intersect')
-          #   )
-          # ),
-          # useShinyjs()
-          # ),
-          # tablerCard(
-          #   title = "Plot intersection",
-          #   plotOutput('plot_intersection'),
-          #   width = 8,
-          #   collapsible = FALSE,
-          #   closable = FALSE,
-          #   overflow = TRUE
-          # )
-          # tablerCard(
-          #   title = "Comparison CNV size with other CNVs (gnomAD, DGV and DECIPHER)",
-          #   DTOutput('test_reading_snv_file'),
-          #   width = 12,
-          #   overflow = TRUE
-          # )
+
           
         )
       ),
       tablerTabItem(
         tabName = "reg_region",
         fluidRow(
-          # tablerCard(title = 'Select a region:',
-          #            uiOutput('gen2e_2tissue'),
-          #            width = 3),
-          # uiOutput('n_enhancer_total'),
-          # uiOutput('n_tads'),
-          # uiOutput('n_lncrna'),
-          # 
-          # # uiOutput('n_enhancer_inside'),
-          # uiOutput('n_enhancer'),
-          # 
-          # uiOutput('redund_n_enhancer'),
-          # tablerCard(title = 'Include target-genes enhancers',
-          #            uiOutput('switch_enhancers'),
-          #            collapsible = FALSE,
-          #            closable = FALSE,
-          #            width = 3),
-          # uiOutput('switch_enhancers'),
+
           
           tablerCard(
             title = "Intersection of disease target-genes from regulatory elements",
@@ -1657,19 +1007,7 @@ tablerDashPage(
         tabName = "disease",
         fluidRow(
           uiOutput('n_hp_chosen')
-          # tablerCard(title = 'Mode of inheritance',
-          #            width = 3,
-          #            closable = FALSE,
-          #            collapsible = FALSE,
-          #            zoomable = FALSE,
-          #            selectizeInput(inputId = 'input_inheritance',
-          #                           label = '',
-          #                           choices = vector_inheritance,
-          #                           selected = NULL,
-          #                           multiple = FALSE,
-          #                           options = NULL)
-          #            
-          # ),
+
           
         ),
         fluidRow(
@@ -1739,13 +1077,6 @@ tablerDashPage(
                           # )
                  )),
           
-          # column(width = 12,
-          #        fluidRow(width = 12,
-          #                 tablerCard(title = 'Genes with HPO terms',
-          #                            DTOutput('hpo_filter_genes'),
-          #                            width = 8)
-          # 
-          #        )),
           tablerCard(title = 'Anatomical entities associated with HPO terms',
                      highchartOutput('plot_anatomy'),
                      width = 12),
@@ -1764,34 +1095,7 @@ tablerDashPage(
                          fill = TRUE
                        ))
           )
-          
-          # tablerCard(title = 'Comparison pathogenicity and phenotypic score',
-          #            plotlyOutput('comparison_patho_pheno'),
-          #            width = 12
-          # ),
-          # column(width = 3,
-          # uiOutput('n_hp_ch2osen')
-          # # uiOutput('check_genes_hp')
-          # ),
-          # tablerCard(title = 'Genes associated with the phenotype terms',
-          #            DTOutput('test_hpo'),
-          #            width = 12),
-          # tablerCard(title = 'Intersection of phenotype terms',
-          #            plotOutput('plot_upset'),
-          #            width = 12)
-          # width = 6
-          # ),
-          # tablerCard(title = 'Select a gene:',
-          #            uiOutput('n_pub2med'),
-          #            width = 3),
-          # tablerCard(title = 'Pubmed articles associated with the region',
-          #            collapsible = FALSE,
-          #            closable = FALSE,
-          #            DTOutput('disease2_pubmed'),
-          #            width = 12,
-          #            options = tagList(
-          #              downloadButton("download_pubmed", "Download table")
-          #            ))
+
         )
       ),
       tablerTabItem(
@@ -1800,9 +1104,7 @@ tablerDashPage(
                    plotOutput('agg_model'),
                    width = 12),
         fluidRow(
-          # tablerCard(title = 'Select a gene:',
-          #            uiOutput('gene_model'),
-          #            width = 3),
+
           tablerCard(title = 'Genes associated with phenotypes in mouse (MGI)',
                      DTOutput('model_genes'),
                      width = 12))
@@ -1811,9 +1113,6 @@ tablerDashPage(
       tablerTabItem(
         tabName = "drugs",
         fluidRow(
-          # tablerCard(title = 'Select a gene:',
-          #            uiOutput('gene_model'),
-          #            width = 3),
           tablerCard(title = 'Approved drugs associated with genes',
                      DTOutput('drugbank_df'),
                      width = 12))
@@ -1826,7 +1125,7 @@ tablerDashPage(
             collapsible = FALSE,
             closable = FALSE,
             title = 'Overview',
-            tags$img(src='test.jpg'),
+            tags$img(src='overview.jpg'),
           
                      width = 12),
         
@@ -1846,26 +1145,6 @@ tablerDashPage(
       ),
       tablerTabItem(
         tabName = "pubmed",
-        # fluidRow(
-        # tablerCard(
-        #   title = "OMIM entries associated with the literature ",
-        #   
-        #   collapsible = FALSE,
-        #   closable = FALSE,
-        #   DTOutput('omim_assoc'),
-        #   overflow = TRUE,
-        #   width = 6
-        # ),
-        # tablerCard(
-        #   title = "Gene entries associated with the literature ",
-        #   
-        #   collapsible = FALSE,
-        #   closable = FALSE,
-        #   DTOutput('medgen_assoc'),
-        #   overflow = TRUE,
-        #   width = 6
-        # )
-        # ),
         fluidRow(
           tablerCard(
             title = "Pubmed articles associated with the region",
@@ -1934,29 +1213,7 @@ tablerDashPage(
                 
               )
           ))
-          # tablerCard(
-          #   title = "Pubmed articles associated with duplications in the region",
-          #   
-          #   collapsible = FALSE,
-          #   closable = FALSE,
-          #   DTOutput('dup_pubmed'),
-          #   overflow = TRUE,
-          #   width = 12
-          # ),
-          # tablerCard(
-          #   title = "Abstract",
-          #   
-          #   DTOutput("abstract_pubmed"),
-          #   width = 12,
-          #   overflow = TRUE
-          # )
-          # tablerCard(title = 'Download report (.html)',
-          #            downloadButton('button55_download', label = "Download"),                       
-          #            width = 6),
-          
-          # tablerCard(title = '',
-          #            DTOutput('mode2l55_genes'),
-          #            width = 6)
+
           
         )
         
@@ -1967,13 +1224,6 @@ tablerDashPage(
           tablerCard(
             title = "Personalize your report:",
             
-            # multiInput(
-            #   inputId = "Id010",
-            #   label = "Countries :", 
-            #   choices = NULL,
-            #   choiceNames = c('Name clinician', 'Age', 'Sex', 'Add comment'), 
-            #   choiceValues = as.character(1:4)
-            #   ),
             fluidRow(
               column(width = 2,
                      tags$b('Patient information'),
@@ -2010,15 +1260,6 @@ tablerDashPage(
         )
         
       )
-      
-      
-      
-      
-      
-      
-      
-      
-      
     )
     
   )

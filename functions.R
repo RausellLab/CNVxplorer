@@ -88,6 +88,11 @@ get_perc_overlap <- function(df, input_tbl,
                              is_a_gene = FALSE) {
 
 
+  
+  # df <- test00121
+  # input_tbl <- test2020
+  
+  
   df <- df %>%
     mutate(id_tmp = row_number())
 
@@ -98,6 +103,10 @@ get_perc_overlap <- function(df, input_tbl,
       dplyr::select(chrom, start, end, id_tmp) 
     
   df <- bed_intersect(tmp_df, input_tbl) %>%
+    group_by(chrom, start.x, end.x) %>%
+    filter(.overlap == max(.overlap)) %>%
+    distinct() %>%
+    ungroup() %>%
     mutate(p_overlap = ((.overlap + 1)  /(end.x - start.x + 1))*100) %>% 
     mutate(p_overlap = round(p_overlap, 2)) %>%
     select(start.x, end.x, p_overlap, id_tmp.x) %>%
@@ -105,13 +114,17 @@ get_perc_overlap <- function(df, input_tbl,
                            'id_tmp.x' = 'id_tmp')) %>%
     rename(start = start.x, end = end.x) %>%
     select(-p_overlap, p_overlap, -id_tmp.x) %>%
-    arrange(desc(p_overlap))
+    arrange(desc(p_overlap)) %>%
+    distinct()
 
   } else {
     
     tmp_df <- df %>% dplyr::select(chrom, start, end, id_tmp)
     
     df <- bed_intersect(tmp_df, input_tbl) %>%
+      group_by(chrom, start.x, end.x) %>%
+      filter(.overlap == max(.overlap)) %>%
+      ungroup() %>%
       mutate(p_overlap = ((.overlap + 1) /(end.x - start.x + 1))*100) %>% 
       arrange(p_overlap) %>%
       mutate(p_overlap = round(p_overlap, 2)) %>%
@@ -119,7 +132,8 @@ get_perc_overlap <- function(df, input_tbl,
       right_join(df, by = c('start.x' = 'start', 'end.x' = 'end', 'id_tmp.x' = 'id_tmp')) %>%
       rename(start = start.x, end = end.x) %>%
       select(-p_overlap, p_overlap, -id_tmp.x) %>%
-      arrange(desc(p_overlap))
+      arrange(desc(p_overlap)) %>%
+      distinct()
     
   }
 

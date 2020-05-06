@@ -1,8 +1,25 @@
 
 
 
+x_tbl <- tibble('chrom' = c('1', '1'),
+                'start' = c(1, 1),
+                'end' = c(10, 10),
+                'casa' = c('A','B'))
+
+x_tbl %>% distinct_at(df, vars(chrom,start, end))
+
+y_tbl <- tibble('chrom' = '1',
+                'start' = c(1,4),
+                'end' = c(2, 6))
+
+x_tbl %>% bed_intersect(y_tbl)
 
 
+tibble('chrom' = c('1', '1'), 'start' = c(1, 1), 'end' = c(100, 100)) %>%
+  bed_intersect(tibble('chrom' = c('1', '1'), 'start' = c(2, 300), 'end' = c(5, 400)))
+
+tibble('chrom' = c('1'), 'start' = c(1), 'end' = c(100)) %>%
+  bed_intersect(tibble('chrom' = c('1','1'), 'start' = c(2, 2), 'end' = c(5, 5)))
 
 test <- read_csv('documentation/upheno_equivalence_model_jaccard.csv')
 

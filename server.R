@@ -149,11 +149,8 @@ function(input, output, session) {
     shinyjs::reset('int_start')
     shinyjs::reset('int_end')
     shinyjs::reset('input_chrom')
-    shinyjs::reset('file_cnv')
-    # shinyjs::reset('start_analysis')
-    
-    
-    
+    shinyjs::reset('file_cnv') 
+    shinyjs::reset('cnv_file')
   })
   
   
@@ -396,10 +393,22 @@ function(input, output, session) {
   
   check_cnv_df <- reactive({
     
-
-    df_output <-  cnv_df %>%
+    
+    df_output <-  cnv_df %>% 
       bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
-      select(-startdelete, -enddelete, -.overlap)
+      group_by(chrom, start, end) %>%
+      filter(.overlap == max(.overlap)) %>%
+      ungroup() %>%
+      select(-startdelete, -enddelete, -.overlap) %>%
+      distinct()
+    
+    
+    
+    
+    # df_output <-  cnv_df[cnv_df$id == '291728',] %>% 
+    #   select(chrom, start, end) %>%
+    #   bed_intersect(test2020[c(1,2,3,4,5),], suffix = c('', 'delete')) %>%
+    #   select(-startdelete, -enddelete, -.overlap)
 
     
     df_output
@@ -653,56 +662,13 @@ function(input, output, session) {
       
     }
     
-    query_pubmed <- entrez_search(db="pubmed", term= query_region, retmax = 200 )
+    query_pubmed <- entrez_search(db="pubmed", term= query_region, retmax = 600 )
 
   })
-  
-  
-  
-  # query_pubmed_dup <- reactive({
-  #   
-    # req(input$start_analysis > 0)
-  #   
-  #   start_coordinates <- coord_user()[1]
-  #   end_coordinates <- coord_user()[2]
-  #   chrom_coordinates <- coord_user()[3]
-  #   
-  #   
-  #   if (input$input_geno_karyo == 'Genomic coordinates') {
-  # 
-  #     query_region <-  chromPlot::hg_cytoBandIdeo %>%
-  #       filter(Chrom %in% chrom_coordinates) %>%
-  #       mutate(keep = map2_chr(Start, End, function(x,y) c(start_coordinates, end_coordinates) %overlaps% c(x,y))) %>%
-  #       filter(keep == TRUE) %>%
-  #       select(Name) %>%
-  #       pull() %>%
-  #       map_chr(function(x) paste0(chrom_coordinates, x)) %>%
-  #       paste0(collapse = ' OR ') %>%
-  #       paste('AND duplication', sep = ' ')
-  #     
-  #   } else {
-  #     query_region <- paste0(chrom_coordinates, input$input_karyotype)
-  #     
-  #   }
-  #   
-  #   test67 <<- query_region
-  #   
-  #   query_pubmed <- entrez_search(db="pubmed", term= query_region, retmax = 200 )
-  #   
-  #   
-  #   
-  # })
+
   
   output$n_pubmed_del <- renderUI({
-    
-    # tablerInfoCard(
-    #   value =  length(query_pubmed_del()[['ids']]),
-    #   status = "primary",
-    #   icon = 'book',
-    #   description = "Number of articles found in Pubmed associated with deletions",
-    #   width = 12
-    # )
-    
+
     tablerStatCard(
       value =   length(query_pubmed_del()[['ids']]),
       title = "Articles found in Pubmed associated with deletions",
@@ -770,11 +736,7 @@ function(input, output, session) {
     } else {
       ids_query <- query_pubmed_dup()[['ids']]
     }
-    # 
-    # 
-    # ids_query <- c(query_pubmed_dup()[['ids']], query_pubmed_del()[['ids']])
-    # 
-    # ids_query <- ids_query[1:200]
+
     
     query_link <- entrez_link(db= 'omim', id= ids_query, dbfrom="pubmed", by_id = TRUE)
     
@@ -1348,7 +1310,7 @@ function(input, output, session) {
     data_raw <- data_raw %>% 
       select(-vg, -ensembl_gene_id)
     
-    
+    test00121 <<- data_raw
 
     data_raw <- get_perc_overlap(data_raw, coord_user(),
                                  is_a_gene = TRUE)
@@ -1619,7 +1581,7 @@ function(input, output, session) {
       select(-startdelete, -enddelete, -.overlap) %>%
       replace_na(replace = list(variant_class = '-', phenotypes = '-')) %>%
       select(chrom, start, end, syndrome_name, variant_class, phenotypes, source) %>%
-      get_perc_overlap((coord_user()))
+      get_perc_overlap(coord_user())
     
   })
   
@@ -2992,6 +2954,25 @@ function(input, output, session) {
       icon = "database",
       description = 'Nº of variants selected'
     )
+  })
+  
+  output$checking_quality_file <- renderUI({
+    
+    original_n_rows <- reading_cnv_file() %>% nrow()
+    
+    dup_n_rows <-  original_n_rows - (reading_cnv_file() %>% distinct() %>% nrow())
+    
+    if (dup_n_rows > 0) {
+
+      tablerInfoCard(
+        width = 12,
+        value = paste0(dup_n_rows, " duplicated"),
+        status = "success",
+        icon = "database",
+        description = 'Nº of rows duplicated'
+      )
+      
+      }
   })
   
   output$ref_user_length <- renderUI({
@@ -5079,6 +5060,9 @@ function(input, output, session) {
     data1 
   })
   
+  
+
+  
   output$cnv_file <- renderDT({
     
     tmp_tbl <- reading_cnv_file() %>% mutate(length_cnv = end - start + 1)
@@ -5098,8 +5082,6 @@ function(input, output, session) {
       
     } else {
       
-      test9999999999999999999999999 <<- input$cnv_file_rows_selected
-      
       validate(
         need(length(input$cnv_file_rows_selected) > 0, 'Please, select at least one variant.')
       )
@@ -5116,7 +5098,8 @@ function(input, output, session) {
   
   df_overlap_cnvs_running <- reactive({
     
-    # req(input$start_analysis > 0)
+    
+    
 
     tmp_df <-  get_perc_overlap(check_cnv_df(),
                                 coord_user())
@@ -5124,44 +5107,7 @@ function(input, output, session) {
     
     tmp_df
   })
-  
-  # intersection_running <- reactive({
-  # 
-  #   start_coordinates <- as.numeric(coord_user()[1])
-  #   end_coordinates <- as.numeric(coord_user()[2])
-  #   chrom_coordinates <- coord_user()[3]
-  #   
-  #   test00000 <<- df_overlap_cnvs_running() 
-  # 
-  #   df_pathogenic <- df_overlap_cnvs_running() %>% filter(source == 'decipher') 
-  #   
-  #   test93131 <<- df_pathogenic
-  #   
-  #   validate(
-  #     need(nrow(df_pathogenic) != 0, "No pathogenic CNVs found")
-  #   )
-  # 
-  #   cnv_input <- GRanges(
-  #     seqnames= chrom_coordinates,
-  #     ranges= IRanges(start= start_coordinates, end = end_coordinates)
-  #   )
-  # 
-  #   cnvs_pathogenic <- GRanges(
-  #     seqnames= df_pathogenic$chrom,
-  #     ranges= IRanges(start= df_pathogenic$start_position, end = df_pathogenic$end_position)
-  #   )
-  # 
-  #   gr_intersect <- intersect(cnv_input, cnvs_pathogenic) %>% as_tibble()
-  #   
-  #   gr_intersect <- gr_intersect %>%
-  #     mutate(id = as.factor(seq(1:n())))
-  # 
-  #   test711 <<- gr_intersect
-  # 
-  #   gr_intersect
-  # 
-  # 
-  # })
+
   
   output$df_intersection <- renderDataTable({
     
@@ -5173,51 +5119,6 @@ function(input, output, session) {
               options = list(dom = 't'))
     
   })
-  
-  # output$plot_intersection <- renderPlot({
-  #   
-  #   validate(
-  #     need(FALSE, "TBA")
-  #   )
-  #   
-  # 
-  #   start_coordinates <- as.numeric(coord_user()[1])
-  #   end_coordinates <- as.numeric(coord_user()[2])
-  #   
-  # 
-  #   
-  #   df_tmp <-intersection_running()
-  # 
-  #   df_genes <- data_selected() %>% mutate(keep = NA) %>%
-  #     rowwise() %>%
-  #     mutate(keep = c(start_position, end_position) %overlaps% c(df_tmp$start, df_tmp$end)) %>%
-  #     ungroup() %>%
-  #     filter(keep == TRUE) %>%
-  #     select(-keep) %>%
-  #     ungroup() %>%
-  #     mutate(pos = round((end_position + start_position)/2), 0) %>%
-  #     mutate(id = rep('gene(s)', n())) %>%
-  #     select(id, pos)
-  # 
-  #   df_total <- intersection_running() %>%
-  #     select(id, start, end) %>%
-  #     gather('rm', 'pos', -id) %>%
-  #     select(-rm) %>%
-  #     rbind(df_genes) %>%
-  #     mutate(id_color = as.factor(if_else(id == 'gene(s)', 'steelblue', 'red')))
-  #   
-  #     test1453 <<- df_total
-  # 
-  #   ggplot() +
-  #     geom_point(data = df_total, aes(pos, id, fill = id_color), color = 'black', shape = 21) +
-  #     geom_path(data =df_total %>% filter(id != 'gene(s)'), aes(pos, id, group = id, color = id_color)) +
-  #     coord_cartesian(xlim = c(start_coordinates, end_coordinates )) +
-  #     ylab('Id intersections') +
-  #     xlab(paste0('chr', coord_user()[3], ':', coord_user()[1], '-', coord_user()[2])) +
-  #     theme_fancy()
-  # 
-  # })
-  
   
   df_overlap_cnvs_running_download_patho <- reactive({
     
@@ -5381,8 +5282,7 @@ function(input, output, session) {
   
   running_decipher_c <- reactive({
     
-    # req(input$start_analysis > 0)
-    
+
     filter_id <-  df_overlap_cnvs_running() %>%
       filter(source == 'decipher_control') %>% pull(id)
     
@@ -5565,7 +5465,8 @@ function(input, output, session) {
       select(-end) %>%
       mutate(pubmed_id = str_extract(LINK, '\\d{8}')) %>%
       select(-LINK) %>%
-      select(-contains('source'))
+      select(-contains('source')) %>%
+      distinct()
 
   })
   
@@ -5585,15 +5486,14 @@ function(input, output, session) {
   
   running_de_novo <- reactive({
     
-    # req(input$start_analysis > 0)
-
     tmp_df <- denovo %>%
       rename(start = Position) %>%
       mutate(end = start) %>%
       bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
       select(-startdelete, -enddelete, -.overlap) %>%
       rename(position = start) %>%
-      select(-end)
+      select(-end) %>%
+      distinct()
     
     tmp_df
     
@@ -5601,10 +5501,6 @@ function(input, output, session) {
   
   running_clinvar <- reactive({
     
-    # req(input$start_analysis > 0)
-    
-    
-
     tmp_df <- clinvar_variants %>%
       mutate(chrom = as.character(chrom)) %>%
       rename(start = pos) %>%
@@ -5613,7 +5509,8 @@ function(input, output, session) {
       select(-startdelete, -enddelete, -.overlap) %>%
       rename(pos = start) %>%
       select(-end) %>%
-      select(-contains('source'))
+      select(-contains('source')) %>%
+      distinct()
     
     
     tmp_df
@@ -5773,9 +5670,9 @@ function(input, output, session) {
   down_file1 <- reactive({
     
     
-    tibble('chrom' = c('1', '10', '16', '22'),
-           'start' = c(34813719, 1000000, 1000000, 1200000),
-           'end' = c(36278623, 1000010, 1200000, 1800000))
+    tibble('chrom' = c('1','1', '1', '10', '16', '22'),
+           'start' = c(34813719, 34813719, 34813719, 1000000, 1000000, 1200000),
+           'end' = c(36278623, 36278623, 36278630, 1000010, 1200000, 1800000))
     
   })
 
