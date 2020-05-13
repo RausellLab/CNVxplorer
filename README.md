@@ -4,8 +4,21 @@
 ## Overview
 
 <p align="center">
-  <img  src="https://github.com/frequena/cnvxplorer/blob/master/www/overview.jpg">
+  <img  src="https://github.com/frequena/cnvxplorer/blob/master/doc/overview.jpg">
 </p>
+
+
+## Features
+
+* Query a genomic interval, cytoband, or upload a file with multiple genomic regions and analyze it simultaneously.
+* Compare the genetic evidence of disease genes from five different databases (OMIM, ORPHANET, ClinGen, DECIPHER, and Genomics England PanelApp).
+* Explore CNV syndromes, pathogenic and non-pathogenic CNVs, disease variants (ClinVar, GWAS), and denovo variants (denovo.db) that overlap with the CNVs.
+* Find regulatory elements disrupted by the variant and their target genes.
+* Consider those target genes that do not map the input variant(s) in the subsequent analysis (optional).
+* Identify relevant diseases and genes based on phenotypic similarity with the clinical characteristics of the patient.
+* Check the phenotype of the orthologous genes in experiments with mouse models.
+* Find PubMed articles related to your variants and filter the relevant ones by keyword, number of citations, or by association with the OMIM database.
+
 
 ### Access
 
