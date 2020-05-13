@@ -166,34 +166,3 @@ coord_chrom_hg19 <- read_tsv('https://hgdownload.cse.ucsc.edu/goldenPath/hg19/bi
                              col_names = c('chrom', 'length')) %>%
   filter(nchar(chrom) < 6) %>% filter(!str_detect(chrom, 'chrM')) %>%
   mutate(chrom = str_remove(chrom, 'chr'))
-
-
-# a <- c("chr1\t249250621",
-#   "chr2\t243199373",
-#   "chr3\t198022430",
-#   "chr4\t191154276",
-#   "chr5\t180915260",
-#   "chr6\t171115067",
-#   "chr7\t159138663",
-#   "chrX\t155270560",
-#   "chr8\t146364022",
-#   "chr9\t141213431",
-#   "chr10\t135534747",
-#   "chr11\t135006516",
-#   "chr12\t133851895",
-#   "chr13\t115169878",
-#   "chr14\t107349540",
-#   "chr15\t102531392",
-#   "chr16\t90354753",
-#   "chr17\t81195210",
-#   "chr18\t78077248",
-#   "chr20\t63025520",
-#   "chrY\t59373566",
-#   "chr19\t59128983",
-#   "chr22\t51304566",
-#   "chr21\t48129895")
-# 
-# coord_chrom_hg19 <- read_tsv(a,
-#                              col_names = c('chrom', 'length')) %>%
-#   filter(nchar(chrom) < 6) %>% filter(!str_detect(chrom, 'chrM')) %>%
-#   mutate(chrom = str_remove(chrom, 'chr'))
