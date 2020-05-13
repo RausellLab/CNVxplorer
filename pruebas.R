@@ -1,5 +1,8 @@
 
 
+query_pubmed <- entrez_search(db="pubmed", term= 'FOXP2', retmax = 1 )
+
+query_pubmed[[1]]
 
 x_tbl <- tibble('chrom' = c('1', '1'),
                 'start' = c(1, 1),
