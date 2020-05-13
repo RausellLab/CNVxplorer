@@ -214,11 +214,6 @@ tablerDashPage(
            uiOutput('checking_quality_file')
                          
               ), 
-              
-              
-              
-              
-              
               ),
             tablerCard(width = 12,
                        title = NULL,
@@ -1125,22 +1120,9 @@ tablerDashPage(
             collapsible = FALSE,
             closable = FALSE,
             title = 'Overview',
-            tags$img(src='overview.jpg'),
-          
-                     width = 12),
-        
-        tablerCard(
-          collapsible = FALSE,
-          closable = FALSE,
-          title = 'Features',
-          width = 12),
-        tablerCard(
-          collapsible = FALSE,
-          closable = FALSE,
-          title = 'FAQs',
-          tags$b('-How the percentage of overlapping is calculated?'),
-          tags$p('On the one hand, if the overlapping measured is between the query region and any CNV, the reference region is the query from the user. On the other hand, if the overlapping measured is between the query region and any gene, in this case, the reference region is the gene.'),
-          width = 12)
+            # tags$img(src='overview.jpg'),
+            includeMarkdown('doc/documentation.Rmd'),
+                     width = 12)
         
       ),
       tablerTabItem(
