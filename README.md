@@ -61,9 +61,12 @@ git clone https://github.com/frequena/cnvxplorer.git
 # The tag "cnvxplorer" is optional, you can choose your own tag
 docker build -t cnvxplorer .
 
-# The default port is 3838. If you specify a different port, you
+# -p Specify the port. The default port is 3838. If you select a different port, you
 # need to change it before in the Dockerfile (command: EXPOSE)
-docker run -p 3838:3838 cnvxplorer
+# Please, make sure the port is listening and not blocked by firewalls
+# -d Detached mode
+docker run -d -p 3838:3838 cnvxplorer
 
+# Note: the first session after the deployment is slower since the application loads all the date needed
 ```
 
