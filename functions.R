@@ -85,12 +85,12 @@ check_regions <- function(chrom = NULL, start = NULL, end = NULL) {
 
 
 get_perc_overlap <- function(df, input_tbl, 
-                             is_a_gene = FALSE) {
+                             is_a_gene = FALSE,
+                             is_patho = FALSE) {
 
 
   
-  # df <- test00121
-  # input_tbl <- test2020
+  input_tbl <- test2020
   
   
   df <- df %>%
@@ -119,22 +119,55 @@ get_perc_overlap <- function(df, input_tbl,
 
   } else {
     
-    tmp_df <- df %>% dplyr::select(chrom, start, end, id_tmp)
-    
-    df <- bed_intersect(tmp_df, input_tbl) %>%
-      group_by(chrom, start.x, end.x) %>%
-      filter(.overlap == max(.overlap)) %>%
-      ungroup() %>%
-      mutate(p_overlap = ((.overlap + 1) /(end.x - start.x + 1))*100) %>% 
-      arrange(p_overlap) %>%
-      mutate(p_overlap = round(p_overlap, 2)) %>%
-      select(start.x, end.x, id_tmp.x, p_overlap) %>%
-      right_join(df, by = c('start.x' = 'start', 'end.x' = 'end', 'id_tmp.x' = 'id_tmp')) %>%
-      rename(start = start.x, end = end.x) %>%
-      select(-p_overlap, p_overlap, -id_tmp.x) %>%
-      arrange(desc(p_overlap)) %>%
-      distinct()
-    
+    if (isTRUE(is_patho)) {
+      
+      df_over_tmp <- df %>% 
+        dplyr::select(chrom, start, end, id_tmp) %>%
+        bed_intersect(input_tbl)
+      
+      
+      df <- df_over_tmp %>%
+        group_by(chrom, start.x, end.x) %>%
+        filter(.overlap == max(.overlap)) %>%
+        ungroup() %>%
+        mutate(p_overlap = ((.overlap + 1) /(end.x - start.x + 1))*100) %>% 
+        arrange(p_overlap) %>%
+        mutate(p_overlap = round(p_overlap, 2)) %>%
+        select(start.x, end.x, id_tmp.x, p_overlap) %>%
+        right_join(df, by = c('start.x' = 'start', 'end.x' = 'end', 'id_tmp.x' = 'id_tmp')) %>%
+        rename(start = start.x, end = end.x) %>%
+        select(-p_overlap, p_overlap, -id_tmp.x) %>%
+        arrange(desc(p_overlap)) %>%
+        distinct()
+      
+      
+      
+    } else {
+      
+      tmp_df <- df %>% 
+        dplyr::select(chrom, start, end, id_tmp)
+      
+      df_over_tmp <-  bed_intersect(input_tbl, tmp_df)
+      
+      
+      df <- df_over_tmp %>%
+        group_by(chrom, start.y, end.y) %>%
+        filter(.overlap == max(.overlap)) %>%
+        ungroup() %>%
+        mutate(p_overlap = ((.overlap + 1) /(end.x - start.x + 1))*100) %>% 
+        arrange(p_overlap) %>%
+        mutate(p_overlap = round(p_overlap, 2)) %>%
+        select(start.y, end.y, id_tmp.y, p_overlap) %>%
+        right_join(df, by = c('start.y' = 'start', 'end.y' = 'end', 'id_tmp.y' = 'id_tmp')) %>%
+        rename(start = start.y, end = end.y) %>%
+        select(-p_overlap, p_overlap, -id_tmp.y) %>%
+        arrange(desc(p_overlap)) %>%
+        distinct()
+      
+      
+    }
+
+
   }
 
   return(df)
