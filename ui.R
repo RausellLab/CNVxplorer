@@ -973,7 +973,7 @@ tablerDashPage(
         fluidRow(
           column(width = 3,
                  tablerCard(title = 'Filter options:',
-                            tags$b('Select a gene:'),
+                            tags$b('Filter by gene:'),
                             selectInput(
                               "gene_yes_no", "",
                               c(No = "No",
@@ -981,7 +981,7 @@ tablerDashPage(
                             conditionalPanel(
                               condition = "input.gene_yes_no == 'Yes'",
                               uiOutput('gene_tissue')),
-                            tags$b('Select a tissue:'),
+                            tags$b('Filter by tissue:'),
                             selectInput(
                               "tissue_yes_no", "",
                               c(No = "No",
@@ -1053,7 +1053,7 @@ tablerDashPage(
                                        uiOutput('n_diseases'),
                                        
                                        selectizeInput(inputId = 'input_inheritance',
-                                                      label = 'Filter by mode of inheritance:',
+                                                      label = tags$b('Filter by mode of inheritance:'),
                                                       choices = vector_inheritance,
                                                       selected = NULL,
                                                       multiple = FALSE,
@@ -1151,7 +1151,7 @@ tablerDashPage(
           tablerCard(
             title = "Abstract",
             
-            DTOutput("abstract_del_pubmed"),
+            DTOutput("abstract_pubmed"),
             width = 12,
             overflow = TRUE
           ),
