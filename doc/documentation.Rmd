@@ -2,7 +2,9 @@
 title: "documentation"
 author: "frequena"
 date: "13/5/2020"
-output: html_document
+output:
+  html_document:
+    toc: true
 ---
 
 ## Overview
@@ -10,10 +12,10 @@ output: html_document
 CNVxplorer is a user-friendly web application developed to assist in the clinical interpretation of CNVs. For this purpose, CNVxplorer provides the user with the following main features:
 
 <p align="center">
-  <img  src="overview.jpg" width='700' height='400'>
+  <img  src="overview.jpg" width='750' height='400'>
 </p>
 
-## Features
+## Features 
 
 * Query a genomic interval, cytoband, or upload a file with multiple genomic regions and analyze it simultaneously.
 * Compare the genetic evidence of disease genes from five different databases (OMIM, ORPHANET, ClinGen, DECIPHER, and Genomics England PanelApp).
@@ -25,6 +27,7 @@ CNVxplorer is a user-friendly web application developed to assist in the clinica
 * Find PubMed articles related to your variants and filter the relevant ones by keyword, number of citations, or by association with the OMIM database.
 
 ## FAQs
+
 
 **What is the query used to retrieve the articles related to my variant(s)?**
 
