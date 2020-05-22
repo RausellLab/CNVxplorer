@@ -1400,16 +1400,6 @@ mutate(start = start + 1) %>%
 # Source: https://www.nature.com/articles/s41467-020-14284-2
 # ------------------------------------------------------------------------------
 
-# # 3262 genes found it / 3326 total nº genes
-# e_mgi <- read.table('/home/cbl02/Storage/data/essential_gene_lists/mgi', header = FALSE,
-#                     stringsAsFactors = FALSE) %>% as_tibble()
-# 
-# # 1931 genes found it / 2010 total nº genes
-# 
-# e_invitro <- read.table('/home/cbl02/Storage/data/essential_gene_lists/invitro', header = FALSE,
-#                     stringsAsFactors = FALSE) %>% as_tibble()
-# 
-# e_intersect <- e_mgi %>% filter(V1 %in% e_invitro$V1)
 
 # Cellular lethal (CL)
 # Developmental lethal (DL)
@@ -1426,7 +1416,7 @@ interval_genes <- getBM(attributes = c('hgnc_symbol', 'hgnc_id'),
   as_tibble() %>% 
   na.omit()
 
-listAttributes(human)
+
 
 fusil_score <- read_tsv('https://www.ebi.ac.uk/biostudies/files/S-BSST293/u/SourceDataFile1_FUSIL_bins.txt')
 
@@ -1434,7 +1424,20 @@ fusil_score <- read_tsv('https://www.ebi.ac.uk/biostudies/files/S-BSST293/u/Sour
 fusil_score <- fusil_score %>% select(HGNC_ID, FUSIL) %>%
   mutate(HGNC_ID = as.integer(str_remove(HGNC_ID, 'HGNC:'))) %>%
   left_join(interval_genes, by = c('HGNC_ID' = 'hgnc_id')) %>%
-  filter(FUSIL != '-')
+  filter(FUSIL != '-') %>%
+  rename(gene = hgnc_symbol, fusil = FUSIL) %>%
+  select(-HGNC_ID)
+
+fusil_score <- fusil_score %>%
+  mutate(desc = case_when(
+    fusil == 'VN' ~ 'Viable with no phenotype',
+    fusil == 'VP' ~ 'Viable with phenotype',
+    fusil == 'SV' ~ 'Subviable',
+    fusil == 'DL' ~ 'Developmental lethal',
+    fusil == 'CL' ~ 'Cellular lethal'
+  )) %>%
+  mutate(fusil = paste(fusil, paste0('(', desc, ')'))) %>%
+  select(gene, fusil)
 
 
 # ------------------------------------------------------------------------------
@@ -1641,18 +1644,25 @@ genes_disgenet <- disgenet %>% select(geneSymbol) %>% distinct() %>% pull()
 
 # ------------------------------------------------------------------------------
 # Dataset: Imprinting genes
-# Source: http://www.geneimprint.com/site/genes-by-species
+# Source: http://www.geneimprint.com/site/genes-by-species.Homo+sapiens
 # ------------------------------------------------------------------------------
 # 
-# imp_genes <- read_tsv('/home/cbl02/Storage/data/imprinted_genes')
-# 
-# imp_genes <- imp_genes %>% 
-#   separate(Aliases, into = LETTERS[1:25], sep = ',') %>%
-#   gather('remove', 'gene', -Location, -Status, -`Expressed Allele`) %>%
-#   select(-remove) %>%
-#   rename(expressed_allele = `Expressed Allele` ) %>%
-#   select(gene, everything()) %>%
-#   distinct()
+imp_genes <- read_tsv('data/imprinted_genes.tsv')
+
+imp_genes <- imp_genes %>%
+  separate_rows(Aliases, sep = ', ') %>%
+  rename(expressed_allele = `Expressed Allele`,
+         gene = Gene) %>%
+  select(gene, everything())
+
+tmp1 <- imp_genes %>% select(-Aliases)
+tmp2 <- imp_genes %>% select(-gene) %>% rename(gene = Aliases)
+
+imp_genes <- tmp1 %>% bind_rows(tmp2) %>% distinct()
+
+imp_genes <- imp_genes %>% mutate(status = paste(Status, '(expressed:', paste0(expressed_allele, ')'))) %>%
+  select(gene, status) %>%
+  rename(imprinted = status)
 
 # ------------------------------------------------------------------------------
 # Dataset: De novo variants (denovo-db)
@@ -2025,15 +2035,20 @@ hgcn_genes <- hgcn_genes %>%
   mutate(omim = as.factor(if_else(gene %in% omim_genes, 'Yes', 'No'))) %>% # OMIM genes
   mutate(orphanet = as.factor(if_else(gene %in% orphanet_genes, 'Yes', 'No'))) %>% # OMIM genes
   mutate(genomics_england = as.factor(if_else(gene %in% panel_total_genes, 'Yes', 'No'))) %>% # Genomics England panel 
-  mutate(essent = as.factor(if_else(ensembl_gene_id %in% e_intersect$V1 , 'Yes', 'No'))) %>% # essential genes (intersection mgi_invitro)
-  # mutate(disease = as.factor(if_else(gene %in% genes_disgenet , 'Yes', 'No'))) %>%
   left_join(ccr) %>% # Genes with CCRs in the 99th percentile or higher 
   left_join(nc) %>% # non-coding scores RVIS and ncGERP - 5UTR + 3UTR + 250bp upstream
   left_join(rvis) %>% # RVIS score based
   left_join(hi) %>% # Haploinsufficiency Score (HI index)
   left_join(snipre) %>% # SNIPre score
-  left_join(gdi) # GDI score (High GDI values reflect highly damaged genes. )
+  left_join(gdi) %>% # GDI score (High GDI values reflect highly damaged genes.)
+  left_join(imp_genes, by = 'gene') %>% # imprinted genes with validation and allele's origin expressed
+  mutate(imprinted = replace_na(imprinted, 'No')) %>%
+  mutate(ohnolog = as.factor(if_else(gene %in% ohno_genes$gene, 'Yes', 'No'))) %>%
+  left_join(fusil_score, by = 'gene')
 
+
+
+  
 hgcn_genes <- hgcn_genes %>% 
   rename(chrom = chromosome_name) %>%
   mutate(clingen = if_else(haplo == 'Yes' | triplo == 'Yes', 'Yes', 'No')) %>%
