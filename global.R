@@ -5,7 +5,6 @@ library(shinyEffects)
 library(echarts4r)
 library(shinyWidgets)
 library(shinyjs)
-# library(karyoploteR)
 library(DT)
 library(XML)
 library(highcharter)
@@ -14,7 +13,7 @@ library(ReactomePA)
 library(shinycssloaders)
 library(plotly)
 library(waiter)
-library(DescTools)# library(hrbrthemes)
+library(DescTools)
 library(clusterProfiler)
 library(org.Hs.eg.db)
 library(patchwork)
@@ -25,7 +24,6 @@ library(reactable)
 library(ggridges)
 library(shinymanager)
 library(UpSetR)
-library(randomForest) # delete in case of using an alternative model
 library(chromPlot)
 import::from(Gviz, "IdeogramTrack")
 import::from(Gviz, 'plotTracks')
@@ -35,8 +33,8 @@ library(ontologyIndex)
 library(formattable)
 library(valr)
 library(TissueEnrich)
-library(arules)
-library(arulesCBA)
+# library(arules)
+# library(arulesCBA)
 library(shinyalert)
 library(ggraph)
 library(igraph) 
@@ -85,8 +83,8 @@ library(tidyverse)
 # # coord_chrom_hg19 - chromosome length
 
 # 
-# file.remove('local_data.RData.gz')
-# file.remove('local_data.RData')
+file.remove('local_data.RData.gz')
+file.remove('local_data.RData')
 # save(hgcn_genes, ## hg19
 #     df_enhancers, ## hg19
 #     tad, ## hg19
@@ -105,11 +103,11 @@ library(tidyverse)
 #     trrust, ## hg19
 #     tf_genes, ## -
 #     drugbank, ## -
-#     dev_raw, 
-#     panel_total, 
-#     omim, 
-#     orphanet_raw,  
-#     hpo_dbs, 
+#     dev_raw,
+#     panel_total,
+#     omim,
+#     orphanet_raw,
+#     hpo_dbs,
 #     lncrna, ## hg19
 #     lncrna_target, ## hg19
 #     denovo, ## hg19
@@ -123,13 +121,13 @@ library(tidyverse)
 #     mgi, ## -
 #     syndromes_total, ## hg19
 #     file = "local_data.RData")
-
+# 
 # system("gzip local_data.RData")
 
 source('functions.R')
 
- system('gunzip -c local_data.RData.gz > local_data.RData')
-load('local_data.RData')
+# system('gunzip -c local_data.RData.gz > local_data.RData')
+# load('local_data.RData')
 
 ridges_home <- cnv_df %>%
   filter(length_cnv >= 50) %>%
