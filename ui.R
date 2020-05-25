@@ -600,7 +600,7 @@ tablerDashPage(
           )
         ),
         tablerCard(
-          title = "Overlap with pathogenic CNVs (DECIPHER)",
+          title = "Overlap with pathogenic/likely pathogenic CNVs (DECIPHER)",
           DTOutput('df_overlap_cnvs'),
           width = 12,
           collapsible = FALSE,
@@ -770,12 +770,17 @@ tablerDashPage(
                             plotOutput('p100_enhancer'),
                             collapsible = FALSE,
                             closable = FALSE,
-                            width = 6),
-                 tablerCard(title = 'Conservation - Phast46way histogram',
-                            plotOutput('p46_enhancer'),
+                            width = 4),
+                 tablerCard(title = 'Conservation - Phast46way placental histogram',
+                            plotOutput('p46pla_enhancer'),
                             collapsible = FALSE,
                             closable = FALSE,
-                            width = 6)
+                            width = 4),
+                 tablerCard(title = 'Conservation - Phast46way primates histogram',
+                            plotOutput('p46pri_enhancer'),
+                            collapsible = FALSE,
+                            closable = FALSE,
+                            width = 4)
         ),
         
 
@@ -789,7 +794,7 @@ tablerDashPage(
                      uiOutput('n_target_mirna'),
                      uiOutput('switch_mirnas')
                    )),
-        tablerCard(title = 'Transcription factors (TFs) targets disrupted',
+        tablerCard(title = 'Transcription factors (TFs) disrupted',
                    DTOutput('tf_df'),
                    collapsible = FALSE,
                    closable = FALSE,

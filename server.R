@@ -167,6 +167,36 @@ function(input, output, session) {
     shinyjs::reset('file_cnv')
   })
   
+# Check input amenabar
+  
+  observe({
+    
+    test_negative <- nrow(coord_user() %>% filter(start < 0 | end < 0))
+    
+    # negative numbers
+    if (test_negative > 0) {
+      
+      shinyalert("Error!", "There is a negative coordinate", type = "error")
+      
+      validate(
+        need(test_negative < 0, 'Negative number')
+      )
+      
+    # out of chromosome coordinate
+    } else if (nrow(coord_user() %>% 
+               left_join(coord_chrom_hg19, by = 'chrom') %>%
+               mutate(is_bigger = end - length) %>%
+               filter(is_bigger > 0)
+               ) > 0) {
+      shinyalert("Error!", "You have selected a genomic coordinate out of the chromosome", type = "error")
+    } else if (nrow(coord_user() %>% mutate(t_length = end - start + 1) %>%
+                    filter(t_length > 1e7))) {
+      
+      shinyalert("Error!", "One of the genomic intervals exceed the maximum length (10 millions b.p)", type = "error")
+      
+    }
+  })
+  
   
   map_blacklist <- reactive({
 
@@ -234,8 +264,8 @@ function(input, output, session) {
   
   coord_user <- eventReactive(input$start_analysis, {
 
-    coord_start <- as.numeric(input$int_start)
-    coord_end <-  as.numeric(input$int_end)
+    coord_start <- as.numeric(str_remove_all(input$int_start, ','))
+    coord_end <-  as.numeric(str_remove_all(input$int_end, ','))
     coord_chrom <- input$input_chrom
 
     
@@ -858,7 +888,7 @@ function(input, output, session) {
       
     }
 
-    query_pubmed <- entrez_search(db="pubmed", term= query_region, retmax = 200 )
+    query_pubmed <- entrez_search(db="pubmed", term= query_region, retmax = 600 )
     
 
 
@@ -2054,8 +2084,7 @@ function(input, output, session) {
     data_input <- tmp_df %>% 
       select(-start, -end, -chrom) %>%
       filter(source == 'CNV') %>%
-      select(-source) %>%
-      select(band, gene, disease, essent, pLI, rvis, ccr, hi, gdi, snipre, ncrvis, 
+      select(band, gene, disease, fusil, ohnolog, imprinted, pLI, rvis, ccr, hi, gdi, snipre, ncrvis, 
              ncgerp, p_overlap) %>%
       filter(disease == 'No')
     
@@ -2065,16 +2094,15 @@ function(input, output, session) {
     
     
     tmp_output <- datatable(data_input, rownames = FALSE, 
-                            colnames = c('Band', 'Gene', 'Disease', 'Essential', 'pLI', 'RVIS', 'CCR', 'HI', 'GDI', 'SnIPRE', 'ncRVIS',
+                            colnames = c('Band', 'Gene', 'Disease', 'Essentiality',
+                                         'Ohnolog', 'Imprinted',
+                                         'pLI', 'RVIS', 'CCR', 'HI', 'GDI', 'SnIPRE', 'ncRVIS',
                                          'ncGERP', 'Overlap(%)'),
                             filter = list(position = 'top'), 
-                            selection = 'single'
-                            # options = list(dom = 't')
-    ) %>%
-      formatStyle(c('pLI', 'rvis', 'hi', 'gdi', 'snipre', 'ncrvis', 'ncgerp', 'essent'), color = styleInterval(94, c('weight', '#ff7f7f'))) %>%
+                            selection = 'single') %>%
+      formatStyle(c('pLI', 'rvis', 'hi', 'gdi', 'snipre', 'ncrvis', 'ncgerp'), color = styleInterval(94, c('weight', '#ff7f7f'))) %>%
       formatStyle(c('ccr'), color = styleInterval(1, c('weight', '#ff7f7f')))
-    # formatStyle(c('disease', 'haplo', 'triplo', 'omim', 'dev', 'fda', 'gwas'), color = styleEqual(c('No', 'Yes'), c('weight', '#ff7f7f')))
-    
+
     
     tmp_output
     
@@ -2584,10 +2612,10 @@ function(input, output, session) {
     
     if (input$input_geno_karyo == 'Genomic coordinates') {
       
-      numericInput(
+      textInput(
         inputId = "int_start",
         label = "Genomic interval - Start",
-        value = 169590972)
+        value = '77,470,275')
       
     } else {
       
@@ -3147,7 +3175,10 @@ function(input, output, session) {
       need(input$df_enhancer_rows_selected != '', "Please, select an enhancer in the datatable.")
     )
     
-    score_filtered <- prev_enhancer() %>% slice(input$df_enhancer_rows_selected) %>% select(phast100) %>% pull()
+    score_filtered <- prev_enhancer() %>% 
+      slice(input$df_enhancer_rows_selected) %>% 
+      select(phast100) %>% 
+      pull()
     
     # prev_enhancer() %>% ggplot(aes(phast100)) +
     #   geom_histogram() +
@@ -3156,25 +3187,40 @@ function(input, output, session) {
     plot_p100 +
       theme_fancy() +
       geom_vline(xintercept = score_filtered, color = 'red')
-    
-    
-    
+
   })
   
-  output$p46_enhancer <- renderPlot({
+  output$p46pla_enhancer <- renderPlot({
     
     validate(
       need(input$df_enhancer_rows_selected != '', "Please, select an enhancer in the datatable.")
     )
     
-    score_filtered <- prev_enhancer() %>% slice(input$df_enhancer_rows_selected) %>% select(phast100) %>% pull()
+    score_filtered <- prev_enhancer() %>% slice(input$df_enhancer_rows_selected) %>% 
+      select(phast46pla) %>% 
+      pull()
     
     
     plot_p46pla +
       theme_fancy() +
       geom_vline(xintercept = score_filtered, color = 'red')
+
+  })
+  
+  output$p46pri_enhancer <- renderPlot({
     
+    validate(
+      need(input$df_enhancer_rows_selected != '', "Please, select an enhancer in the datatable.")
+    )
     
+    score_filtered <- prev_enhancer() %>% 
+      slice(input$df_enhancer_rows_selected) %>% 
+      select(phast46pri) %>% 
+      pull()
+    
+    plot_p46pri +
+      theme_fancy() +
+      geom_vline(xintercept = score_filtered, color = 'red')
     
   })
   
@@ -3780,6 +3826,7 @@ function(input, output, session) {
       na.omit()
     
     if (input$input_inheritance != 'Any') {
+      
     keep_identifiers <- tmp_tbl %>% select(identifier) %>%
       left_join(hpo_omim %>% select(identifier, hp)) %>%
       filter(hp %in% input$input_inheritance) %>%
@@ -3792,7 +3839,6 @@ function(input, output, session) {
     )
     
     }
-    
 
     if (length(input$chosen_hp) == 0) {
       
@@ -3801,7 +3847,6 @@ function(input, output, session) {
       
     } else {
       
-
       to_sim_gene <- tmp_tbl %>% 
         select(gene, hp_gene)
       
@@ -3810,22 +3855,18 @@ function(input, output, session) {
         left_join(hpo_omim %>% select(identifier, hp)  %>% rename(hp_omim = hp), by = 'identifier') %>%
         na.omit()
       
-
-
       list_hpo_genes <- base::split(to_sim_gene$hp_gene, to_sim_gene$gene)      
       list_hpo_diseases <- base::split(to_sim_disease$hp_omim, to_sim_disease$identifier)      
       
-      # hpo_patient  <- list('patient' = 'HP:0001285')
-      hpo_patient  <- list('patient' = input$chosen_hp)
-      
-      
-      
+      hpo_patient  <- list('patient' = 'HP:0000002')
+      # hpo_patient  <- list('patient' = input$chosen_hp)
+    
       output_genes <- get_sim_grid(ontology=hpo_dbs, 
                                    term_sets= hpo_patient,
                                    term_sets2 = list_hpo_genes,
                                    term_sim_method = 'resnik') %>%
         t() %>% 
-        enframe(name = 'gene') %>% 
+        as_tibble(rownames = 'gene') %>%
         rename(sim_gene = patient) %>%
         mutate(sim_gene = round(sim_gene, 2))
 
@@ -3838,8 +3879,7 @@ function(input, output, session) {
         mutate(identifier = as.double(identifier)) %>%
         rename(sim_mim = patient) %>%
         mutate(sim_mim = round(sim_mim, 2))
-      
-      
+    
       return_tbl <- tmp_tbl %>% 
         select(-hp_gene) %>%
         distinct() %>%
@@ -3858,6 +3898,8 @@ function(input, output, session) {
     
     output$dt_running_sim_score <- renderDT({
       
+      
+      test1412 <<- running_sim_score()
       
       datatable(running_sim_score() %>% replace_na(list(sim_gene = '-', sim_mim = '-')) %>%
                   mutate(identifier = paste0(identifier, '(', disease_source, ')')) %>%
@@ -4238,10 +4280,10 @@ function(input, output, session) {
     
     if (input$input_geno_karyo == 'Genomic coordinates') {
       
-      numericInput(
+      textInput(
         inputId = "int_end",
         label = "Genomic interval - End",
-        value = 170890108)
+        value = '79,376,846')
     }
   })
   
@@ -4792,7 +4834,8 @@ function(input, output, session) {
     } else {
       
       validate(
-        need(length(input$cnv_file_rows_selected) > 0, 'Please, select at least one variant.')
+        need(length(input$cnv_file_rows_selected) > 0, 'Please, click on the rows to select, at least,
+             one variant')
       )
       
       tmp_tbl[input$cnv_file_rows_selected,]
