@@ -1219,14 +1219,26 @@ df_enhancers <- df_enhancers %>% mutate(phast100 = round(phast100, 2)) %>%
   mutate(phast46pri = round(phast46pri, 2))
   
 
-plot_p100 <- df_enhancers %>% select(id, phast100) %>% distinct() %>% ggplot(aes(phast100)) + geom_density() +
+plot_p100 <- df_enhancers %>% 
+  select(id, phast100) %>% 
+  distinct() %>% 
+  ggplot(aes(phast100)) + 
+  geom_density() +
   xlab('Phast100way score')
+
 plot_p46pla <-  df_enhancers %>% 
   select(id, phast46pla) %>% 
   distinct() %>% 
   ggplot(aes(phast46pla)) + 
   geom_density() +
-  xlab('Phast46way score')
+  xlab('Phast46way placental score')
+
+plot_p46pri <-  df_enhancers %>% 
+  select(id, phast46pri) %>% 
+  distinct() %>% 
+  ggplot(aes(phast46pri)) + 
+  geom_density() +
+  xlab('Phast46way placental score')
   
 # 
 # enh_post <- mod_remot('from_remot/enhancer_apolo_crossmap_cleaned_7_result.txt', 'EUR', 7, TRUE)
@@ -2046,9 +2058,6 @@ hgcn_genes <- hgcn_genes %>%
   mutate(ohnolog = as.factor(if_else(gene %in% ohno_genes$gene, 'Yes', 'No'))) %>%
   left_join(fusil_score, by = 'gene')
 
-
-
-  
 hgcn_genes <- hgcn_genes %>% 
   rename(chrom = chromosome_name) %>%
   mutate(clingen = if_else(haplo == 'Yes' | triplo == 'Yes', 'Yes', 'No')) %>%
