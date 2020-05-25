@@ -7,6 +7,7 @@
   - [Features](#Features)
   - [Access](#Access)
   - [Installation](#Installation)
+  - [Contributions](#Contributions)
 
 ## Overview
 
@@ -82,3 +83,5 @@ docker run -d -p 3838:3838 cnvxplorer
 
 # Note: the first session after the deployment is slower since the application loads all the date needed
 ```
+
+## Contributions
