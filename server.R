@@ -170,20 +170,23 @@ function(input, output, session) {
 # Check input amenabar
   
   observe({
-    
+
     test_negative <- nrow(coord_user() %>% filter(start < 0 | end < 0))
-    
+    test9231 <<- test_negative
     # negative numbers
     if (test_negative > 0) {
-      
+
       shinyalert("Error!", "There is a negative coordinate", type = "error")
-      
-      validate(
-        need(test_negative < 0, 'Negative number')
-      )
-      
+
+      req(coord_user() %>% pull(start) > 0)
+
+
+      # validate(
+      #   need(test_negative < 0, 'Negative number')
+      # )
+
     # out of chromosome coordinate
-    } else if (nrow(coord_user() %>% 
+    } else if (nrow(coord_user() %>%
                left_join(coord_chrom_hg19, by = 'chrom') %>%
                mutate(is_bigger = end - length) %>%
                filter(is_bigger > 0)
@@ -191,12 +194,12 @@ function(input, output, session) {
       shinyalert("Error!", "You have selected a genomic coordinate out of the chromosome", type = "error")
     } else if (nrow(coord_user() %>% mutate(t_length = end - start + 1) %>%
                     filter(t_length > 1e7))) {
-      
+
       shinyalert("Error!", "One of the genomic intervals exceed the maximum length (10 millions b.p)", type = "error")
-      
+
     }
   })
-  
+
   
   map_blacklist <- reactive({
 
@@ -268,6 +271,7 @@ function(input, output, session) {
     coord_end <-  as.numeric(str_remove_all(input$int_end, ','))
     coord_chrom <- input$input_chrom
 
+
     
     if (input$input_geno_karyo == 'Genomic coordinates') {
       
@@ -294,12 +298,49 @@ function(input, output, session) {
       
     } else {
 
-      test24124120419241491924912941299412 <<- cnv_file_to_analyze()
-
       tbl_output <- cnv_file_to_analyze()
-      
-      
+
     }
+    
+    tmp_check_1 <- tbl_output %>% 
+      filter(start < 0 | end < 0)
+    
+    tmp_check_2 <- tbl_output %>% 
+      mutate(t_length = end - start + 1) %>%
+      filter(t_length >= 1e7)
+    
+    tmp_check_3 <- tbl_output %>%
+      mutate(check_lower_end = end - start) %>%
+      filter(check_lower_end < 0) 
+    
+    tmp_check_4 <- tbl_output %>%
+      left_join(coord_chrom_hg19, by = 'chrom') %>%
+      mutate(is_bigger = end - length) %>%
+      filter(is_bigger > 0)
+    
+    
+    if (nrow(tmp_check_1) > 0) {
+
+      shinyalert("Error!", "You have selected a region with negative coordinates", type = "error")
+      req(tmp_check_1 == 0)
+
+    } else if (nrow(tmp_check_2) > 0) {
+      
+      shinyalert("Error!", "One of the genomic intervals exceed the maximum length (10 millions b.p)", type = "error")
+      req(tmp_check_2 == 0)
+
+    } else if (nrow(tmp_check_3) > 0 ) {
+       
+      
+      shinyalert("The end of the genomic interval is lower than the start", type = "error")
+      req(tmp_check_3 == 0)
+      
+     } else if (nrow(tmp_check_4) > 0 ) {
+ 
+      shinyalert("Error!", "You have selected a genomic coordinate out of the chromosome", type = "error")
+      req(tmp_check_4 == 0)
+       
+      }
     
     
     test2020 <<- tbl_output
@@ -2794,7 +2835,6 @@ function(input, output, session) {
     tmp_end <- coord_user() %>% pull(end)
     tmp_chrom <- coord_user() %>% pull(chrom)
     
-    
     tablerInfoCard(
       width = 12,
       value =  coord_user() %>% nrow(),
@@ -2802,10 +2842,6 @@ function(input, output, session) {
       icon = "database",
       description =  'Nº region(s) displayed'
     )
-    
-    
-    
-    
   })
   
   
@@ -2850,8 +2886,6 @@ function(input, output, session) {
   output$ref_user_cytoband <- renderUI({
     
     req(input$input_geno_karyo != 'Multiple coordinates')
-    
-    
     
     if (input$input_geno_karyo == 'Genomic coordinates') {
       
