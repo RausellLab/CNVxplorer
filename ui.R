@@ -211,6 +211,7 @@ tablerDashPage(
                                         multiple = FALSE,
                                         options = NULL),
            uiOutput('n_variants'),
+           uiOutput('ref_user_region_file'),
            uiOutput('checking_quality_file')
                          
               ), 
@@ -233,8 +234,10 @@ tablerDashPage(
                        ),
                        
             ), 
-            uiOutput('ref_user_length'),
+           
+            uiOutput('ref_user_region'),
             uiOutput('ref_user_cytoband'),
+            uiOutput('ref_user_length'),
             uiOutput('check_blacklist')
 
           )

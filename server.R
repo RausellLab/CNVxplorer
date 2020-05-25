@@ -2766,6 +2766,49 @@ function(input, output, session) {
       }
   })
   
+  output$ref_user_region <- renderUI({
+    
+    req(input$input_geno_karyo != 'Multiple coordinates')
+    
+    tmp_start <- coord_user() %>% pull(start)
+    tmp_end <- coord_user() %>% pull(end)
+    tmp_chrom <- coord_user() %>% pull(chrom)
+    
+    
+    tablerInfoCard(
+      width = 12,
+      value =  paste0(tmp_chrom,':', tmp_start, '-', tmp_end),
+      status = "primary",
+      icon = "database",
+      description =  'Current region displayed'
+    )
+    
+    
+    
+  })
+  
+  
+  output$ref_user_region_file <- renderUI({
+    
+    tmp_start <- coord_user() %>% pull(start)
+    tmp_end <- coord_user() %>% pull(end)
+    tmp_chrom <- coord_user() %>% pull(chrom)
+    
+    
+    tablerInfoCard(
+      width = 12,
+      value =  coord_user() %>% nrow(),
+      status = "primary",
+      icon = "database",
+      description =  'Nº region(s) displayed'
+    )
+    
+    
+    
+    
+  })
+  
+  
   output$ref_user_length <- renderUI({
     
     
@@ -2799,7 +2842,6 @@ function(input, output, session) {
       status = "primary",
       icon = "database",
       description =  tmp_description
-      
     )
     
     
@@ -2836,31 +2878,13 @@ function(input, output, session) {
       value =  tmp_cyto,
       status = "primary",
       icon = "database",
-      description =  'Cytoband(s) selected'
+      description =  'Cytoband(s) mapping'
       
     )
     
     
   })
-  
-  
-  # output$n_genes_enh_added <- renderUI({
-  #   
-  #   req(nrow(data_selected_enhancers()) > 0)
-  # 
-  #   tmp_df <- data_selected_enhancers()
-  #   
-  #       tablerInfoCard(
-  #     width = 12,
-  #     value = paste0('+', nrow(tmp_df), " genes"),
-  #     status = "warning",
-  #     icon = "database",
-  #     # description =  name_region
-  #     description = 'Target-genes enhancers'
-  #   )
-  # 
-  #   
-  # })
+
   
   output$counter_header <- renderUI({
 
