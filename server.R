@@ -332,7 +332,7 @@ function(input, output, session) {
     } else if (nrow(tmp_check_3) > 0 ) {
        
       
-      shinyalert("The end of the genomic interval is lower than the start", type = "error")
+      shinyalert('Error!', "The end of the genomic interval is lower than the start", type = "error")
       req(tmp_check_3 == 0)
       
      } else if (nrow(tmp_check_4) > 0 ) {
@@ -1806,8 +1806,6 @@ function(input, output, session) {
       select(-source) %>%
       select(band, gene, disease, orphanet, dev, clingen, omim, gwas, p_overlap) %>%
       filter(disease == 'Yes')
-    # mutate(n_evidences = sample(1:4, n(), replace = TRUE)) %>%
-    # select(band, gene, n_evidences)
     
     data_tmp <- data_input %>% 
       left_join(running_upset_disease() %>% 
@@ -2656,7 +2654,7 @@ function(input, output, session) {
       textInput(
         inputId = "int_start",
         label = "Genomic interval - Start",
-        value = '77,470,275')
+        value = '185787209')
       
     } else {
       
@@ -4341,7 +4339,7 @@ function(input, output, session) {
       textInput(
         inputId = "int_end",
         label = "Genomic interval - End",
-        value = '79,376,846')
+        value = '188405222')
     }
   })
   
@@ -4955,12 +4953,25 @@ function(input, output, session) {
       need(nrow(tmp_df) != 0, "No pathogenic CNVs found.")
     )
     
-    datatable(tmp_df, escape = FALSE,
+  
+    test91232131333 <<- tmp_df
+    
+    tmp_df <- tmp_df %>%
+      rowwise() %>%
+      mutate(genes = paste(bed_intersect(hgcn_genes, 
+                                         tibble('chrom' = chrom, 'start' = start,
+                                                      'end' = end)) %>% pull(gene.x), collapse = ', ')) %>%
+      ungroup()
+    
+    
+    datatable(tmp_df, 
+              escape = FALSE,
               colnames = c('ID', 'Chrom', 'Start', 'End', 'Pathogenicity', 'Genotype', 'Class', 'Phenotype',
-                           'CNV size', 'Overlap (%)'),
+                           'CNV size', 'Overlap (%)', 'Genes overlapping'),
               selection = 'single',
+              filter = list(position = 'top'), 
               options = list(
-                columnDefs = list(list(className = 'dt-center',  targets = c(0:6,8,9)))),  rownames= FALSE)
+                columnDefs = list(list(className = 'dt-center',  targets = c(0:6,8,9, 10)))),  rownames= FALSE)
   })
   
   
@@ -5301,7 +5312,10 @@ function(input, output, session) {
         
         mutate(id = paste0("<a href='", paste0('https://www.ncbi.nlm.nih.gov/clinvar/variation/', id),"' target='_blank'>", id,"</a>"))
 
-      datatable(tmp_df, escape = FALSE, colnames = c('Chrom', 'Position','Reference', 'Alternative','Gene','Clinical significance',
+      datatable(tmp_df, 
+                filter = list(position = 'top'), 
+                escape = FALSE, 
+                colnames = c('Chrom', 'Position','Reference', 'Alternative','Gene','Clinical significance',
                                                      'Disease Identifier', 
                                                      'Disease name', 'Clinvar ID'), 
                 rownames = FALSE
