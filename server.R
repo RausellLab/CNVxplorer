@@ -3257,7 +3257,9 @@ function(input, output, session) {
       select(phast46pla) %>% 
       pull()
     
-    
+    plot_p46pla +
+    theme_fancy() +
+      geom_vline(xintercept = score_filtered, color = 'red')
 
 
   })
@@ -3274,6 +3276,7 @@ function(input, output, session) {
       pull()
     
     plot_p46pla +
+      xlab('Phast46way primate score')
       theme_fancy() +
       geom_vline(xintercept = score_filtered, color = 'red')
     
