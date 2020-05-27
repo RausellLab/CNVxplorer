@@ -83,8 +83,8 @@ library(tidyverse)
 # # coord_chrom_hg19 - chromosome length
 
 # 
-file.remove('local_data.RData.gz')
-file.remove('local_data.RData')
+# file.remove('local_data.RData.gz')
+# file.remove('local_data.RData')
 # save(hgcn_genes, ## hg19
 #     df_enhancers, ## hg19
 #     tad, ## hg19
@@ -114,6 +114,7 @@ file.remove('local_data.RData')
 #     clinvar_variants,  ## hg19
 #     plot_p100, ## -
 #     plot_p46pla, ## -
+#     plot_p46pri, ## -
 #     lncrna_coord, ## hg19
 #     blacklist_encode, ## hg19
 #     mpo_dbs, ## -
@@ -126,8 +127,8 @@ file.remove('local_data.RData')
 
 source('functions.R')
 
-# system('gunzip -c local_data.RData.gz > local_data.RData')
-# load('local_data.RData')
+system('gunzip -c local_data.RData.gz > local_data.RData')
+load('local_data.RData')
 
 ridges_home <- cnv_df %>%
   filter(length_cnv >= 50) %>%
@@ -147,6 +148,20 @@ ridges_home <- cnv_df %>%
   ylab('Database') +
   theme_ridges()
 
+input_check_cnv %>% 
+  mutate(length_cnv = end - start + 1) %>%
+  filter(length_cnv >= 50) %>%
+  ggplot(aes(length_cnv, y = pathogenicity)) +
+  stat_density_ridges(quantile_lines = TRUE, quantiles = 2, aes(fill = pathogenicity), alpha = 0.6, show.legend = FALSE, size = 1.25) +
+  scale_x_log10() +
+  scale_y_discrete(expand = c(0.01, 0)) +
+  scale_fill_viridis_d() +
+  xlab('log10(CNVs size)') +
+  ylab('Database') +
+  theme_ridges()
+  
+  
+
 
 
 theme_fancy <- function() {
@@ -161,6 +176,8 @@ human_chrom <- list('chr1' = 1, 'chr2' = 2,'chr3' = 3,'chr4' = 4,'chr5' = 5,'chr
                     'chrX' = 'X','chrY' = 'Y')
 
 coord_chrom_hg19 <- read_tsv('https://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/hg19.chrom.sizes',
-                             col_names = c('chrom', 'length')) %>%
-  filter(nchar(chrom) < 6) %>% filter(!str_detect(chrom, 'chrM')) %>%
+                             col_names = c('chrom', 'length'), col_types = 
+                               list(chrom = col_character(),length = col_double())) %>%
+  filter(nchar(chrom) < 6) %>% 
+  filter(!str_detect(chrom, 'chrM')) %>%
   mutate(chrom = str_remove(chrom, 'chr'))
