@@ -148,22 +148,6 @@ ridges_home <- cnv_df %>%
   ylab('Database') +
   theme_ridges()
 
-input_check_cnv %>% 
-  mutate(length_cnv = end - start + 1) %>%
-  filter(length_cnv >= 50) %>%
-  ggplot(aes(length_cnv, y = pathogenicity)) +
-  stat_density_ridges(quantile_lines = TRUE, quantiles = 2, aes(fill = pathogenicity), alpha = 0.6, show.legend = FALSE, size = 1.25) +
-  scale_x_log10() +
-  scale_y_discrete(expand = c(0.01, 0)) +
-  scale_fill_viridis_d() +
-  xlab('log10(CNVs size)') +
-  ylab('Database') +
-  theme_ridges()
-  
-  
-
-
-
 theme_fancy <- function() {
   theme_minimal(base_family = "Asap Condensed") +
     theme(panel.grid.minor = element_blank()) +
