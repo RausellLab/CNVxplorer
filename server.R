@@ -3252,14 +3252,13 @@ function(input, output, session) {
       need(input$df_enhancer_rows_selected != '', "Please, select an enhancer in the datatable.")
     )
     
-    score_filtered <- prev_enhancer() %>% slice(input$df_enhancer_rows_selected) %>% 
+    score_filtered <- prev_enhancer() %>% 
+      slice(input$df_enhancer_rows_selected) %>% 
       select(phast46pla) %>% 
       pull()
     
     
-    plot_p46pla +
-      theme_fancy() +
-      geom_vline(xintercept = score_filtered, color = 'red')
+
 
   })
   
@@ -3274,7 +3273,7 @@ function(input, output, session) {
       select(phast46pri) %>% 
       pull()
     
-    plot_p46pri +
+    plot_p46pla +
       theme_fancy() +
       geom_vline(xintercept = score_filtered, color = 'red')
     
