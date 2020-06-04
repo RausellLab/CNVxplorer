@@ -41,6 +41,7 @@ library(igraph)
 library(widyr)
 library(tidytext)
 library(tidyverse)
+library(bioloupe)
 
 
 # # Files needed to run the app
@@ -79,7 +80,6 @@ library(tidyverse)
 # # pubmed_df - Nº hits deletion - duplication
 # # ensembl_reg  - Ensembl Regulatory Build
 # # region_gaps - Centromeric and telomeric regions
-# # fusil_score - essential genes
 # # coord_chrom_hg19 - chromosome length
 
 # 
@@ -128,7 +128,7 @@ library(tidyverse)
 source('functions.R')
 
 # system('gunzip -c local_data.RData.gz > local_data.RData')
-load('local_data.RData')
+# load('local_data.RData')
 
 ridges_home <- cnv_df %>%
   filter(length_cnv >= 50) %>%
@@ -165,3 +165,6 @@ coord_chrom_hg19 <- read_tsv('https://hgdownload.cse.ucsc.edu/goldenPath/hg19/bi
   filter(nchar(chrom) < 6) %>% 
   filter(!str_detect(chrom, 'chrM')) %>%
   mutate(chrom = str_remove(chrom, 'chr'))
+
+
+coord_cytobands <- chromPlot::hg_cytoBandIdeo %>% mutate(Start = Start + 1)
