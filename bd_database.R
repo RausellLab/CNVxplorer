@@ -1214,7 +1214,8 @@ df_enhancers <- df_enhancers %>%
   left_join(from_python %>% select(id, phast100, phast46pla, phast46pri), by = 'id') %>%
   left_join(from_remot, by = c('chrom', 'start', 'end'))
 
-df_enhancers <- df_enhancers %>% mutate(phast100 = round(phast100, 2)) %>%
+df_enhancers <- df_enhancers %>% 
+  mutate(phast100 = round(phast100, 2)) %>%
   mutate(phast46pla = round(phast46pla, 2)) %>%
   mutate(phast46pri = round(phast46pri, 2))
   
@@ -1238,7 +1239,7 @@ plot_p46pri <-  df_enhancers %>%
   distinct() %>% 
   ggplot(aes(phast46pri)) + 
   geom_density() +
-  xlab('Phast46way placental score')
+  xlab('Phast46way primate score')
   
 # 
 # enh_post <- mod_remot('from_remot/enhancer_apolo_crossmap_cleaned_7_result.txt', 'EUR', 7, TRUE)
