@@ -1041,6 +1041,23 @@ tablerDashPage(
           ), 
           column(width = 4,
                  
+                 tablerCard(title = 'Entity recognition',
+                            width = 12,
+                            closable = FALSE,
+                            collapsible = FALSE,
+                            zoomable = FALSE,
+                           textInput(inputId = 'text_recognition', label = NULL, value = "", width = NULL,
+                                     placeholder = 'Enter your clinical annotations...'),
+                           tags$hr(),
+                           DTOutput('entities_df')
+
+                           ),
+                 
+
+                          
+                            
+
+                 
                  tablerCard(title = 'Suggested phenotype terms',
                             width = 12,
                             DTOutput('suggest_df')
@@ -1159,8 +1176,15 @@ tablerDashPage(
           tablerCard(
             title = "Abstract",
             
-            DTOutput("abstract_pubmed"),
-            width = 12,
+            htmlOutput("abstract_html"),
+            width = 8,
+            overflow = TRUE
+          ),
+          tablerCard(
+            title = "Entities found",
+            
+            DTOutput("abstract_df"),
+            width = 4,
             overflow = TRUE
           ),
           tablerCard(

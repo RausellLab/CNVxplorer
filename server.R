@@ -282,7 +282,7 @@ function(input, output, session) {
       
     } else if (input$input_geno_karyo == 'G banding') {
       
-      df_tmp <- chromPlot::hg_cytoBandIdeo %>%
+      df_tmp <- coord_cytobands %>%
         filter(Chrom == coord_chrom) %>%
         filter(Name == input$input_karyotype)
       
@@ -396,9 +396,7 @@ function(input, output, session) {
       options = list(
         size = 5,
         `live-search` = TRUE))
-    
-    
-    
+
   })
   
   
@@ -589,8 +587,31 @@ function(input, output, session) {
     )
     
     datatable(tmp_df, escape = FALSE, rownames = FALSE, colnames = c('HPO term', 'Description'), options = list(dom = 't'), class = 'cell-border stripe')
+
+  })
+  
+  
+  get_entities <- reactive({
     
+    req(input$text_recognition)
+
+    b <- find_scigraph(text = input$text_recognition)
     
+    b$content %>% 
+      filter(category == 'phenotype', str_detect(identifier, 'HP:')) %>%
+      select(-category)
+  })
+  
+  output$entities_df <- renderDT({
+    
+    validate(
+      need(nrow(get_entities()) > 0, 'No phenotypic terms found in the text.')
+    )
+    
+    datatable(get_entities(), 
+              rownames = FALSE, 
+              options = list(dom = 't'), 
+              class = 'cell-border stripe')
     
   })
   
@@ -705,7 +726,7 @@ function(input, output, session) {
     
     if ((input$input_geno_karyo == 'Multiple coordinates' | input$input_geno_karyo == 'Genomic coordinates')) {
 
-      tmp_query <-  chromPlot::hg_cytoBandIdeo %>%
+      tmp_query <-  coord_cytobands %>%
         rename(chrom = Chrom, start = Start, end = End) %>%
         bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
         select(-startdelete, -enddelete, -.overlap) %>%
@@ -902,7 +923,7 @@ function(input, output, session) {
 
     if ((input$input_geno_karyo == 'Multiple coordinates' | input$input_geno_karyo == 'Genomic coordinates')) {
       
-      tmp_query <-  chromPlot::hg_cytoBandIdeo %>%
+      tmp_query <-  coord_cytobands %>%
         rename(chrom = Chrom, start = Start, end = End) %>%
         bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
         select(-startdelete, -enddelete, -.overlap) %>%
@@ -1296,36 +1317,83 @@ function(input, output, session) {
     
   })
   
-  output$abstract_pubmed <- renderDataTable({
+  abstract_pubmed <- reactive({
     
-    validate(
-      need(input$del_dup_pubmed_rows_selected != '', "Please, select an article from the table.")
-    )
-
+      validate(
+        need(input$del_dup_pubmed_rows_selected != '', "Please, select an article from the table.")
+      )
     
     if (input$select_del_dup == 'deletions') {
       
-      paper_selected <- running_pubmed_del() %>% slice(input$del_dup_pubmed_rows_selected)
+      paper_selected <- running_pubmed_del() %>% 
+        slice(input$del_dup_pubmed_rows_selected) %>%
+        pull(pmid)
       
     } else {
       
-      paper_selected <- running_pubmed_dup() %>% slice(input$del_dup_pubmed_rows_selected)
+      paper_selected <- running_pubmed_dup() %>% slice(input$del_dup_pubmed_rows_selected) %>%
+        pull(pmid)
       
     }
     
+    # jaja <- 'Chemokines have been shown to play an important role in the pathogenesis of <span style="color:red">pancreatitis</span>, but the role of chemokine <span style="color:green">CXCL9</span> in <span style="color:red">pancreatitis</span> is poorly understood. The aim of this study was to investigate whether <span style="color:green">CXCL9</span> was a modulating factor in chronic <span style="color:red">pancreatitis</span>. Chronic <span style="color:red">pancreatitis</span> was induced in <span style="color:lime">Sprague-Dawley rats</span> by intraductal infusion of <span style="color:blue">trinitrobenzene sulfonic acid</span> (TNBS) and <span style="color:green">CXCL9</span> expression was assessed by immunohistochemistry, Western blot analysis and enzyme linked immunosorbent assay (ELISA). Recombinant <span style="color:lime">human</span> <span style="color:green">CXCL9</span> protein (<span style="color:green">rCXCL9</span>), neutralizing antibody and normal saline (NS) were administered to <span style="color:lime">rats</span> with chronic <span style="color:red">pancreatitis</span> by subcutaneous injection. The severity of <span style="color:red">fibrosis</span> was determined by measuring <span style="color:blue">hydroxyproline</span> in pancreatic tissues and histological grading. The effect of <span style="color:green">rCXCL9</span> on activated pancreatic stellate cells (PSCs) in vitro was examined and collagen 1alpha1, <span style="color:green">TGF-beta1</span> and <span style="color:green">CXCR3</span> expression was assessed by Western blot analysis in isolated <span style="color:lime">rat</span> PSCs. <span style="color:red">Chronic pancreatic injury</span> in <span style="color:lime">rats</span> was induced after TNBS treatment and <span style="color:green">CXCL9</span> protein was markedly upregulated during TNBS-induced <span style="color:red">chronic pancreatitis</span>. Although <span style="color:red">parenchymal injury in the pancreas</span> was not obviously affected after <span style="color:green">rCXCL9</span> and neutralizing antibody administration, <span style="color:green">rCXCL9</span> could attenuate fibrogenesis in <span style="color:red">TNBS-induced chronic pancreatitis</span> in vivo and exerted antifibrotic effects in vitro, suppressing collagen production in activated PSCs. In conclusion, <span style="color:green">CXCL9</span> is involved in the modulation of pancreatic fibrogenesis in <span style="color:red">TNBS-induced chronic pancreatitis</span> in <span style="color:lime">rats</span>, and may be a therapeutic target in <span style="color:red">pancreatic fibrosis</span>'
     
-    fetch.pubmed <- entrez_fetch(db = "pubmed", id = paper_selected %>% pull(pmid), rettype = "xml", parsed = T)
-    # Extract the Abstracts for the respective IDS.  
-    abstracts = xpathApply(fetch.pubmed, '//PubmedArticle//Article', function(x)
-      xmlValue(xmlChildren(x)$Abstract))
+    result <- find_pubtator(pmid = paper_selected, bioconcept = 'all')
     
-    tmp_df <- tibble(Title = paper_selected$title, Abstract = abstracts[[1]]) %>% gather('Category', 'Info')
-    tmp888 <<- tmp_df
     
-    datatable(tmp_df, rownames = FALSE, colnames = '',
-              options = list(dom = 't'))
     
   })
+  
+  
+  
+  output$abstract_html <- renderUI({
+    
+    HTML(abstract_pubmed()[[1]]$abstract_tagged)
+
+  })
+  
+  output$abstract_df <- renderDataTable({
+    
+    # test12412 <<- abstract_pubmed()[[1]]$dataframe 
+    
+    df <- abstract_pubmed()[[1]]$dataframe %>% filter(element == 'abstract') %>%
+      select(word, category, identifier)
+    
+    datatable(df, rownames = FALSE, options = list(dom = 't'), class = 'cell-border stripe')
+    
+  })
+    
+  
+  # output$abstract_pubmed <- renderDataTable({
+  # 
+  #   validate(
+  #     need(input$del_dup_pubmed_rows_selected != '', "Please, select an article from the table.")
+  #   )
+  # 
+  # 
+  #   if (input$select_del_dup == 'deletions') {
+  # 
+  #     paper_selected <- running_pubmed_del() %>% slice(input$del_dup_pubmed_rows_selected)
+  # 
+  #   } else {
+  # 
+  #     paper_selected <- running_pubmed_dup() %>% slice(input$del_dup_pubmed_rows_selected)
+  # 
+  #   }
+  # 
+  # 
+  #   fetch.pubmed <- entrez_fetch(db = "pubmed", id = paper_selected %>% pull(pmid), rettype = "xml", parsed = T)
+  #   # Extract the Abstracts for the respective IDS.
+  #   abstracts = xpathApply(fetch.pubmed, '//PubmedArticle//Article', function(x)
+  #     xmlValue(xmlChildren(x)$Abstract))
+  # 
+  #   tmp_df <- tibble(Title = paper_selected$title, Abstract = abstracts[[1]]) %>% gather('Category', 'Info')
+  #   tmp888 <<- tmp_df
+  # 
+  #   datatable(tmp_df, rownames = FALSE, colnames = '',
+  #             options = list(dom = 't'))
+  # 
+  # })
   
   
   output$dup_pubmed <- renderDataTable({
@@ -2328,8 +2396,7 @@ function(input, output, session) {
     if (input$gtex_gene_tissue == 'Gene' ) {
       
       req(!is.null(input$input_gtex_gene))
-      
-      
+
       filtered_gene <- input$input_gtex_gene
       
       p <- gtex %>%
@@ -2349,7 +2416,6 @@ function(input, output, session) {
       
       filtered_genes_cnv <- data_selected() %>% pull(gene)
       filtered_tissue <- input$input_gtex_tissue
-      
       
       p <- gtex %>%
         filter(tissue == filtered_tissue) %>%
@@ -2375,13 +2441,19 @@ function(input, output, session) {
     
     
     vector_genes <- data_selected() %>% pull(gene)
+    vector_background <- hgcn_genes %>% pull(gene)
     
-    gs<-GeneSet(geneIds= vector_genes,
+    gs<- GeneSet(geneIds= vector_genes,
                 organism="Homo Sapiens",
                 geneIdType=SymbolIdentifier())
     
+    background_genes <- GeneSet(geneIds= vector_background,
+                 organism="Homo Sapiens",
+                 geneIdType=SymbolIdentifier())
+    
     output <- teEnrichment(inputGenes = gs, 
-                           rnaSeqDataset = if_else(input$tissue_expression_dbs == 'gtex', 1, 3))
+                           rnaSeqDataset = if_else(input$tissue_expression_dbs == 'gtex', 1, 3),
+                           backgroundGenes = background_genes)
     
     
     seEnrichmentOutput<-output[[1]]
@@ -2552,19 +2624,22 @@ function(input, output, session) {
     chrom_coordinates <- paste0('chr', chrom_coordinates)
     
     test9914 <<- chrom_coordinates
+    test9915 <<- start_coordinates
+    test9916 <<- end_coordinates
 
-    ideoTrack <- IdeogramTrack(genome="hg19", chromosome= chrom_coordinates)
-    plotTracks(ideoTrack, from= start_coordinates , to = end_coordinates, showBandId=TRUE,
-               cex.bands=0.5)
-    
-    # plotKaryotype(chromosomes = input_chr, plot.type = 2) %>%
-    # kpDataBackground(data.panel = 1)
-    # kpAddBaseNumbers() %>%
-    # kpRect(chr= input_chr, x0= data_input$start_position, x1= data_input$end_position, y0=0.2, y1=0.4)
-    
+    ideoTrack <- Gviz::IdeogramTrack(genome= "hg19", chromosome = chrom_coordinates)
+    Gviz::plotTracks(ideoTrack, from= start_coordinates , to = end_coordinates, 
+                     showBandId=TRUE, cex.bands = 0.5)
     
   })
   
+  
+  output$plot_chrom <- renderPlot({
+    
+    plot_chrom_react()
+    
+    
+  })
   
   # fisher_running <- reactive({
   #   
@@ -2604,48 +2679,43 @@ function(input, output, session) {
   # 
   # })
   
-  
-  output$df_fisher <- renderDataTable({
-    
-    
-    tmp_df <- fisher_running() %>% select(-genes)
-    datatable(tmp_df,
-              selection = 'single',
-              colnames = c('Panel name', 'p.value', 'Gene ratio'))
-    
-  })
-  
-  output$df_fisher_selected <- renderText({
-    
-    test88777 <<- input$df_fisher_rows_selected
-    test88888 <<- fisher_running()
-    validate(
-      need(input$df_fisher_rows_selected != '', "Please, select a clinical panel in the datatable.")
-    )
-    
-    name_panel_to_filter <- fisher_running() %>% slice(input$df_fisher_rows_selected) %>% pull(name_panel)
-    tmp_df <- fisher_running() %>% filter(name_panel == name_panel_to_filter) %>% select(genes) %>%
-      filter(!str_detect(genes, '-'))
-    
-    validate(
-      need(nrow(tmp_df) != 0, "Not genes found.")
-    )
-    
-    # datatable(tmp_df)
-    test000 <<- tmp_df
-    tmp_df %>% pull(genes) %>% paste(collapse = ', ')
-    
-  })
+  # 
+  # output$df_fisher <- renderDataTable({
+  #   
+  #   
+  #   tmp_df <- fisher_running() %>% select(-genes)
+  #   datatable(tmp_df,
+  #             selection = 'single',
+  #             colnames = c('Panel name', 'p.value', 'Gene ratio'))
+  #   
+  # })
+  # 
+  # output$df_fisher_selected <- renderText({
+  #   
+  #   test88777 <<- input$df_fisher_rows_selected
+  #   test88888 <<- fisher_running()
+  #   validate(
+  #     need(input$df_fisher_rows_selected != '', "Please, select a clinical panel in the datatable.")
+  #   )
+  #   
+  #   name_panel_to_filter <- fisher_running() %>% slice(input$df_fisher_rows_selected) %>% pull(name_panel)
+  #   tmp_df <- fisher_running() %>% filter(name_panel == name_panel_to_filter) %>% select(genes) %>%
+  #     filter(!str_detect(genes, '-'))
+  #   
+  #   validate(
+  #     need(nrow(tmp_df) != 0, "Not genes found.")
+  #   )
+  #   
+  #   # datatable(tmp_df)
+  #   test000 <<- tmp_df
+  #   tmp_df %>% pull(genes) %>% paste(collapse = ', ')
+  #   
+  # })
 
 
   
   
-  output$plot_chrom <- renderPlot({
-
-    plot_chrom_react()
-    
-    
-  })
+ 
   
   output$choose_geno_karyo1 <- renderUI({
     
@@ -2658,7 +2728,7 @@ function(input, output, session) {
       
     } else {
       
-      karyotype_filtered <- as.list(chromPlot::hg_cytoBandIdeo %>% filter(Chrom == input$input_chrom) %>% select(Name))
+      karyotype_filtered <- as.list(coord_cytobands %>% filter(Chrom == input$input_chrom) %>% select(Name))
       
       pickerInput(
         inputId = "input_karyotype",
@@ -2888,7 +2958,7 @@ function(input, output, session) {
     if (input$input_geno_karyo == 'Genomic coordinates') {
       
       
-      tmp_cyto <- chromPlot::hg_cytoBandIdeo %>%
+      tmp_cyto <- coord_cytobands %>%
         rename(chrom = Chrom, start = Start, end = End) %>%
         bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
         select(-startdelete, -enddelete, -.overlap) %>%
@@ -3275,7 +3345,7 @@ function(input, output, session) {
       select(phast46pri) %>% 
       pull()
     
-    plot_p46pla +
+    plot_p46pri +
       xlab('Phast46way primate score') +
       theme_fancy() +
       geom_vline(xintercept = score_filtered, color = 'red')
@@ -3916,8 +3986,8 @@ function(input, output, session) {
       list_hpo_genes <- base::split(to_sim_gene$hp_gene, to_sim_gene$gene)      
       list_hpo_diseases <- base::split(to_sim_disease$hp_omim, to_sim_disease$identifier)      
       
-      hpo_patient  <- list('patient' = 'HP:0000002')
-      # hpo_patient  <- list('patient' = input$chosen_hp)
+      # hpo_patient  <- list('patient' = 'HP:0000002')
+      hpo_patient  <- list('patient' = input$chosen_hp)
     
       output_genes <- get_sim_grid(ontology=hpo_dbs, 
                                    term_sets= hpo_patient,
@@ -4111,14 +4181,12 @@ function(input, output, session) {
     tmp_df <- running_sim_score() %>%
       slice(input$dt_running_sim_score_rows_selected) %>%
       pull(gene)
-    
-    
-    tmp_df2 <- hpo_filter() %>% 
-      filter(gene %in% tmp_df)
 
-    tmp_df2 <- tmp_df2 %>% 
+    tmp_df2 <- hpo_filter() %>% 
+      filter(gene %in% tmp_df) %>%
       mutate(hp = paste0("<a href='", paste0('https://hpo.jax.org/app/browse/term/', hp),"' target='_blank'>", hp,"</a>")) %>%
-      select(gene, hp, desc)
+      select(gene, hp, desc) %>%
+      distinct()
     
     datatable(tmp_df2, escape = FALSE, rownames = FALSE, colnames = c('Gene', 'HPO term', 'Description'))
     
@@ -4996,6 +5064,8 @@ function(input, output, session) {
       status = "primary",
       fill = TRUE
     )
+    
+    
   })
   
   
@@ -5100,7 +5170,7 @@ function(input, output, session) {
     } else if (input$select_no_patho_cnv == 'decipher_control') {
       
       validate(
-        need(nrow(running_dgv()) > 0, '0 non-pathogenic CNVs from Decipher Population found.' )
+        need(nrow(running_decipher_c()) > 0, '0 non-pathogenic CNVs from Decipher Population found.' )
       )
       
       
@@ -5115,7 +5185,7 @@ function(input, output, session) {
     } else {
       
       validate(
-        need(nrow(running_dgv()) > 0, '0 non-pathogenic CNVs from gnomAD v.2.1 found.' )
+        need(nrow(running_gnomad()) > 0, '0 non-pathogenic CNVs from gnomAD v.2.1 found.' )
       )
       
       datatable(running_gnomad(), 
