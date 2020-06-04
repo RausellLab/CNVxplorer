@@ -12,19 +12,28 @@ library(tictoc)
 library(ontologyIndex)
 library(corrr)
 library(furrr)
+library(resample)
+library(tune)
+library(parsnip)
+library(yardstick)
+library(glue)
+library(patchwork)
 
 
 rename <- dplyr::rename
 slice <- dplyr::slice
 
+
 # save(hgcn_genes, df_enhancers, lncrna_coord, lncrna, tad, gtex, hpa, hpo_genes, cnv_df, vector_total_terms,
 #      gnomad_sv_raw, decipher_control_raw, dgv_df_raw, hpo_omim, anato_df, mirtarbase, pubmed_df,
 #       vector_inheritance, trrust, tf_genes, drugbank,prot_complex,ohno_genes,recomb,
-#       genes_promoter,para_genes,string_db,region_gaps, fusil_score,ensembl_reg, gene_density_tbl,
+#       genes_promoter,para_genes,string_db,region_gaps,ensembl_reg, gene_density_tbl,
 #     select, dev_raw, panel_total, omim, orphanet_raw,  hpo_dbs, model1, denovo, clinvar_variants, ridges_home, plot_p100, plot_p46pla, blacklist_encode, mpo_dbs, gwas_variants,mgi, syndromes_total,
 # file = "env_annot_cnvs.RData")
 # 
-# load('env_annot_cnvs.RData')
+load('env_annot_cnvs.RData')
+load('local_data.RData')
+
 
 theme_fancy <- function() {
   theme_minimal(base_family = "Asap Condensed") +
@@ -33,7 +42,7 @@ theme_fancy <- function() {
   
 }
 
-input_check_cnv <-  read_tsv('/data-cbl/frequena_data/from_workstation/daa_decipher/decipher-cnvs-grch37-2020-01-19.txt', skip = 1) %>%
+input_check_cnv <-read_tsv('/data-cbl/frequena_data/from_workstation/daa_decipher/decipher-cnvs-grch37-2020-01-19.txt', skip = 1) %>%
   as_tibble() %>%
   mutate(length = end - start + 1) %>%
   filter(length >= 50) %>%
@@ -41,24 +50,127 @@ input_check_cnv <-  read_tsv('/data-cbl/frequena_data/from_workstation/daa_decip
   mutate(source = 'decipher') %>%
   rename(id = `# patient_id`, chrom = chr) %>%
   mutate(id = as.character(id)) %>%
-  # filter(pathogenicity %in% c('Pathogenic', 'Likely pathogenic')) %>% 
+  filter(pathogenicity %in% c('Pathogenic')) %>%
   mutate(phenotypes = str_replace_all(phenotypes, '\\|', '<br>')) %>% 
   # filter(inheritance == 'De novo constitutive') %>% 
-  filter(variant_class %in% c('Deletion', 'Duplication'))
-  # mutate(id_tmp = row_number())
-# 
-# 
-# input_check_overlap <- input_check_cnv %>% select(id,pathogenicity,variant_class, 
-#                                                   inheritance,chrom,start, end) %>%
-#   bind_rows(gnomad_sv_raw %>% mutate(pathogenicity = 'benign_gnomad',
-#                                      inheritance = NA) %>%
-#               rename(variant_class = svtype) %>%
-#               select(id,pathogenicity,
-#                      chrom, start, end))
+  filter(variant_class %in% c('Deletion', 'Duplication')) %>%
+  mutate(id_tmp = row_number())
 
+
+coord_cytobands <- coord_cytobands %>% rename(chrom = Chrom, start = Start, end = End)
+
+gen_random <- function(input_check_cnv, n_rep = 9) {
+  
+  result_df <- tibble()
+  
+  for (i in 1:nrow(input_check_cnv)) {
+    
+    print(i)
+    
+    tmp_chrom <- input_check_cnv %>% slice(i) %>% pull(chrom)
+    tmp_start <- input_check_cnv %>% slice(i) %>% pull(start)
+    tmp_end <- input_check_cnv %>% slice(i) %>% pull(end)
+    tmp_id <- input_check_cnv %>% slice(i) %>% pull(id_tmp)
+    tmp_cyto <- bed_intersect(coord_cytobands,
+                            tibble('chrom' = tmp_chrom,'start' = tmp_start, 'end' = tmp_end)) %>% 
+      pull(Name.x)
+    
+    # tmp_cyto %in% (coord_cytobands %>% filter(chrom == tmp_chrom) %>% pull(Name))
+    
+    tmp_n_genes <- hgcn_genes %>% 
+      bed_intersect(tibble('chrom' = tmp_chrom,'start' = tmp_start, 'end' = tmp_end)) %>% nrow()
+  
+    
+    result_tmp_cnv <- tibble()
+    
+    n_try <- 0
+
+    while (nrow(result_tmp_cnv) < n_rep) {
+      
+      n_try <- n_try + 1
+      
+      if (n_try < 500) {
+        
+      selected_chrom <- coord_chrom_hg19 %>% filter(chrom == tmp_chrom)
+      random_chrom <- selected_chrom  %>% pull(chrom)
+      random_chrom_end <- selected_chrom  %>% pull(length)
+      random_chrom_end <- random_chrom_end - (tmp_end - tmp_start + 1)
+      random_start <- sample(1:random_chrom_end, 1)
+      random_end <- random_start + (tmp_end - tmp_start + 1)
+      random_cyto <- bed_intersect(coord_cytobands,
+                                   tibble('chrom' = random_chrom,
+                                          'start' = random_start, 
+                                          'end' = random_end)) %>%
+      pull(Name.x)
+      
+      # Filter 1: eliminate cnvs mapping the original one
+      tmp_check <- random_cyto %in% tmp_cyto %>% unique()
+      
+      if (length(tmp_check) == 2 | (length(tmp_check) == 1 & isTRUE(tmp_check))) next
+      
+      random_genes <- hgcn_genes %>% bed_intersect(tibble('chrom' = random_chrom,
+                            'start' = random_start, 
+                            'end' = random_end)) %>% nrow()
+      
+      # Filter 2: eliminate cnvs with no genes if the original cnv has genes
+      if (tmp_n_genes > 0) {
+        if (random_genes == 0 ) next
+      }
+      
+      
+      tmp_df <- tibble('chrom' = random_chrom,
+                       'start' = random_start,
+                       'end' = random_end)
+      
+      result_tmp_cnv <- result_tmp_cnv %>% bind_rows(tmp_df)
+      } else {
+        
+        result_tmp_cnv <- tibble('chrom' = 'error', 'start' = 0, 'end' = 0)
+        break
+      }
+      
+      }
+    
+    result_tmp_cnv <- result_tmp_cnv %>% 
+      mutate(id_tmp = row_number()) %>%
+      mutate(id_tmp = paste0(tmp_id,'_', id_tmp))
+    
+    result_df <- result_df %>% bind_rows(result_tmp_cnv)
+  }
+  
+  return(result_df)
+  
+ }
+
+random_cnvs <- gen_random(input_check_cnv, n_rep = 9)
+remove_cnvs_error <- random_cnvs %>% 
+  filter(chrom == 'error') %>% 
+  pull(id_tmp) %>%
+  as.character()
+
+input_check_cnv <- input_check_cnv %>% filter(! id_tmp %in% remove_cnvs_error)
+random_cnvs <- random_cnvs %>% 
+  filter(chrom != 'error') %>%
+  mutate(inheritance = NA, variant_class = NA )
+
+input_check_cnv <- input_check_cnv %>% mutate(id_tmp = as.character(id_tmp)) %>% bind_rows(random_cnvs)
 
 check_cnv <- function(input_id, input_clinical, input_variant, input_inheritance,
                       input_chrom, input_start, input_end) {
+  
+  
+  # input_id <- input_check_cnv %>% slice(1) %>% pull(id_tmp)
+  # input_clinical <- input_check_cnv %>% slice(1) %>% pull(pathogenicity)
+  # input_variant <- input_check_cnv %>% slice(1) %>% pull(variant_class)
+  # input_inheritance <- input_check_cnv %>% slice(1) %>% pull(inheritance)
+  # input_chrom <- input_check_cnv %>% slice(1) %>% pull(chrom)
+  # input_start <- input_check_cnv %>% slice(1) %>% pull(start)
+  # input_end <- input_check_cnv %>% slice(1) %>% pull(end)
+  
+  
+  
+  
+  
 
   id_tmp <- input_id
   clinical_tmp <- input_clinical
@@ -265,11 +377,6 @@ minimum_vg <- ifelse(length(temporal_df) == 0, 0, temporal_df)
 
 
 n_genes_one_hpo <- vector_genes %in% hpo_genes$gene %>% sum()
-
-# N Number of genes identified as Cellular letal (FUSIL score)
-
-
-# result_n_genes_cl <- vector_genes %in% fusil_scoregene %>% sum()
 
 
 # Protein complex gene
@@ -483,13 +590,15 @@ result_n_ctcf <- bed_intersect(tmp_cnv, ensembl_reg %>% filter(type == 'CTCF_bin
 # Number essential genes
 
 
-result_n_essent_genes_cl <- length(vector_genes[vector_genes %in% 
-                                               (fusil_score %>% filter(FUSIL == 'CL') %>% pull(hgnc_symbol))]) 
-  
-  
-result_n_essent_genes_dl <- length(vector_genes[vector_genes %in% 
-                                                  (fusil_score %>% filter(FUSIL == 'DL') %>% pull(hgnc_symbol))]) 
+result_n_essent_genes_cl <- hgcn_genes %>% 
+  filter(gene %in% vector_genes) %>% 
+  filter(str_detect(fusil, 'CL')) %>% 
+  nrow()
 
+result_n_essent_genes_dl <- hgcn_genes %>% 
+  filter(gene %in% vector_genes) %>% 
+  filter(str_detect(fusil, 'DL')) %>% 
+  nrow()
 
 
 # Number enhancers
@@ -519,11 +628,6 @@ if(length(n_genes_one_hpo) == 0) {
     pull(gene) %>% unique() %>% paste(collapse = ', ')
   
 }
-
-
-
-
-
 
 
 # Number miRNAs
@@ -608,12 +712,24 @@ return(result_tmp)
 
 }
 
+# ------------------------------------------------------------------------------
+# PARALLEL ANNOTATION VISUALIZATION
+# ------------------------------------------------------------------------------
+
 plan("multiprocess", workers = 40)
 
+check_cnv(input_check_cnv$id[1],
+          input_check_cnv$pathogenicity[1],
+          input_check_cnv$variant_class[1],
+          input_check_cnv$inheritance[1],
+          input_check_cnv$chrom[1],
+          input_check_cnv$start[1],
+          input_check_cnv$end[1]
+          )
 
 tic()
 
-output_list <- future_pmap(list(input_check_cnv$id, 
+output_list <- future_pmap(list(input_check_cnv$id_tmp, 
                          input_check_cnv$pathogenicity, 
                          input_check_cnv$variant_class,
                          input_check_cnv$inheritance,
@@ -626,17 +742,9 @@ output_df <- bind_rows(lapply(output_list, as.data.frame.list)) %>% as_tibble()
 
 toc()
 
-
-plan("multiprocess", workers = 2)
-
-tic()
-
-
-xd <- output_df %>%
-  select(id, chrom, start, end) %>%
-  mutate(n_hits = future_pmap_chr(list(id, chrom, start, end),  get_enrich))
-
-toc()
+# ------------------------------------------------------------------------------
+# RMARKDOWN VISUALIZATION
+# ------------------------------------------------------------------------------
 
 
 output_df %>% write_tsv('output_df.tsv')
@@ -644,6 +752,183 @@ output_df %>% write_tsv('output_df.tsv')
 
 library(prettydoc)
 rmarkdown::render("output_annotation_cnvs.Rmd", 'html_document')
+
+
+# ------------------------------------------------------------------------------
+# LOGISTIC REGRESSION
+# ------------------------------------------------------------------------------
+
+# temporal
+
+
+model_df <- output_df %>% 
+  mutate(clinical = if_else(is.na(clinical), 'unlabeled', clinical)) %>%
+  separate(id, sep = '_', c('id', 'random_n')) %>%
+  mutate(clinical = factor(clinical))
+  
+remove_ids <- model_df %>% group_by(id) %>% count() %>% filter(n != 10) %>% pull(id)
+model_df <- model_df %>% filter(! id %in% remove_ids)
+
+
+total_ids <- model_df %>%
+  select(id) %>% 
+  distinct() %>% 
+  pull()
+
+training_ids <- total_ids[sample(length(total_ids)*0.7)]
+
+training_tbl <- model_df %>% filter(id %in% training_ids)
+test_tbl <- model_df %>% filter(!id %in% training_ids)
+
+
+training_cv <- vfold_cv(training_tbl, prop = 0.9, strata = clinical)
+
+
+logistic_rs <- fit_resamples(logistic_reg(mode = 'classification') %>% 
+                               set_engine(engine = 'glm'),
+                             clinical ~ n_genes + disease_genes + n_genes_hpo ,
+                             control = control_resamples(save_pred = TRUE),
+                             training_cv)
+
+xgboost_rs <- fit_resamples(boost_tree(mode = 'classification') %>% 
+                              set_engine(engine = 'xgboost'),
+                            clinical ~ n_genes + disease_genes + n_genes_hpo ,
+                            control = control_resamples(save_pred = TRUE),
+                            training_cv)
+
+# ------------------------------------------------------------------------------
+# 10CV - ROC AND PR CURVES
+# ------------------------------------------------------------------------------
+
+from_cv <- function(model, name_model) {
+  
+  # ROC AUC
+  tmp_mean <- model %>% 
+    unnest(.predictions) %>% 
+    group_by(id) %>% 
+    roc_auc(clinical, .pred_unlabeled) %>% 
+    summarise(mean(.estimate)) %>%
+    round(2)
+  
+  tmp_err <-model %>% 
+    unnest(.predictions) %>% 
+    group_by(id) %>% 
+    roc_auc(clinical, .pred_unlabeled) %>% 
+    summarise(sd(.estimate) / sqrt(10)) %>%
+    round(3)
+  
+  p1 <- model %>% 
+    unnest(.predictions) %>%
+    group_by(id) %>%
+    roc_curve(clinical, .pred_unlabeled) %>%
+    ggplot(aes(1-specificity, sensitivity)) +
+    geom_path(aes(group = id, color = id),  show.legend = FALSE) +
+    theme_bw() +
+    labs(title = glue('{name_model}  (Mean AUC: {tmp_mean} ± {tmp_err})'))
+  
+  # PR AUC
+  tmp_mean <- model %>% 
+    unnest(.predictions) %>% 
+    group_by(id) %>% 
+    pr_auc(clinical, .pred_unlabeled) %>% 
+    summarise(mean(.estimate)) %>%
+    round(2)
+  
+  tmp_err <-model %>% 
+    unnest(.predictions) %>% 
+    group_by(id) %>% 
+    pr_auc(clinical, .pred_unlabeled) %>% 
+    summarise(sd(.estimate) / sqrt(10)) %>%
+    round(3)
+  
+  p2 <- model %>% 
+    unnest(.predictions) %>%
+    group_by(id) %>%
+    pr_curve(clinical, .pred_unlabeled) %>%
+    ggplot(aes(recall, precision)) +
+    geom_path(aes(group = id, color = id), show.legend = FALSE) +
+    theme_bw() +
+    labs(title = glue('{name_model} (Mean AUCpr: {tmp_mean} ± {tmp_err})'))
+  
+  list(p1, p2)
+  
+}
+
+
+logistic_rs %>%
+  unnest(.predictions)
+
+a <- from_cv(xgboost_rs, name_model = 'Logistic regression')
+
+a1 <- a[[1]]
+a2 <- a[[2]]
+
+a1 + a2
+
+# ------------------------------------------------------------------------------
+# TEST DATASET
+# ------------------------------------------------------------------------------
+
+# test_tbl <- test_tbl %>%
+# logistic_reg glm
+# boost_tree xgboost
+# rule_fit xrf
+# rand_forest ranger
+
+logistic_model <- boost_tree(mode = 'classification') %>% 
+  set_engine(engine = 'xgboost') %>%
+  fit(clinical ~ n_genes + disease_genes + n_genes_hpo + n_cnv_syndromes +
+        max_page_rank + max_cpg
+        , data = training_tbl)
+
+a <- predict(logistic_model, test_tbl, type = 'prob') %>% 
+  rename(pred_patho = .pred_Pathogenic) %>%
+  select(pred_patho) %>% bind_cols(test_tbl)
+
+a %>% 
+  select(id, pred_patho, random_n) %>% 
+  mutate(random_n = if_else(is.na(random_n), 'original', random_n )) %>%
+  group_by(id) %>%
+  arrange(desc(pred_patho)) %>%
+  mutate(rank = row_number()) %>%
+  # filter(id == '2315') %>%
+  ungroup() %>%
+  group_by(random_n, rank) %>%
+  count() %>%
+  filter(random_n == 'original') %>%
+  ungroup() %>%
+  mutate(perc = 100*(n / sum(n))) %>%
+  mutate(accum_perc = cumsum(perc)) %>%
+  mutate(same_group = 'yes') %>%
+  ggplot(aes(factor(rank), accum_perc)) +
+  geom_path(aes(group = same_group)) +
+  geom_point() +
+  theme_bw() +
+  labs(x = 'Rank', y = 'Cumulative Frequency (%)')
+
+# plan("multiprocess", workers = 2)
+# 
+# tic()
+# 
+# 
+# xd <- output_df %>%
+#   select(id, chrom, start, end) %>%
+#   mutate(n_hits = future_pmap_chr(list(id, chrom, start, end),  get_enrich))
+# 
+# toc()
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # 
 # output_df %>%
