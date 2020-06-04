@@ -6,8 +6,13 @@ query_pubmed[[1]]
 
 x_tbl <- tibble('chrom' = c('1', '1'),
                 'start' = c(1, 1),
-                'end' = c(10, 10),
-                'casa' = c('A','B'))
+                'end' = ,
+                'casa' = )
+
+
+
+169590972-170890108 
+167684407	170911240
 
 x_tbl %>% distinct_at(df, vars(chrom,start, end))
 
