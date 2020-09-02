@@ -42,6 +42,7 @@ library(widyr)
 library(tidytext)
 library(tidyverse)
 library(bioloupe)
+library(networkD3)
 
 
 # # Files needed to run the app

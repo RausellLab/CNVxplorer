@@ -1,18 +1,177 @@
 
 
-query_pubmed <- entrez_search(db="pubmed", term= 'FOXP2', retmax = 1 )
-
-query_pubmed[[1]]
-
-x_tbl <- tibble('chrom' = c('1', '1'),
-                'start' = c(1, 1),
-                'end' = ,
-                'casa' = )
 
 
 
-169590972-170890108 
-167684407	170911240
+
+
+
+
+
+
+
+## RULEBAYES
+
+library(xgboost)
+
+data(agaricus.train, package='xgboost')
+data(agaricus.test, package='xgboost')
+
+dtrain <- xgb.DMatrix(agaricus.train$data, label = agaricus.train$label)
+dtest <- xgb.DMatrix(agaricus.test$data, label = agaricus.test$label)
+watchlist <- list(train = dtrain, eval = dtest)
+
+## A simple xgb.train example:
+param <- list(max_depth = 2, eta = 1, verbose = 0, nthread = 2,
+              objective = "binary:logistic", eval_metric = "auc")
+bst <- xgb.train(param, dtrain, nrounds = 2, watchlist)
+
+bst$params
+
+
+
+
+xgb.model.dt.tree(model = bst) %>%
+  group_by(.data$Tree) %>%
+  arrange(.data$Node) %>% # put the root at the top of each tree group
+  do(harvested_rules = rule_traverse(.data[1, ], .data) %>%
+       filter(!is.na(.data$feature))) %>%
+  pull(.data$harvested_rules) %>%
+  bind_rows()
+
+
+
+# Libraries
+library(ggraph)
+library(igraph)
+library(tidyverse)
+library(RColorBrewer) 
+# create a data frame giving the hierarchical structure of your individuals
+d1=data.frame(from="origin", to=paste("group", seq(1,10), sep=""))
+d2=data.frame(from=rep(d1$to, each=10), to=paste("subgroup", seq(1,100), sep="_"))
+edges=rbind(d1, d2)
+
+# create a vertices data.frame. One line per object of our hierarchy
+vertices = data.frame(
+  name = unique(c(as.character(edges$from), as.character(edges$to))) , 
+  value = runif(111)
+) 
+# Let's add a column with the group of each name. It will be useful later to color points
+vertices$group = edges$from[ match( vertices$name, edges$to ) ]
+
+
+#Let's add information concerning the label we are going to add: angle, horizontal adjustement and potential flip
+#calculate the ANGLE of the labels
+vertices$id=NA
+myleaves=which(is.na( match(vertices$name, edges$from) ))
+nleaves=length(myleaves)
+vertices$id[ myleaves ] = seq(1:nleaves)
+vertices$angle= 90 - 360 * vertices$id / nleaves
+
+# calculate the alignment of labels: right or left
+# If I am on the left part of the plot, my labels have currently an angle < -90
+vertices$hjust<-ifelse( vertices$angle < -90, 1, 0)
+
+# flip angle BY to make them readable
+vertices$angle<-ifelse(vertices$angle < -90, vertices$angle+180, vertices$angle)
+
+# Create a graph object
+mygraph <- graph_from_data_frame( edges, vertices=vertices )
+
+# Make the plot
+ggraph(mygraph, layout = 'dendrogram', circular = TRUE) + 
+  geom_edge_diagonal(colour="grey") +
+  scale_edge_colour_distiller(palette = "RdPu") +
+  geom_node_text(aes(x = x*1.15, y=y*1.15, filter = leaf, label=name, angle = angle, hjust=hjust, colour=group), size=2.7, alpha=1) +
+  geom_node_point(aes(filter = leaf, x = x*1.07, y=y*1.07, colour=group, size=value, alpha=0.2)) +
+  scale_colour_manual(values= rep( brewer.pal(9,"Paired") , 30)) +
+  scale_size_continuous( range = c(0.1,10) ) +
+  theme_void() +
+  theme(
+    legend.position="none",
+    plot.margin=unit(c(0,0,0,0),"cm"),
+  ) +
+  expand_limits(x = c(-1.3, 1.3), y = c(-1.3, 1.3))
+
+
+
+
+test <- test2019 %>%
+  mutate(id = as.character(row_number())) %>%
+  select(id, source)
+  select(source) %>% 
+  count(source)
+  
+
+test1 <- tibble('from' = '1', 'to' = '2')
+
+
+mygraph <- graph_from_data_frame( test1, vertices= test )
+  
+
+ggraph(mygraph, layout = 'dendrogram', circular = TRUE) + 
+  geom_node_text(aes(label= name)) +
+  geom_node_point(aes(filter = leaf, x = x*1.07, y=y*1.07, colour=source, alpha=0.2)) +
+  theme_void() +
+  theme(
+    legend.position="none",
+    plot.margin=unit(c(0,0,0,0),"cm"),
+  ) +
+  expand_limits(x = c(-1.3, 1.3), y = c(-1.3, 1.3))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+######
+
+library(BioCircos)
+
+
+# Add background
+track_background = tracks + BioCircosBackgroundTrack("arcs_background", colors = "#2222EE")
+
+
+track_cnvs <- BioCircosArcTrack('track_cnvs', test2020$chrom, test2020$start, test2020$end,
+                              minRadius = 1.18, maxRadius = 1.25, opacities = 0.8)
+
+track_genes = BioCircosCNVTrack('track_genes', test2019$chrom, test2019$start, test2019$end, 1, 
+                                color = "#CC0000", range = c(0,6))
+
+n_links <- test2019 %>% filter(source != 'cnv') %>% pull(chrom) %>% length()
+
+links_labels = test2019 %>% filter(source != 'cnv') %>% pull(source)
+links_labels <- paste0(links_labels, seq(1, length(links_labels)))
+
+track_links <- BioCircosLinkTrack('track_links', 
+                                  rep(test2020$chrom, n_links), 
+                                  rep(test2020$start, n_links),
+                                  rep(test2020$start, n_links) + 1000000, 
+                                  test2019 %>% filter(source != 'cnv') %>% pull(chrom), 
+                                  test2019 %>% filter(source != 'cnv') %>% pull(start), 
+                                  test2019 %>% filter(source != 'cnv') %>% pull(start) + 1000000 ,
+                                  maxRadius = 0.55, 
+                                  labels = links_labels)
+
+
+
+track_list <- track_cnvs + track_genes + track_links + track_background
+
+BioCircos(track_list, genomeFillColor = "YlOrBr", genomeTicksDisplay = F, genomeLabelDy = 0)
+
+
+
+
+
 
 x_tbl %>% distinct_at(df, vars(chrom,start, end))
 

@@ -51,6 +51,7 @@ RUN R -e "install.packages(c('shinydashboard', \
 'UpSetR', \
 'randomForest', \
 'shinyalert', \
+'network3D', \
 'XML', \
 'shiny'))"
 

@@ -26,6 +26,11 @@ tablerDashPage(
         "Regulatory elements"
       ),
       tablerNavMenuItem(
+        tabName = "genomic_interactions",
+        icon = "box",
+        "Genomic interactions"
+      ),
+      tablerNavMenuItem(
         tabName = "disease",
         icon = "box",
         "Phenotypic analysis"
@@ -831,6 +836,21 @@ tablerDashPage(
       ),
       
       tablerTabItem(
+        tabName = "genomic_interactions",
+        
+        # tagAppendAttributes(actionButton(ns("open"), "Network Options"), class = "btn-outline-primary"),
+        
+
+        tablerCard(title = 'Network',
+                   width = 12,
+                   forceNetworkOutput("network_ppi")
+        )
+      ),
+          
+          
+      
+      
+      tablerTabItem(
         tabName = "cnv_ngs",
         fluidRow(
           # column(3,
@@ -1135,7 +1155,9 @@ tablerDashPage(
         fluidRow(
           tablerCard(title = 'Approved drugs associated with genes',
                      DTOutput('drugbank_df'),
-                     width = 12))
+                     width = 12)
+
+          )
         
       ),
       tablerTabItem(

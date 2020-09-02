@@ -2216,11 +2216,35 @@ function(input, output, session) {
     
     
   })
+
   
   
+  output$run_network <- renderPlot({
+
+    
+    
+    test <- data_selected() %>%
+      mutate(id = as.character(row_number())) %>%
+      select(id, source)
+    
+    
+    test1 <- tibble('from' = '1', 'to' = '2')
+    
+    
+    mygraph <- graph_from_data_frame( test1, vertices= test )
+    
+    
+    ggraph(mygraph, layout = 'dendrogram', circular = TRUE) + 
+      geom_node_text(aes(label= name)) +
+      geom_node_point(aes(filter = leaf, x = x*1.07, y=y*1.07, colour=source, alpha=0.2)) +
+      theme_void() +
+      theme(
+        legend.position="none",
+        plot.margin=unit(c(0,0,0,0),"cm"),
+      ) +
+      expand_limits(x = c(-1.3, 1.3), y = c(-1.3, 1.3))
+  })
   
-  
-  # outputOptions(output, "dgenes", suspendWhenHidden= TRUE)
   
   output$choose_reg_region <- renderUI({
     
@@ -5450,10 +5474,46 @@ function(input, output, session) {
     
   })
   
+  output$network_ppi <- renderForceNetwork({
+    
+    validate(
+      need(nrow(data_selected()) != 0, "No protein-coding genes found.")
+    )
+    
+
+    df_nodes <- data_selected() %>% 
+      # filter(gene != 'ZFPM2') %>%
+      select(gene, source) %>% 
+        mutate(id =  row_number() - 1) %>% 
+        tibble::as_data_frame() 
+
+    
+    df_links <- interactions_db %>% 
+      filter(from %in% df_nodes$gene | to %in% df_nodes$gene) %>%
+      left_join(df_nodes %>% select(-source), by = c( 'from' = 'gene')) %>% 
+      rename(id_from = id) %>%
+      left_join(df_nodes %>% select(-source), by = c( 'to' = 'gene')) %>% 
+      rename(id_to = id) %>% 
+      na.omit() %>%
+      select(id_from, id_to) %>%
+      tibble::as_data_frame()
+    
+    forceNetwork(Links = df_links, Nodes = df_nodes,
+                 Source = "id_from", Target = "id_to",
+                 NodeID = "gene", 
+                 zoom = TRUE,
+                 Group = "source",
+                 opacity = 1)
+    
+    
+  })
+  
   
   output$drugbank_df <- renderDT({
     
     vector_filt_genes <- data_selected() %>% pull(gene)
+    
+    
     
     
     tmp_df <- drugbank %>%

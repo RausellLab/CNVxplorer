@@ -12,12 +12,21 @@ library(tictoc)
 library(ontologyIndex)
 library(corrr)
 library(furrr)
-library(resample)
 library(tune)
 library(parsnip)
 library(yardstick)
 library(glue)
 library(patchwork)
+library(rsample)
+library(xrf)
+library(rules)
+library(dials)
+library(workflows)
+library(rstanarm)
+library(bayestestR)
+
+
+set.seed(123)
 
 
 rename <- dplyr::rename
@@ -42,7 +51,7 @@ theme_fancy <- function() {
   
 }
 
-input_check_cnv <-read_tsv('/data-cbl/frequena_data/from_workstation/daa_decipher/decipher-cnvs-grch37-2020-01-19.txt', skip = 1) %>%
+input_check_cnv <- read_tsv('/data-cbl/frequena_data/from_workstation/daa_decipher/decipher-cnvs-grch37-2020-01-19.txt', skip = 1) %>%
   as_tibble() %>%
   mutate(length = end - start + 1) %>%
   filter(length >= 50) %>%
@@ -50,7 +59,7 @@ input_check_cnv <-read_tsv('/data-cbl/frequena_data/from_workstation/daa_deciphe
   mutate(source = 'decipher') %>%
   rename(id = `# patient_id`, chrom = chr) %>%
   mutate(id = as.character(id)) %>%
-  filter(pathogenicity %in% c('Pathogenic')) %>%
+  filter(pathogenicity %in% c('Unknown')) %>%
   mutate(phenotypes = str_replace_all(phenotypes, '\\|', '<br>')) %>% 
   # filter(inheritance == 'De novo constitutive') %>% 
   filter(variant_class %in% c('Deletion', 'Duplication')) %>%
@@ -718,7 +727,7 @@ return(result_tmp)
 
 plan("multiprocess", workers = 40)
 
-check_cnv(input_check_cnv$id[1],
+a <- check_cnv(input_check_cnv$id[1],
           input_check_cnv$pathogenicity[1],
           input_check_cnv$variant_class[1],
           input_check_cnv$inheritance[1],
@@ -855,9 +864,6 @@ from_cv <- function(model, name_model) {
 }
 
 
-logistic_rs %>%
-  unnest(.predictions)
-
 a <- from_cv(xgboost_rs, name_model = 'Logistic regression')
 
 a1 <- a[[1]]
@@ -868,30 +874,57 @@ a1 + a2
 # ------------------------------------------------------------------------------
 # TEST DATASET
 # ------------------------------------------------------------------------------
+# xrf_model <- xrf(formule_models, data = training_tbl_to_model, family = "binomial")
 
-# test_tbl <- test_tbl %>%
-# logistic_reg glm
-# boost_tree xgboost
-# rule_fit xrf
-# rand_forest ranger
 
-logistic_model <- boost_tree(mode = 'classification') %>% 
-  set_engine(engine = 'xgboost') %>%
-  fit(clinical ~ n_genes + disease_genes + n_genes_hpo + n_cnv_syndromes +
-        max_page_rank + max_cpg
-        , data = training_tbl)
+training_tbl_to_model <- training_tbl %>% select(-id, -random_n, -chrom, -start, -end, -type_variant,
+                        -type_inheritance, -enh_gene_hpo_vector)
+# n_cnv_syndromes + n_genes_hpo + max_ccr + max_hi + max_pli + embryo_mouse
+# essent_cl + max_cpg + max_phast  + n_prot_complex
+formule_models <- clinical ~   n_cnv_syndromes + n_genes_hpo + max_ccr + max_hi + max_pli + embryo_mouse +
+  essent_cl + max_cpg + max_phast  + n_prot_complex + patho_cnv + nonpatho_cnv + n_systems
+  
 
-a <- predict(logistic_model, test_tbl, type = 'prob') %>% 
+
+
+xgboost_model <- boost_tree() %>%
+  set_mode('classification') %>%
+  set_engine('xgboost') %>%
+  fit(formule_models, data = training_tbl_to_model)
+
+forest_model <- rand_forest() %>%
+  set_mode('classification') %>%
+  set_engine('ranger') %>%
+  fit(formule_models, data = training_tbl_to_model)
+
+
+logistic_model <- logistic_reg() %>%
+  set_mode('classification') %>%
+  set_engine('glm') %>%
+  fit(formule_models, data = training_tbl_to_model)
+
+rulefit_model1 <- rule_fit(trees = 100, tree_depth = 3, penalty = 0.3) %>%
+  set_mode('classification') %>%
+  set_engine('xrf') %>%
+  fit(formule_models, data = training_tbl_to_model)
+
+rulefit_model2 <- xrf(formule_models,
+                     data = training_tbl_to_model,
+                     # xgb_control = list(nrounds = 100, max_depth = 5, min_child_weight = 3),
+                     family = "binomial")
+
+
+
+perc_xgboost <- predict(xgboost_model, test_tbl, type = 'prob') %>%
   rename(pred_patho = .pred_Pathogenic) %>%
-  select(pred_patho) %>% bind_cols(test_tbl)
-
-a %>% 
-  select(id, pred_patho, random_n) %>% 
+  select(pred_patho) %>%
+  bind_cols(test_tbl) %>%
+  select(id, pred_patho, random_n) %>%
   mutate(random_n = if_else(is.na(random_n), 'original', random_n )) %>%
   group_by(id) %>%
   arrange(desc(pred_patho)) %>%
   mutate(rank = row_number()) %>%
-  # filter(id == '2315') %>%
+  # filter(id == '2169') %>%
   ungroup() %>%
   group_by(random_n, rank) %>%
   count() %>%
@@ -900,11 +933,370 @@ a %>%
   mutate(perc = 100*(n / sum(n))) %>%
   mutate(accum_perc = cumsum(perc)) %>%
   mutate(same_group = 'yes') %>%
-  ggplot(aes(factor(rank), accum_perc)) +
-  geom_path(aes(group = same_group)) +
-  geom_point() +
+  mutate(rank = as.integer(rank))
+
+perc_forest <- predict(forest_model, test_tbl, type = 'prob') %>%
+    rename(pred_patho = .pred_Pathogenic) %>%
+  select(pred_patho) %>% 
+  bind_cols(test_tbl) %>%
+  select(id, pred_patho, random_n) %>% 
+  mutate(random_n = if_else(is.na(random_n), 'original', random_n )) %>%
+  group_by(id) %>%
+  arrange(desc(pred_patho)) %>%
+  mutate(rank = row_number()) %>%
+  # filter(id == '2169') %>%
+  ungroup() %>%
+  group_by(random_n, rank) %>%
+  count() %>%
+  filter(random_n == 'original') %>%
+  ungroup() %>%
+  mutate(perc = 100*(n / sum(n))) %>%
+  mutate(accum_perc = cumsum(perc)) %>%
+  mutate(same_group = 'yes') %>%
+  mutate(rank = as.integer(rank))
+
+
+perc_xrf <- tibble('pred_patho' = 1 - as.vector(predict(rulefit_model1, test_tbl, type = 'response'))) %>%
+  predict(rulefit_model1, test_tbl, type = 'prob') %>%
+  rename(pred_patho = .pred_Pathogenic) %>%
+  select(pred_patho) %>%
+  bind_cols(test_tbl) %>%
+  select(id, pred_patho, random_n) %>%
+  mutate(random_n = if_else(is.na(random_n), 'original', random_n )) %>%
+  group_by(id) %>%
+  arrange(desc(pred_patho)) %>%
+  mutate(rank = row_number()) %>%
+  filter(id == '2169') %>%
+  ungroup() %>%
+  group_by(random_n, rank) %>%
+  count() %>%
+  filter(random_n == 'original') %>%
+  ungroup() %>%
+  mutate(perc = 100*(n / sum(n))) %>%
+  mutate(accum_perc = cumsum(perc)) %>%
+  mutate(same_group = 'yes') %>%
+  mutate(rank = as.integer(rank))
+
+
+perc_xrf <- predict(rulefit_model, test_tbl, type = 'prob') %>%
+  rename(pred_patho = .pred_Pathogenic) %>%
+  select(pred_patho) %>% 
+  bind_cols(test_tbl) %>%
+  select(id, pred_patho, random_n) %>% 
+  mutate(random_n = if_else(is.na(random_n), 'original', random_n )) %>%
+  group_by(id) %>%
+  arrange(desc(pred_patho)) %>%
+  mutate(rank = row_number()) %>%
+  # filter(id == '2169') %>%
+  ungroup() %>%
+  group_by(random_n, rank) %>%
+  count() %>%
+  filter(random_n == 'original') %>%
+  ungroup() %>%
+  mutate(perc = 100*(n / sum(n))) %>%
+  mutate(accum_perc = cumsum(perc)) %>%
+  mutate(same_group = 'yes') %>%
+  mutate(rank = as.integer(rank))
+
+
+perc_logistic <- predict(logistic_model, test_tbl, type = 'prob') %>%
+  rename(pred_patho = .pred_Pathogenic) %>%
+  select(pred_patho) %>% 
+  bind_cols(test_tbl) %>%
+  select(id, pred_patho, random_n) %>% 
+  mutate(random_n = if_else(is.na(random_n), 'original', random_n )) %>%
+  group_by(id) %>%
+  arrange(desc(pred_patho)) %>%
+  mutate(rank = row_number()) %>%
+  # filter(id == '2169') %>%
+  ungroup() %>%
+  group_by(random_n, rank) %>%
+  count() %>%
+  filter(random_n == 'original') %>%
+  ungroup() %>%
+  mutate(perc = 100*(n / sum(n))) %>%
+  mutate(accum_perc = cumsum(perc)) %>%
+  mutate(same_group = 'yes') %>%
+  mutate(rank = as.integer(rank))
+
+
+##
+
+# ------------------------------------------------------------------------------
+# PLOT COMPARISON
+# ------------------------------------------------------------------------------
+
+  ggplot() +
+    geom_path(data = tibble('rank' = seq(1,10), 'accum_perc' = seq(10,100,10)), aes(rank, accum_perc, color = 'red')) +
+    geom_point(data = tibble('rank' = seq(1,10), 'accum_perc' = seq(10,100,10)), aes(rank, accum_perc)) +
+    geom_path(data = perc_xgboost, aes(rank, accum_perc, color = 'blue'), ) +
+    geom_point(data = perc_xgboost, aes(rank, accum_perc)) +
+    geom_path(data = perc_xrf, aes(rank, accum_perc, color = 'green') ) +
+    geom_point(data = perc_xrf, aes(rank, accum_perc)) +
+    geom_path(data = perc_forest, aes(rank, accum_perc, color = 'yellow') ) +
+    geom_point(data = perc_forest, aes(rank, accum_perc)) +
+    geom_path(data = perc_logistic, aes(rank, accum_perc, color = 'orange') ) +
+    geom_point(data = perc_logistic, aes(rank, accum_perc)) +
+    scale_colour_manual(name = 'Model',
+                      values =c('red'='red','blue'='blue', 'green' = 'green', 'yellow' = 'yellow', 'orange' = 'orange'), 
+                      labels = c('xgboost','rulefit', 'logistic regression', 'random','random forest')) +
+    scale_x_continuous(breaks = scales::pretty_breaks(10)) +
+    theme_bw() +
+    labs(x = 'Rank', y = 'Cumulative Frequency (%)')
+
+# ------------------------------------------------------------------------------
+# HYPERPARAMETER TUNING
+# ------------------------------------------------------------------------------
+
+# penalty = 0.003
+# tree_depth = 8
+
+
+xgboost_model <- rule_fit(trees = 100, tree_depth = tune(), penalty = tune()) %>%
+  set_mode('classification') %>%
+  set_engine('xrf')
+
+tree_grid <- grid_regular(tree_depth(), penalty(), levels = 5)
+
+training_folds <- vfold_cv(training_tbl_to_model[1:5000,], v =  2)
+
+
+tree_wf <- workflow() %>%
+  add_model(xgboost_model) %>%
+  add_formula(formule_models)
+
+tree_res <- 
+  tree_wf %>% 
+  tune_grid(
+    resamples = training_folds,
+    grid = tree_grid
+  )
+
+
+
+tree_res %>%
+  collect_metrics() %>%
+  # mutate(tree_depth = factor(tree_depth)) %>%
+  ggplot(aes(tree_depth, mean)) +
+  geom_line(size = 1.5, alpha = 0.6,  aes(color = penalty )) +
+  geom_point(size = 2) +
+  facet_wrap(~ .metric, scales = "free", nrow = 2) +
+  scale_x_log10() +
+  scale_color_viridis_d(option = "plasma", begin = .9, end = 0)
+
+
+# trees = 500, tree_depth = 4
+best_tree <- tree_res %>% select_best(metric = 'roc_auc')
+
+final_wf <- 
+  tree_wf %>% 
+  finalize_workflow(best_tree)
+
+# ------------------------------------------------------------------------------
+# FINAL MODEL 
+# ------------------------------------------------------------------------------
+
+final_tree <- 
+  final_wf %>%
+  fit(data = training_tbl_to_model) 
+
+
+final_xgboost <- predict(final_tree, test_tbl, type = 'prob') %>%
+  rename(pred_patho = .pred_Pathogenic) %>%
+  select(pred_patho) %>% 
+  bind_cols(test_tbl) %>%
+  select(id, pred_patho, random_n) %>% 
+  mutate(random_n = if_else(is.na(random_n), 'original', random_n )) %>%
+  group_by(id) %>%
+  arrange(desc(pred_patho)) %>%
+  mutate(rank = row_number()) %>%
+  # filter(id == '2169') %>%
+  ungroup() %>%
+  group_by(random_n, rank) %>%
+  count() %>%
+  filter(random_n == 'original') %>%
+  ungroup() %>%
+  mutate(perc = 100*(n / sum(n))) %>%
+  mutate(accum_perc = cumsum(perc)) %>%
+  mutate(same_group = 'yes') %>%
+  mutate(rank = as.integer(rank))
+
+ggplot() +
+  geom_path(data = tibble('rank' = seq(1,10), 'accum_perc' = seq(10,100,10)), aes(rank, accum_perc, color = 'red')) +
+  geom_point(data = tibble('rank' = seq(1,10), 'accum_perc' = seq(10,100,10)), aes(rank, accum_perc)) +
+  geom_path(data = final_xgboost, aes(rank, accum_perc, color = 'orange') ) +
+  geom_point(data = final_xgboost, aes(rank, accum_perc)) +
+  # scale_colour_manual(name = 'Model',
+  #                     values =c('red'='red','blue'='blue', 'green' = 'green', 'yellow' = 'yellow', 'orange' = 'orange'), 
+  #                     labels = c('xgboost','rulefit', 'logistic regression', 'random','random forest')) +
+  scale_x_continuous(breaks = scales::pretty_breaks(10)) +
   theme_bw() +
   labs(x = 'Rank', y = 'Cumulative Frequency (%)')
+
+# ------------------------------------------------------------------------------
+# END
+# ------------------------------------------------------------------------------
+
+output_xrf <- xrf(formule_models,
+                  training_tbl_to_model, family = 'binomial',
+                  xgb_control = list(nrounds = 100, max_depth = 2))
+
+data_pre_lasso <- output_xrf$full_data
+
+rules_tbl <- output_xrf %>%
+  coef(s = "lambda.min") %>%
+  as_tibble() %>%
+  select(term, rule) %>%
+  na.omit()
+# separate_rows(rule, sep = '&') %>%
+# slice(1) %>%
+# pull(rule)
+
+ 
+
+
+
+# plan("multiprocess", workers = 40)
+# 
+# tic()
+# 
+# output_list <- future_pmap(list(input_check_cnv$id_tmp, 
+#                                 input_check_cnv$pathogenicity, 
+#                                 input_check_cnv$variant_class,
+#                                 input_check_cnv$inheritance,
+#                                 input_check_cnv$chrom, 
+#                                 input_check_cnv$start, 
+#                                 input_check_cnv$end), 
+#                            check_cnv)
+# 
+# output_df <- bind_rows(lapply(output_list, as.data.frame.list)) %>% as_tibble()
+# 
+# toc()
+
+bayesian_model <- rstanarm::stan_glm(formule_models,
+                                     family = 'binomial',
+                                     data = data_pre_lasso,
+                                     cores = 4,
+                                     iter = 4000,
+                                     chains = 4)
+                                     # QR = TRUE,
+                                     # prior = laplace())
+
+
+ready_test <- tibble()
+
+for (i in 1:nrow(test_tbl)) {
+  print(i)
+  tmp_test_row <- test_tbl %>% slice(i)
+  para_test <- rules_tbl %>%
+    rowwise() %>%
+    mutate(ok = tmp_test_row %>% filter_(rule) %>% nrow()) %>%
+    pivot_wider(-rule,values_from = ok, names_from = term)
+  ready_test_tmp <- para_test %>% bind_cols(tmp_test_row)
+  ready_test <- ready_test %>% bind_rows(ready_test_tmp)
+}
+
+# library(ggridges)
+# posterior_linpred(bayesian_model, newdata = ready_test, transform = TRUE) %>%
+#   as_tibble() %>%
+#   pivot_longer(everything(), names_to = 'obs', values_to = 'prob') %>%
+#   ggplot(aes(prob, obs)) +
+#     geom_density_ridges()
+
+pred_bayesian  <- posterior_linpred(bayesian_model, newdata = ready_test, transform = TRUE) %>%
+  as_tibble() %>%
+  map_dbl(~ mean(.x))
+
+pred_lasso <- predict(output_xrf, ready_test, type = 'response')
+
+
+check_pred <- ready_test %>%
+  select(clinical) %>%
+  mutate(pred_lasso = pred_lasso %>% as.vector(),
+         pred_bayesian = pred_bayesian)
+
+
+roc_lasso <- check_pred %>% roc_curve(clinical, pred_lasso) %>% mutate(model = 'lasso')
+roc_bayesian <- check_pred %>% roc_curve(clinical, pred_bayesian) %>% mutate(model = 'bayesian')
+
+auc_lasso <- check_pred %>% roc_auc(clinical, pred_lasso) %>% pull(.estimate) %>% round(3)
+auc_bayesian <- check_pred %>% roc_auc(clinical, pred_bayesian) %>% pull(.estimate) %>% round(3)
+
+roc_both <- roc_lasso %>% bind_rows(roc_bayesian)
+
+
+roc_both %>%
+  ggplot(aes((1-specificity), sensitivity)) +
+  geom_line(aes(color = model), size = 1) +
+  theme_bw() +
+  geom_abline(linetype = 3) +
+  labs(title = 'Comparison performance logistic and Bayesian model',
+       subtitle = glue('AUC (lasso) = {auc_lasso} - AUC (Bayesian) = {auc_bayesian}'))
+
+
+
+perc_xrf <- tibble('pred_patho' = 1 - as.vector(predict(output_xrf, ready_test, type = 'response'))) %>%
+  # predict(rulefit_model1, test_tbl, type = 'prob') %>%
+  # rename(pred_patho = .pred_Pathogenic) %>%
+  # select(pred_patho) %>%
+  bind_cols(ready_test) %>%
+  select(id, pred_patho, random_n) %>%
+  mutate(random_n = if_else(is.na(random_n), 'original', random_n )) %>%
+  group_by(id) %>%
+  arrange(desc(pred_patho)) %>%
+  mutate(rank = row_number()) %>%
+  # filter(id == '2169') %>%
+  ungroup() %>%
+  group_by(random_n, rank) %>%
+  count() %>%
+  filter(random_n == 'original') %>%
+  ungroup() %>%
+  mutate(perc = 100*(n / sum(n))) %>%
+  mutate(accum_perc = cumsum(perc)) %>%
+  mutate(same_group = 'yes') %>%
+  mutate(rank = as.integer(rank))
+
+perc_xrf_bayesian <- tibble('pred_patho' = 1 - as.vector(pred_bayesian)) %>%
+  # predict(rulefit_model1, test_tbl, type = 'prob') %>%
+  # rename(pred_patho = .pred_Pathogenic) %>%
+  # select(pred_patho) %>%
+  bind_cols(ready_test) %>%
+  select(id, pred_patho, random_n) %>%
+  mutate(random_n = if_else(is.na(random_n), 'original', random_n )) %>%
+  group_by(id) %>%
+  arrange(desc(pred_patho)) %>%
+  mutate(rank = row_number()) %>%
+  # filter(id == '2169') %>%
+  ungroup() %>%
+  group_by(random_n, rank) %>%
+  count() %>%
+  filter(random_n == 'original') %>%
+  ungroup() %>%
+  mutate(perc = 100*(n / sum(n))) %>%
+  mutate(accum_perc = cumsum(perc)) %>%
+  mutate(same_group = 'yes') %>%
+  mutate(rank = as.integer(rank))
+
+ggplot() +
+  geom_path(data = tibble('rank' = seq(1,10), 'accum_perc' = seq(10,100,10)), aes(rank, accum_perc, color = 'red')) +
+  geom_point(data = tibble('rank' = seq(1,10), 'accum_perc' = seq(10,100,10)), aes(rank, accum_perc)) +
+  geom_path(data = perc_xrf, aes(rank, accum_perc, color = 'orange') ) +
+  geom_point(data = perc_xrf, aes(rank, accum_perc)) +
+  geom_path(data = perc_xrf_bayesian, aes(rank, accum_perc, color = 'red') ) +
+  geom_point(data = perc_xrf_bayesian, aes(rank, accum_perc)) +
+  # scale_colour_manual(name = 'Model',
+  #                     values =c('red'='red','blue'='blue', 'green' = 'green', 'yellow' = 'yellow', 'orange' = 'orange'), 
+  #                     labels = c('xgboost','rulefit', 'logistic regression', 'random','random forest')) +
+  scale_x_continuous(breaks = scales::pretty_breaks(10)) +
+  theme_bw() +
+  labs(x = 'Rank', y = 'Cumulative Frequency (%)')
+
+
+
+# ------------------------------------------------------------------------------
+# END
+# ------------------------------------------------------------------------------
+
 
 # plan("multiprocess", workers = 2)
 # 
