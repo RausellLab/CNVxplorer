@@ -1280,7 +1280,10 @@ library(tidygraph)
 
 download.file('https://stringdb-static.org/download/protein.links.v11.0/9606.protein.links.v11.0.txt.gz', 
               '9606.protein.links.v11.0.txt.gz')
+
+
 system('gunzip 9606.protein.links.v11.0.txt.gz')
+
 string_db <- read_delim('9606.protein.links.v11.0.txt', delim = ' ', skip = 1, col_names = c('p1', 'p2', 'score'))
 file.remove('9606.protein.links.v11.0.txt')
 
@@ -1298,6 +1301,14 @@ human  <- useMart("ensembl", dataset = "hsapiens_gene_ensembl",
 interval_genes <- getBM(attributes = c('hgnc_symbol', 'ensembl_peptide_id'),
                         mart = human ) %>% 
   as_tibble()
+
+interactions_db <- string_db %>%
+  left_join(interval_genes, by = c('p1' = 'ensembl_peptide_id')) %>%
+  rename(from = hgnc_symbol) %>%
+  left_join(interval_genes, by = c('p2' = 'ensembl_peptide_id')) %>%
+  rename(to = hgnc_symbol) %>%
+  select(from, to) %>%
+  na.omit()
 
 
 string_db <- as_tbl_graph(string_db, directed = FALSE) %>%
@@ -1825,6 +1836,7 @@ variant_summary <- read_tsv('https://civicdb.org/downloads/01-Mar-2020/01-Mar-20
 # ------------------------------------------------------------------------------
 # mirtarbase
 # version 8
+# Genomic coordinates from mirbase
 # ------------------------------------------------------------------------------
 
 
