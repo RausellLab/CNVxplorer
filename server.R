@@ -5308,8 +5308,8 @@ function(input, output, session) {
     
 
     tmp_df <- gwas_variants %>%
-      rename(chrom = CHR_ID, start = CHR_POS) %>%
-      mutate(end = start) %>%
+      # rename(chrom = CHR_ID, start = CHR_POS) %>%
+      # mutate(end = start) %>%
       bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
       select(-startdelete, -enddelete, -.overlap) %>%
       rename(pos = start) %>%
@@ -5419,7 +5419,7 @@ function(input, output, session) {
         
       datatable(tmp_df, 
                 escape = FALSE,
-                colnames = c('Variant','Chrom', 'Position','Intergenic', 'Gene', 'Disease or trait', 'Link study'),
+                colnames = c('Variant','Chrom', 'Position','Intergenic', 'Reported gene', 'Disease or trait', 'Link study'),
                 rownames = FALSE)
 
     }
