@@ -5305,6 +5305,7 @@ function(input, output, session) {
   running_gwas <- reactive({
     
     # req(input$start_analysis > 0)
+    
 
     tmp_df <- gwas_variants %>%
       rename(chrom = CHR_ID, start = CHR_POS) %>%
@@ -5320,18 +5321,7 @@ function(input, output, session) {
 
   })
   
-  output$df_gwas <- renderDataTable({
-    
-    tmp_df <- running_gwas() %>%
-      mutate(pubmed_id = paste0("<a href='", paste0('https://pubmed.ncbi.nlm.nih.gov/', pubmed_id),"' target='_blank'>", pubmed_id,"</a>"))
-    
-    datatable(tmp_df, 
-              escape = FALSE,
-              colnames = c('Chrom', 'Position','Intergenic', 'Disease trait', 'gene', 'Link study'),
-              rownames = FALSE)
-    
-    
-  })
+
   
   
   running_de_novo <- reactive({
@@ -5424,11 +5414,12 @@ function(input, output, session) {
       )
       
       tmp_df <- running_gwas() %>%
-        mutate(pubmed_id = paste0("<a href='", paste0('https://pubmed.ncbi.nlm.nih.gov/', pubmed_id),"' target='_blank'>", pubmed_id,"</a>"))
-      
+        mutate(pubmed_id = paste0("<a href='", paste0('https://pubmed.ncbi.nlm.nih.gov/', pubmed_id),"' target='_blank'>", pubmed_id,"</a>")) %>%
+        mutate(SNPS = paste0("<a href='", paste0('https://www.ebi.ac.uk/gwas/variants/', SNPS),"' target='_blank'>", SNPS,"</a>"))
+        
       datatable(tmp_df, 
                 escape = FALSE,
-                colnames = c('Chrom', 'Position','Intergenic', 'Disease trait', 'gene', 'Link study'),
+                colnames = c('Variant','Chrom', 'Position','Intergenic', 'Gene', 'Disease or trait', 'Link study'),
                 rownames = FALSE)
 
     }
