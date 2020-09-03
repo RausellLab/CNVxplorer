@@ -5489,6 +5489,10 @@ function(input, output, session) {
       select(id_from, id_to) %>%
       tibble::as_data_frame()
     
+    validate(
+      need(nrow(df_links) != 0, "No protein-protein interactions found.")
+    )
+    
     forceNetwork(Links = df_links, Nodes = df_nodes,
                  Source = "id_from", Target = "id_to",
                  NodeID = "gene", 
