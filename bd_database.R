@@ -737,46 +737,40 @@ hi <- read.table('/home/cbl02/Storage/data/HI_Predictions_Version3.bed', sep = '
 
 # ------------------------------------------------------------------------------
 # Dataset: GWAS genes
-# Source:https://www.ebi.ac.uk/gwas/docs/file-downloads
+# Source: https://www.ebi.ac.uk/gwas/api/search/downloads/full
 # Note: file All associations v1.0
-# Access: 6/6/19
+# Reference genome: hg38
 # ------------------------------------------------------------------------------
 
 
-gwas_raw <- read.table('/home/cbl02/Storage/data/gwas_catalog_v1.0-associations_e96_r2019-05-03.tsv', header = TRUE, sep = '\t',
-                       fill = TRUE)
+url <- "https://www.ebi.ac.uk/gwas/api/search/downloads/full"
+download.file(url, destfile = basename(url))
 
-gwas <- gwas_raw %>% as_tibble() %>% 
-  select(CHR_ID, CHR_POS, INTERGENIC, REPORTED.GENE.S.) %>% 
-  mutate(CHR_ID = as.character(CHR_ID),
-         CHR_POS = as.character(CHR_POS),
-         INTERGENIC = as.numeric(as.character(INTERGENIC)),
-         REPORTED.GENE.S. = as.character(REPORTED.GENE.S.)) %>%
+gwas_raw <- read_tsv('full')
+
+
+gwas_variants <- gwas_raw %>% 
+  # as_tibble() %>% 
+  select(SNPS, `CHR_ID`, `CHR_POS`, `INTERGENIC`, `REPORTED GENE(S)`, `DISEASE/TRAIT`, `LINK`) %>% 
+  rename(REPORTED.GENE.S. = `REPORTED GENE(S)`) %>%
+  # mutate(CHR_ID = as.character(CHR_ID),
+  #        CHR_POS = as.character(CHR_POS),
+  #        INTERGENIC = as.numeric(as.character(INTERGENIC)),
+  #        REPORTED.GENE.S. = as.character(REPORTED.GENE.S.)) %>%
   filter(CHR_ID %in% c(1:22,'X')) %>%
-  separate(REPORTED.GENE.S., into = as.character(1:150), sep = ',') %>% 
-  select(CHR_ID, CHR_POS, INTERGENIC, '1') %>% 
-  rename('gene' = '1') %>%
-  filter(INTERGENIC == 0) %>%
+  separate_rows(REPORTED.GENE.S., sep = ', ') %>% 
+  rename('gene' = REPORTED.GENE.S.) %>%
+  mutate(gene = if_else(gene == 'NR', '-', gene)) %>%
+  mutate(INTERGENIC = if_else(INTERGENIC == 1, 'Yes', 'No')) %>%
+  mutate(CHR_POS = as.integer(CHR_POS))
+
+gwas_genes <- gwas_variants %>%
   select(gene) %>%
   distinct() %>%
   na.omit() %>%
   pull()
 
-
-gwas_variants <- gwas_raw %>% 
-  as_tibble() %>% 
-  select(CHR_ID, CHR_POS, INTERGENIC, REPORTED.GENE.S., DISEASE.TRAIT, LINK) %>% 
-  mutate(CHR_ID = as.character(CHR_ID),
-         CHR_POS = as.character(CHR_POS),
-         INTERGENIC = as.numeric(as.character(INTERGENIC)),
-         REPORTED.GENE.S. = as.character(REPORTED.GENE.S.)) %>%
-  filter(CHR_ID %in% c(1:22,'X')) %>%
-  separate(REPORTED.GENE.S., into = as.character(1:150), sep = ',') %>% 
-  select(CHR_ID, CHR_POS, INTERGENIC, DISEASE.TRAIT,'1', LINK) %>% 
-  rename('gene' = '1') %>%
-  mutate(CHR_POS = as.numeric(CHR_POS)) %>%
-  mutate(gene = if_else(gene == 'NR', '-', gene)) %>%
-  mutate(INTERGENIC = if_else(INTERGENIC == 1, 'Yes', 'No'))
+file.remove('full')
   
 
 # ------------------------------------------------------------------------------
@@ -2057,7 +2051,7 @@ hgcn_genes <- hgcn_genes %>%
   mutate(dev = as.factor(if_else(gene %in% dev_genes, 'Yes', 'No'))) %>% # developmental disorder genes - it can be extended with mode, consecuence and disease
   mutate(fda = as.factor(if_else(gene %in% fda, 'Yes', 'No'))) %>% #  Mechanistic targets of FDA-approved drugs 
   mutate(clinvar = as.factor(if_else(gene %in% clinvar_genes, 'Yes', 'No'))) %>% # List of genes with likely pathogenic and pathogenic variants
-  mutate(gwas = as.factor(if_else(gene %in% gwas, 'Yes', 'No'))) %>% # GWAS genes
+  mutate(gwas = as.factor(if_else(gene %in% gwas_genes, 'Yes', 'No'))) %>% # GWAS genes
   mutate(omim = as.factor(if_else(gene %in% omim_genes, 'Yes', 'No'))) %>% # OMIM genes
   mutate(orphanet = as.factor(if_else(gene %in% orphanet_genes, 'Yes', 'No'))) %>% # OMIM genes
   mutate(genomics_england = as.factor(if_else(gene %in% panel_total_genes, 'Yes', 'No'))) %>% # Genomics England panel 
