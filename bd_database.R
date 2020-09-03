@@ -1273,6 +1273,7 @@ plot_p46pri <-  df_enhancers %>%
 # Dataset: STRING
 # Source: https://stringdb-static.org/download/protein.links.v11.0/9606.protein.links.v11.0.txt.gz
 # Version: 11
+# Threshold score (700) based on STRING FAQs (https://string-db.org/cgi/help.pl?sessionId=H0T1nAmrXuLJ)
 # ------------------------------------------------------------------------------
 
 
