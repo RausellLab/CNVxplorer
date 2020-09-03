@@ -771,6 +771,23 @@ gwas_genes <- gwas_variants %>%
   pull()
 
 file.remove('full')
+
+tmp_gwas_liftover <- gwas_variants %>% 
+  select(CHR_ID, CHR_POS, everything()) %>%
+  rename(chrom = CHR_ID, start = CHR_POS) %>%
+  mutate(end = start) %>%
+  GRanges()
+
+seqlevelsStyle(tmp_gwas_liftover) = "UCSC"  # necessary
+# missed 616
+
+tmp_gwas_liftover = liftOver(tmp_gwas_liftover, from_hg38_to_hg19)
+
+gwas_variants <- tmp_gwas_liftover %>% 
+  as_tibble() %>%
+  select(SNPS, seqnames, start, end,  INTERGENIC, gene, DISEASE.TRAIT, LINK) %>%
+  rename(chrom = seqnames) %>%
+  mutate(chrom = str_remove(chrom, 'chr'))
   
 
 # ------------------------------------------------------------------------------
