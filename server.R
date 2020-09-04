@@ -4361,11 +4361,9 @@ function(input, output, session) {
 
   output$plot_similarity_genes <- renderPlot({
     
-    
     validate(
       need(length(input$chosen_hp) > 0, "Please, select at least one HPO term.")
     )
-    
     
     tmp_df <- running_sim_score()
     
@@ -4376,7 +4374,7 @@ function(input, output, session) {
         select(gene, sim_gene) %>%
         arrange(desc(sim_gene)) %>%
         distinct() %>%
-        ggplot(aes(reorder(gene, sim_gene), sim_gene)) +
+        ggplot(aes(reorder(gene, -sim_gene), sim_gene)) +
         geom_col(aes(fill = sim_gene), color = 'black', show.legend = FALSE) +
         ylab('Phenotypic similarity score') +
         xlab('Genes') +
@@ -4393,12 +4391,13 @@ function(input, output, session) {
         distinct() %>%
         arrange(desc(sim_mim)) %>%
         # filter(similarity_score >= filter_higher_than) %>%
-        ggplot(aes(reorder(identifier, sim_mim), sim_mim)) +
+        ggplot(aes(reorder(identifier, -sim_mim), sim_mim)) +
         geom_col(aes(fill = sim_mim), color = 'black', show.legend = FALSE) +
         # coord_flip() +
         ylab('Phenotypic similarity score') +
         xlab('Disease identifiers') +
         scale_fill_viridis_c() +
+        # scale_x_reverse() +
         theme_fancy() +
         theme(axis.text.x = element_text(angle = 45, hjust = 1),
               axis.title.x = element_text(size = 16),
