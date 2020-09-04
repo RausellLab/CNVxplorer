@@ -1061,7 +1061,7 @@ tablerDashPage(
           ), 
           column(width = 4,
                  
-                 tablerCard(title = 'Entity recognition',
+                 tablerCard(title = 'Find HP terms in a clinical text',
                             width = 12,
                             closable = FALSE,
                             collapsible = FALSE,
