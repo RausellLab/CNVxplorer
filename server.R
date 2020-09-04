@@ -1357,7 +1357,8 @@ function(input, output, session) {
     # test12412 <<- abstract_pubmed()[[1]]$dataframe 
     
     df <- abstract_pubmed()[[1]]$dataframe %>% filter(element == 'abstract') %>%
-      select(word, category, identifier)
+      select(word, category, identifier) %>%
+      rename(entity = word)
     
     datatable(df, rownames = FALSE, options = list(dom = 't'), class = 'cell-border stripe')
     
