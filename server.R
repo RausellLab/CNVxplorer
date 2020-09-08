@@ -193,7 +193,7 @@ function(input, output, session) {
                ) > 0) {
       shinyalert("Error!", "You have selected a genomic coordinate out of the chromosome", type = "error")
     } else if (nrow(coord_user() %>% mutate(t_length = end - start + 1) %>%
-                    filter(t_length > 1e7))) {
+                    filter(t_length > 1.5e7))) {
 
       shinyalert("Error!", "One of the genomic intervals exceed the maximum length (10 millions b.p)", type = "error")
 
@@ -307,7 +307,7 @@ function(input, output, session) {
     
     tmp_check_2 <- tbl_output %>% 
       mutate(t_length = end - start + 1) %>%
-      filter(t_length >= 1e7)
+      filter(t_length >= 1.5e7)
     
     tmp_check_3 <- tbl_output %>%
       mutate(check_lower_end = end - start) %>%
