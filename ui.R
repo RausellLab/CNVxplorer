@@ -28,7 +28,7 @@ tablerDashPage(
       tablerNavMenuItem(
         tabName = "genomic_interactions",
         icon = "box",
-        "Genomic interactions"
+        "Protein interaction network"
       ),
       tablerNavMenuItem(
         tabName = "disease",
