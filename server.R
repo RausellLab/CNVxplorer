@@ -326,7 +326,7 @@ function(input, output, session) {
 
     } else if (nrow(tmp_check_2) > 0) {
       
-      shinyalert("Error!", "One of the genomic intervals exceed the maximum length (10 millions b.p)", type = "error")
+      shinyalert("Error!", "One of the genomic intervals exceed the maximum length (15 millions b.p)", type = "error")
       req(tmp_check_2 == 0)
 
     } else if (nrow(tmp_check_3) > 0 ) {
@@ -470,16 +470,7 @@ function(input, output, session) {
       ungroup() %>%
       select(-startdelete, -enddelete, -.overlap) %>%
       distinct()
-    
-    
-    
-    
-    # df_output <-  cnv_df[cnv_df$id == '291728',] %>% 
-    #   select(chrom, start, end) %>%
-    #   bed_intersect(test2020[c(1,2,3,4,5),], suffix = c('', 'delete')) %>%
-    #   select(-startdelete, -enddelete, -.overlap)
 
-    
     df_output
     
   })
@@ -633,7 +624,7 @@ function(input, output, session) {
 
 
   
-  output$df_check_hp_genes <- renderDataTable({
+  output$df_check_hp_genes <- renderDT({
     
     # req(input$start_analysis > 0)
     
@@ -787,7 +778,7 @@ function(input, output, session) {
   
   
   
-  # output$omim_assoc <- renderDataTable({
+  # output$omim_assoc <- renderDT({
   # 
   #   ids_query <- c(query_pubmed_dup()[['ids']], query_pubmed_del()[['ids']])
   #   test0123456 <<- ids_query
@@ -865,7 +856,7 @@ function(input, output, session) {
   
   
   
-  output$gene_assoc <- renderDataTable({
+  output$gene_assoc <- renderDT({
     
     ids_query <- c(query_pubmed_del()[['ids']], query_pubmed_dup()[['ids']])
     
@@ -894,7 +885,7 @@ function(input, output, session) {
   })
   
   
-  # output$medgen_assoc <- renderDataTable({
+  # output$medgen_assoc <- renderDT({
   #   
   #   ids_query <- c(query_pubmed_del()[['ids']], query_pubmed_dup()[['ids']])
   #   query_link <- entrez_link(db= 'medgen', id= ids_query, dbfrom="pubmed")
@@ -1205,7 +1196,7 @@ function(input, output, session) {
     
   })
   
-  output$del_dup_pubmed <- renderDataTable({
+  output$del_dup_pubmed <- renderDT({
     
     req(running_pubmed_del())
     req(running_pubmed_dup())
@@ -1352,7 +1343,7 @@ function(input, output, session) {
 
   })
   
-  output$abstract_df <- renderDataTable({
+  output$abstract_df <- renderDT({
     
     # test12412 <<- abstract_pubmed()[[1]]$dataframe 
     
@@ -1365,7 +1356,7 @@ function(input, output, session) {
   })
     
   
-  # output$abstract_pubmed <- renderDataTable({
+  # output$abstract_pubmed <- renderDT({
   # 
   #   validate(
   #     need(input$del_dup_pubmed_rows_selected != '', "Please, select an article from the table.")
@@ -1397,7 +1388,7 @@ function(input, output, session) {
   # })
   
   
-  output$dup_pubmed <- renderDataTable({
+  output$dup_pubmed <- renderDT({
     
     
     tmp_df <- running_pubmed_dup()
@@ -1758,7 +1749,7 @@ function(input, output, session) {
     
   })
   
-  output$cnv_syndromes <- renderDataTable({
+  output$cnv_syndromes <- renderDT({
     
     req(running_cnv_syndromes())
     req(input$select_cnv_syndrome)
@@ -1863,10 +1854,25 @@ function(input, output, session) {
   
   
   
-  output$dgenes <- renderDataTable({
+  output$dgenes <- renderDT({
     
     server <- TRUE
     
+    # test021321 <<- running_upset_disease()
+
+  # data_input <-   test2019  %>%
+  #     select(-start, -end, -chrom) %>%
+  #     filter(source == 'CNV') %>%
+  #     select(-source) %>%
+  #     select(band, gene, disease, orphanet, dev, clingen, omim, gwas, p_overlap) %>%
+  #     filter(disease == 'Yes')
+    # data_input %>%
+    #   left_join(test021321 %>% count(gene, value), by = 'gene') %>%
+    #   select(gene, n, p_overlap) %>% nrow()
+    # datatable(rownames = FALSE, colnames = c('Gene', 'Nº evidences', 'Overlap (%)'),
+    #                         filter = list(position = 'top'), 
+    #                         selection = 'single',
+    #                         options = list(columnDefs = list(list(className = 'dt-center', targets = '_all'))))
     
     
     data_input <- data_selected()  %>% 
@@ -1890,12 +1896,14 @@ function(input, output, session) {
                             filter = list(position = 'top'), 
                             selection = 'single',
                             options = list(columnDefs = list(list(className = 'dt-center', targets = '_all'))))
+    
+    test9421412414124124124 <<- tmp_output
 
     tmp_output
 
   })
   
-  output$dgenes_reg <- renderDataTable({
+  output$dgenes_reg <- renderDT({
     
     server <- TRUE
     
@@ -1990,7 +1998,7 @@ function(input, output, session) {
   })
   
   
-  output$select_gene_disease <- renderDataTable({
+  output$select_gene_disease <- renderDT({
     
     
     validate(
@@ -2081,13 +2089,11 @@ function(input, output, session) {
                              paste0('https://www.ncbi.nlm.nih.gov/projects/dbvar/clingen/clingen_gene.cgi?sym=', gene),"' target='_blank'>", gene,"</a>"))
       
       datatable(tmp_df, escape = FALSE, rownames = FALSE, colnames = c('Gene', 'Haploinsufficient', 'Triplosensitivity'))
-      
-      
     }
     
   })
   
-  output$select_gene_disease_reg <- renderDataTable({
+  output$select_gene_disease_reg <- renderDT({
     
     
     validate(
@@ -2183,7 +2189,7 @@ function(input, output, session) {
     
   })
   
-  output$dgenes_no_disease <- renderDataTable({
+  output$dgenes_no_disease <- renderDT({
     
     server <- TRUE
     
@@ -2287,7 +2293,7 @@ function(input, output, session) {
   
   
   
-  output$genes_from_reg_regions <- renderDataTable({
+  output$genes_from_reg_regions <- renderDT({
     
     # if (!is.null(input$enhancers_on_off)) {
     #   if (input$enhancers_on_off) {
@@ -2320,7 +2326,7 @@ function(input, output, session) {
     # )
   })
   
-  # output$genes_from_tads <- renderDataTable({
+  # output$genes_from_tads <- renderDT({
   #   
   #   if (!is.null(input$tads_on_off)) {
   #     if (input$tads_on_off) {
@@ -2351,7 +2357,7 @@ function(input, output, session) {
   #   # )
   # })
   
-  output$score_references <- renderDataTable({
+  output$score_references <- renderDT({
     
     
     test1945 <<- input$dgenes_rows_all
@@ -2705,7 +2711,7 @@ function(input, output, session) {
   # })
   
   # 
-  # output$df_fisher <- renderDataTable({
+  # output$df_fisher <- renderDT({
   #   
   #   
   #   tmp_df <- fisher_running() %>% select(-genes)
@@ -3104,7 +3110,7 @@ function(input, output, session) {
   
   
   
-  output$df_mirna <- renderDataTable({
+  output$df_mirna <- renderDT({
     
     validate(
       need(nrow(mirna_raw()) > 0, '0 miRNAs found.')
@@ -3147,7 +3153,7 @@ function(input, output, session) {
   })
   
   
-  output$tf_df <- renderDataTable({
+  output$tf_df <- renderDT({
     
     validate(
       need(nrow(tf_raw()) > 0, '0 Transcription factors (TFs) found.')
@@ -3179,7 +3185,7 @@ function(input, output, session) {
   
   
   
-  output$lncrna_df <- renderDataTable({
+  output$lncrna_df <- renderDT({
     
     validate(
       need(nrow(lncrna_raw()) > 0, '0 lncRNAs found.')
@@ -3398,7 +3404,7 @@ function(input, output, session) {
     
   })
   
-  output$df_enhancer <- renderDataTable({
+  output$df_enhancer <- renderDT({
     
     validate(
       need(nrow(prev_enhancer()) > 0, '0 enhancers found.')
@@ -3727,7 +3733,7 @@ function(input, output, session) {
   })
   
   
-  output$df_tads <- renderDataTable({
+  output$df_tads <- renderDT({
     
     tmp_df <- prev_tads() %>% select(-n_genes_not_cnv, -genes_not_cnv,
                                      -n_genes)
@@ -3925,7 +3931,7 @@ function(input, output, session) {
   # })
   # 
   
-  # output$hpo_filter_genes <- renderDataTable({
+  # output$hpo_filter_genes <- renderDT({
   #   
   #   
   #   # validate(
@@ -4124,7 +4130,7 @@ function(input, output, session) {
   #   
   # })
 
-  # output$hpo_assoc_genes <- renderDataTable({
+  # output$hpo_assoc_genes <- renderDT({
   #   
   #   # hpo_filter_genes
   #   
@@ -4160,7 +4166,7 @@ function(input, output, session) {
   #   
   # })
   # 
-  output$hpo_assoc_diseases <- renderDataTable({
+  output$hpo_assoc_diseases <- renderDT({
     
     validate(
       need(input$dt_running_sim_score_rows_selected != '', "Please, select a row.")
@@ -4197,7 +4203,7 @@ function(input, output, session) {
     
   })
   
-  output$hpo_assoc_genes <- renderDataTable({
+  output$hpo_assoc_genes <- renderDT({
     
     validate(
       need(input$dt_running_sim_score_rows_selected != '', "Please, select a row.")
@@ -4218,7 +4224,7 @@ function(input, output, session) {
   })
   
   
-  # output$hpo_filter_cnvs <- renderDataTable({
+  # output$hpo_filter_cnvs <- renderDT({
   #   
   #   
   #   test913 <<- data_selected()
@@ -4888,7 +4894,7 @@ function(input, output, session) {
   })
   
   
-  output$df_do <- renderDataTable({
+  output$df_do <- renderDT({
     
     test883 <<- running_do()  
     
@@ -5006,7 +5012,7 @@ function(input, output, session) {
   })
 
   
-  output$df_intersection <- renderDataTable({
+  output$df_intersection <- renderDT({
     
     
     df_tmp <- intersection_running() %>%
@@ -5286,7 +5292,7 @@ function(input, output, session) {
   
   
   # 
-  # output$df_upload <- renderDataTable({
+  # output$df_upload <- renderDT({
   #   
   #   req(running_upload())
   # 
@@ -5384,7 +5390,7 @@ function(input, output, session) {
     
   })
   
-  output$df_variants <- renderDataTable({
+  output$df_variants <- renderDT({
     
     req(input$select_clinvar_gwas)
     
@@ -5427,7 +5433,7 @@ function(input, output, session) {
   })
   
   
-  output$df_de_novo <- renderDataTable({
+  output$df_de_novo <- renderDT({
     
     tmp_df <- running_de_novo() %>% 
       mutate(CaddScore = replace_na(CaddScore, '-'),
