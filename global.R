@@ -82,6 +82,7 @@ library(networkD3)
 # # ensembl_reg  - Ensembl Regulatory Build
 # # region_gaps - Centromeric and telomeric regions
 # # coord_chrom_hg19 - chromosome length
+# # interactions_db - protein-protein high-confidence interactions from STRING
 
 # 
 # file.remove('local_data.RData.gz')
@@ -119,8 +120,9 @@ library(networkD3)
 #     lncrna_coord, ## hg19
 #     blacklist_encode, ## hg19
 #     mpo_dbs, ## -
-#     gwas_variants, ## -
+#     gwas_variants, ## hg19
 #     mgi, ## -
+#     interactions_db, ## -
 #     syndromes_total, ## hg19
 #     file = "local_data.RData")
 # 

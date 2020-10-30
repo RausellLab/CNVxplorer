@@ -661,6 +661,50 @@ function(input, output, session) {
     
   })
   
+  output$overview_hp_terms <- renderPlot({
+    
+    
+    hpo_filter() %>% 
+      count(hp) %>% 
+      left_join(hpo_genes %>% select(hp, desc),by = 'hp') %>% 
+      distinct() %>%
+      mutate(desc = paste0(desc, ' (', hp, ')')) %>%
+      arrange(desc(n)) %>%
+      slice(1:10) %>%
+      ggplot(aes(reorder(desc, n), n)) +
+      geom_col(aes(fill = n), color = 'black', show.legend = FALSE) +
+      scale_fill_viridis_c() +
+      coord_flip() +
+      theme_minimal() +
+      labs(y = 'Frequency', x = NULL)
+
+  })
+  
+  output$overview_hp_anatomy <- renderPlot({
+    
+    genes_selected <- hpo_filter() %>% select(gene) %>% distinct() %>% pull()
+    hpo_from_gene <- hpo_genes %>% filter(gene %in% genes_selected)  %>% pull(hp)
+
+   unlist(map(hpo_from_gene, function(x) get_ancestors(hpo_dbs, x))) %>% 
+   enframe()  %>% 
+   select(value) %>%
+   left_join(anato_df, by = c('value' = 'name')) %>%
+   na.omit() %>%
+   rename(anatomy_entity = value.y) %>%
+      count(anatomy_entity) %>%
+      slice(1:10) %>%
+      ggplot(aes(reorder(anatomy_entity, n), n)) +
+      geom_col(aes(fill = n), color = 'black', show.legend = FALSE) +
+      # scale_fill_continuous() +
+      scale_fill_viridis_c() +
+      coord_flip() +
+      theme_minimal() +
+      labs(y = 'Nº HP terms associated', x = NULL)
+
+  })
+  
+  
+  
   output$n_cnv_patho <- renderUI({
     
     # req(input$start_analysis > 0)
@@ -4106,66 +4150,8 @@ function(input, output, session) {
     
     
   })
-  
-  
-  # output$n_genes_no_cnv <- renderUI({
-  #   
-  #   
-  #   n_genes <- running_sim_score() %>%  
-  #     filter(source != 'CNV') %>% 
-  #     pull(gene) %>%
-  #     unique() %>% 
-  #     length()
-  #   
-  #   tablerInfoCard(
-  #     width = 12,
-  #     value =  paste(n_genes, 'Genes'),
-  #     status = "primary",
-  #     icon = "database",
-  #     description =  'Genes with HPO terms'
-  #     
-  #   )
-  #   
-  #   
-  #   
-  # })
 
-  # output$hpo_assoc_genes <- renderDT({
-  #   
-  #   # hpo_filter_genes
-  #   
-  #   validate(
-  #     need(input$hpo_filter_genes_rows_selected != '', "Please, select a gene.")
-  #   )
-  #   
-  #   
-  #   
-  #   tmp_df <- hpo_filter() %>%
-  #     count(gene) %>%
-  #     slice(input$hpo_filter_genes_rows_selected) %>%
-  #     select(gene) %>%
-  #     pull(gene)
-  #   
-  #   
-  #   tmp_df2 <- hpo_filter()
-  #   tmp_df2 <- tmp_df2 %>% filter(gene %in% tmp_df ) %>% select(-entrez_id)
-  #   tmp_df2 <- tmp_df2 %>% 
-  #     mutate(hp = paste0("<a href='", paste0('https://hpo.jax.org/app/browse/term/', hp),"' target='_blank'>", hp,"</a>")) %>%
-  #     select(gene, hp, term)
-  #   test232134 <<- tmp_df2
-  #   datatable(tmp_df2, escape = FALSE, rownames = FALSE, colnames = c('Gene', 'HPO term', 'Description'))
-  #   
-  # })
-  
-  
-  
-  # run_select_disease_hpo <- reactive({
-  #   
-  #   
-  # 
-  #   
-  # })
-  # 
+
   output$hpo_assoc_diseases <- renderDT({
     
     validate(
@@ -4268,7 +4254,7 @@ function(input, output, session) {
     
     
     validate(
-        need(length(input$chosen_hp) != 0, 'Please, select at least one HPO term.'),
+        need(length(input$chosen_hp) != 0, "Please, select at least one HP term to describe patient's symptoms"),
         need(input$dt_running_sim_score_rows_selected != '', "Please, select a row.")
 
     )

@@ -148,7 +148,7 @@ ref_scores <- tibble(score = c('gwas', # we could filter out by number of hits (
 # drugbank curl -Lfv -o filename.zip -u francisco.requena@institutimagine.org:BElerofonte93-- https://www.drugbank.ca/releases/5-1-5/downloads/target-approved-polypeptide-ids
 
 # ------------------------------------------------------------------------------
-# Dataset: Protein-coding genes with HGCN symbol 
+# Dataset: Protein-coding genes with HGNC symbol 
 # Source: https://www.genenames.org/download/statistics-and-files/
 # Source:  ftp://ftp.ebi.ac.uk/pub/databases/genenames/new/tsv/locus_types/gene_with_protein_product.txt
 # ------------------------------------------------------------------------------
@@ -318,14 +318,12 @@ phast46pla <- getGScores("phastCons46wayPlacental.UCSC.hg19")
 plan("multiprocess", workers = 40)
 
 
-genomic_ranges <- tibble(chrom = '1', start = 1000000, end = )
-
 
   get_annot_promoter <- function(gene, chrom, tss) {
     
-    # gene <- 'A'
-    # chrom <- '1'
-    # tss <- 58856544
+    # gene <- 'PRY'
+    # chrom <- hgcn_genes[hgcn_genes$gene == 'PRY',]$chrom
+    # tss <- hgcn_genes[hgcn_genes$gene == 'PRY',]$start
     
     tmp_granges <- GRanges(seqnames= paste0('chr', chrom), 
                            IRanges(start=(tss-2000):(tss+2000), width=1))
@@ -356,6 +354,12 @@ genomic_ranges <- tibble(chrom = '1', start = 1000000, end = )
   genes_promoter <- bind_rows(lapply(output_temp, as.data.frame.list)) %>% as_tibble()
   
   toc()
+  
+  
+  # get_annot_promoter(hgcn_genes[hgcn_genes$gene == 'PRY',]$gene,
+  #                    hgcn_genes[hgcn_genes$gene == 'PRY',]$chrom,
+  #                    hgcn_genes[hgcn_genes$gene == 'PRY',]$start
+  #                     )
   
 
   # hgcn_genes %>% select(gene, pLI) %>%
@@ -989,7 +993,7 @@ recomb <- tmp_granges_recomb %>% as_tibble() %>% select(seqnames, start, end, cm
 
 
 
-gnomad_sv_raw <-  read_tsv('/home/cbl02/Storage/data/gnomad_v2.1_sv.sites.bed', col_types = list(`#chrom` = col_character())) %>%
+gnomad_sv_raw <-  read_tsv('data/gnomad_v2.1_sv.sites.bed', col_types = list(`#chrom` = col_character())) %>%
   filter(SVTYPE %in% c('DEL', 'DUP')) %>%
   filter(FILTER == 'PASS') %>%
   rename(id = name) %>%
@@ -1130,7 +1134,7 @@ tad <- tad %>%
 # Genome reference: hg38
 # ------------------------------------------------------------------------------
 
-genehancer <- read.table('/home/cbl02/Storage/data/genehancer_V4_11.gff', header = FALSE, sep = '\t',
+genehancer <- read.table('data/genehancer_V4_11.gff', header = FALSE, sep = '\t',
                   stringsAsFactors = FALSE)
 
 df <- genehancer %>%

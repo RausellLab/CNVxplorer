@@ -191,10 +191,6 @@ tablerDashPage(
                  ),
                  plotOutput('plot_chrom', height = 200)
 
-                 
-                 
-                 
-                 
           ),
           
           column(
@@ -221,24 +217,24 @@ tablerDashPage(
                          
               ), 
               ),
-            tablerCard(width = 12,
-                       title = NULL,
-                       collapsible = FALSE,
-                       closable = FALSE,
-                       zoomable = FALSE,
-                       statusSide = 'left',
-                       pickerInput(
-                         inputId = "11type_cnv",
-                         label = tags$b("CNV type"), 
-                         choices = list("-" = NA, "Deletion" = 1, "Duplication" = 0)
-                       ),
-                       pickerInput(
-                         inputId = "11denovo_yes_no",
-                         label = tags$b("de novo CNV?"), 
-                         choices = list("-" = NA, 'Yes' = 1, 'No' = 0)
-                       ),
-                       
-            ), 
+            # tablerCard(width = 12,
+            #            title = NULL,
+            #            collapsible = FALSE,
+            #            closable = FALSE,
+            #            zoomable = FALSE,
+            #            statusSide = 'left',
+            #            pickerInput(
+            #              inputId = "11type_cnv",
+            #              label = tags$b("CNV type"), 
+            #              choices = list("-" = NA, "Deletion" = 1, "Duplication" = 0)
+            #            ),
+            #            pickerInput(
+            #              inputId = "11denovo_yes_no",
+            #              label = tags$b("de novo CNV?"), 
+            #              choices = list("-" = NA, 'Yes' = 1, 'No' = 0)
+            #            ),
+            #            
+            # ), 
            
             uiOutput('ref_user_region'),
             uiOutput('ref_user_cytoband'),
@@ -644,7 +640,7 @@ tablerDashPage(
         fluidRow(
           tablerCard(
             title = "Overlap with disease genes",
-            DTOutput("dgenes") %>% withSpinner(type = 5),
+            DTOutput("dgenes"),
             width = 4,
             collapsible = FALSE,
             closable = FALSE,
@@ -1028,6 +1024,13 @@ tablerDashPage(
       ),
       tablerTabItem(
         tabName = "disease",
+        fluidRow( 
+        tablerCard(title = 'Overview - HP terms distribution',
+                   plotOutput('overview_hp_terms'),
+                   width = 6),
+        tablerCard(title = 'Overview - Anatomical entities distribution',
+                   plotOutput('overview_hp_anatomy'),
+                   width = 6)),
         fluidRow(
           uiOutput('n_hp_chosen')
 
