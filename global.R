@@ -85,8 +85,8 @@ library(networkD3)
 # # interactions_db - protein-protein high-confidence interactions from STRING
 
 # 
-# file.remove('local_data.RData.gz')
-# file.remove('local_data.RData')
+file.remove('local_data.RData.gz')
+file.remove('local_data.RData')
 # save(hgcn_genes, ## hg19
 #     df_enhancers, ## hg19
 #     tad, ## hg19
@@ -130,8 +130,8 @@ library(networkD3)
 
 source('functions.R')
 
-# system('gunzip -c local_data.RData.gz > local_data.RData')
-# load('local_data.RData')
+system('gunzip -c local_data.RData.gz > local_data.RData')
+load('local_data.RData')
 
 ridges_home <- cnv_df %>%
   filter(length_cnv >= 50) %>%
