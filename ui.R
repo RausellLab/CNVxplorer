@@ -833,13 +833,25 @@ tablerDashPage(
       
       tablerTabItem(
         tabName = "genomic_interactions",
-        
-        # tagAppendAttributes(actionButton(ns("open"), "Network Options"), class = "btn-outline-primary"),
-        
-
-        tablerCard(title = 'Network',
+        column(width = 9,
+        tablerCard(title = 'Protein interaction network',
                    width = 12,
                    forceNetworkOutput("network_ppi")
+        )),
+        column(width = 3,
+               tablerCard(title = 'Color legend', width = 12,
+                         htmlOutput("legend_html")),
+                         
+               tablerCard(title = 'Filter gene', width = 12,
+               selectInput(
+                 "gtex_gen231e_tissue", "",
+                 c(Gene = "Gene",
+                   Tissue = "Tissue"),
+                 selected = 'Tissue'))),
+               
+        tablerCard(title = 'Nº of protein-protein interactions',
+                   width = 12,
+                   plotOutput('frequency_network')
         )
       ),
           
@@ -1025,17 +1037,17 @@ tablerDashPage(
       tablerTabItem(
         tabName = "disease",
         fluidRow( 
-        tablerCard(title = 'Overview - HP terms distribution',
+        tablerCard(title = 'Top 10 most frequent HP terms (gene annotation)',
                    plotOutput('overview_hp_terms'),
                    width = 6),
-        tablerCard(title = 'Overview - Anatomical entities distribution',
+        tablerCard(title = 'Top 10 most frequent anatomical entities (gene annotation)',
                    plotOutput('overview_hp_anatomy'),
                    width = 6)),
-        fluidRow(
-          uiOutput('n_hp_chosen')
-
-          
-        ),
+        # fluidRow(
+        #   uiOutput('n_hp_chosen')
+        # 
+        # 
+        # ),
         fluidRow(
           tablerCard(title = 'Phenotype terms',
                      width = 8,
@@ -1063,6 +1075,7 @@ tablerDashPage(
                      
           ), 
           column(width = 4,
+                 uiOutput('n_hp_chosen'),
                  
                  tablerCard(title = 'Find HP terms in a clinical text',
                             width = 12,

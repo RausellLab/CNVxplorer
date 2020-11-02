@@ -642,7 +642,6 @@ function(input, output, session) {
     
     # req(input$start_analysis > 0)
     
-    
     tablerInfoCard(
       width = 12,
       value =  paste(length(input$chosen_hp), 'HPO terms'),
@@ -662,8 +661,7 @@ function(input, output, session) {
   })
   
   output$overview_hp_terms <- renderPlot({
-    
-    
+
     hpo_filter() %>% 
       count(hp) %>% 
       left_join(hpo_genes %>% select(hp, desc),by = 'hp') %>% 
@@ -675,6 +673,7 @@ function(input, output, session) {
       geom_col(aes(fill = n), color = 'black', show.legend = FALSE) +
       scale_fill_viridis_c() +
       coord_flip() +
+      scale_y_continuous(breaks = pretty_breaks()) +
       theme_minimal() +
       labs(y = 'Frequency', x = NULL)
 
@@ -698,6 +697,7 @@ function(input, output, session) {
       # scale_fill_continuous() +
       scale_fill_viridis_c() +
       coord_flip() +
+      scale_y_continuous(breaks = pretty_breaks()) +
       theme_minimal() +
       labs(y = 'Nº HP terms associated', x = NULL)
 
@@ -1371,8 +1371,7 @@ function(input, output, session) {
       
     }
     
-    # jaja <- 'Chemokines have been shown to play an important role in the pathogenesis of <span style="color:red">pancreatitis</span>, but the role of chemokine <span style="color:green">CXCL9</span> in <span style="color:red">pancreatitis</span> is poorly understood. The aim of this study was to investigate whether <span style="color:green">CXCL9</span> was a modulating factor in chronic <span style="color:red">pancreatitis</span>. Chronic <span style="color:red">pancreatitis</span> was induced in <span style="color:lime">Sprague-Dawley rats</span> by intraductal infusion of <span style="color:blue">trinitrobenzene sulfonic acid</span> (TNBS) and <span style="color:green">CXCL9</span> expression was assessed by immunohistochemistry, Western blot analysis and enzyme linked immunosorbent assay (ELISA). Recombinant <span style="color:lime">human</span> <span style="color:green">CXCL9</span> protein (<span style="color:green">rCXCL9</span>), neutralizing antibody and normal saline (NS) were administered to <span style="color:lime">rats</span> with chronic <span style="color:red">pancreatitis</span> by subcutaneous injection. The severity of <span style="color:red">fibrosis</span> was determined by measuring <span style="color:blue">hydroxyproline</span> in pancreatic tissues and histological grading. The effect of <span style="color:green">rCXCL9</span> on activated pancreatic stellate cells (PSCs) in vitro was examined and collagen 1alpha1, <span style="color:green">TGF-beta1</span> and <span style="color:green">CXCR3</span> expression was assessed by Western blot analysis in isolated <span style="color:lime">rat</span> PSCs. <span style="color:red">Chronic pancreatic injury</span> in <span style="color:lime">rats</span> was induced after TNBS treatment and <span style="color:green">CXCL9</span> protein was markedly upregulated during TNBS-induced <span style="color:red">chronic pancreatitis</span>. Although <span style="color:red">parenchymal injury in the pancreas</span> was not obviously affected after <span style="color:green">rCXCL9</span> and neutralizing antibody administration, <span style="color:green">rCXCL9</span> could attenuate fibrogenesis in <span style="color:red">TNBS-induced chronic pancreatitis</span> in vivo and exerted antifibrotic effects in vitro, suppressing collagen production in activated PSCs. In conclusion, <span style="color:green">CXCL9</span> is involved in the modulation of pancreatic fibrogenesis in <span style="color:red">TNBS-induced chronic pancreatitis</span> in <span style="color:lime">rats</span>, and may be a therapeutic target in <span style="color:red">pancreatic fibrosis</span>'
-    
+
     result <- find_pubtator(pmid = paper_selected, bioconcept = 'all')
     
     
@@ -1387,13 +1386,26 @@ function(input, output, session) {
 
   })
   
+  output$legend_html <- renderUI({
+    
+    # .domain(["CNV", "Enhancer", "lncRNAs", "miRNAs", "TFs"])
+    # .range(["#66C2A5","#FC8D62", "#8DA0CB", "#E78AC3", "#A6D854"]);'
+
+HTML('<span style="color:#66C2A5">CNV</span> <br>
+     <span style="color:#FC8D62">Enhancer</span> <br>
+     <span style="color:#8DA0CB">lncRNAs</span> <br>
+     <span style="color:#E78AC3">miRNAs</span> <br>
+     <span style="color:#A6D854">TFs</span>')
+
+  })
+  
   output$abstract_df <- renderDT({
     
-    # test12412 <<- abstract_pubmed()[[1]]$dataframe 
-    
+
     df <- abstract_pubmed()[[1]]$dataframe %>% filter(element == 'abstract') %>%
       select(word, category, identifier) %>%
-      rename(entity = word)
+      rename(entity = word) %>%
+      distinct()
     
     datatable(df, rownames = FALSE, options = list(dom = 't'), class = 'cell-border stripe')
     
@@ -2338,11 +2350,7 @@ function(input, output, session) {
   
   
   output$genes_from_reg_regions <- renderDT({
-    
-    # if (!is.null(input$enhancers_on_off)) {
-    #   if (input$enhancers_on_off) {
-    
-    
+
     validate(
       need(!is.null(input$select_reg_region), "0 non-disease target genes found."),
       need(length(input$select_reg_region) != 0, "0 non-disease target genes found.")
@@ -2905,7 +2913,7 @@ function(input, output, session) {
         value = paste0(nrow(tmp_df), " genes"),
         status = "success",
         icon = "database",
-        description = 'Genes found in CNV'
+        description = 'Genes found in CNV(s)'
       )
     } else {
       tablerInfoCard(
@@ -2913,7 +2921,7 @@ function(input, output, session) {
         value = paste0(nrow(tmp_df), " genes"),
         status = "success",
         icon = "database",
-        description = 'Genes found in CNV'
+        description = 'Genes found in CNV(s)'
       )
     }
     
@@ -3220,7 +3228,8 @@ function(input, output, session) {
       bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
       filter(target_symbol %in% hgcn_genes$gene) %>%
       select(-startdelete, -enddelete, -.overlap) %>%
-      mutate(is_mapping = if_else(target_symbol %in% genes_cnv, 'Yes', 'No'))
+      mutate(is_mapping = if_else(target_symbol %in% genes_cnv, 'Yes', 'No')) %>%
+      select(-.source)
     
     
     
@@ -3234,6 +3243,9 @@ function(input, output, session) {
     validate(
       need(nrow(lncrna_raw()) > 0, '0 lncRNAs found.')
     )
+    
+    test913444444 <<- lncrna_raw()
+    
 
     datatable(lncrna_raw(), rownames = FALSE,
               colnames = c('Symbol', 'Chromosome', 'Start', 'End', 'Ensembl ID', 'Target symbol', 
@@ -3313,12 +3325,10 @@ function(input, output, session) {
   
   prev_enhancer <- reactive({
     
-    # req(input$start_analysis > 0)
-    
+
     genes_cnv <- data_selected_prev() %>% pull(gene)
-    
-    
-    data_tmp <- df_enhancers %>% 
+
+    data_tmp <- df_enhancers %>%
       bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
       filter(gene %in% hgcn_genes$gene) %>%
       select(id,chrom, start, end, gene, everything()) %>%
@@ -5344,7 +5354,8 @@ function(input, output, session) {
       select(-end) %>%
       select(-contains('source')) %>%
       distinct() %>%
-      mutate(disease_identifier = str_replace_all(disease_identifier, ',', '\n'))
+      mutate(disease_identifier = str_replace_all(disease_identifier, ',', '\n')) %>%
+      select(id, everything())
       
     
     
@@ -5393,9 +5404,9 @@ function(input, output, session) {
       datatable(tmp_df, 
                 filter = list(position = 'top'), 
                 escape = FALSE, 
-                colnames = c('Chrom', 'Position','Reference', 'Alternative','Gene','Clinical significance',
+                colnames = c('Clinvar ID', 'Chrom','Position','Reference', 'Alternative','Gene','Clinical significance',
                                                      'Disease Identifier', 
-                                                     'Disease name', 'Clinvar ID'), 
+                                                     'Disease name'), 
                 rownames = FALSE
       )
       
@@ -5420,6 +5431,10 @@ function(input, output, session) {
   
   
   output$df_de_novo <- renderDT({
+    
+    validate(
+      need(nrow(running_de_novo()) != 0, '0 de novo variants found.')
+    )
     
     tmp_df <- running_de_novo() %>% 
       mutate(CaddScore = replace_na(CaddScore, '-'),
@@ -5457,19 +5472,18 @@ function(input, output, session) {
     
   })
   
-  output$network_ppi <- renderForceNetwork({
+  
+  temporal_network <- reactive({
     
     validate(
       need(nrow(data_selected()) != 0, "No protein-coding genes found.")
     )
     
-
+    
     df_nodes <- data_selected() %>% 
-      # filter(gene != 'ZFPM2') %>%
       select(gene, source) %>% 
-        mutate(id =  row_number() - 1) %>% 
-        tibble::as_data_frame() 
-
+      mutate(id =  row_number() - 1) %>% 
+      tibble::as_data_frame()
     
     df_links <- interactions_db %>% 
       filter(from %in% df_nodes$gene | to %in% df_nodes$gene) %>%
@@ -5481,20 +5495,58 @@ function(input, output, session) {
       select(id_from, id_to) %>%
       tibble::as_data_frame()
     
+    result <- list('nodes' = df_nodes, 'links' = df_links)
+    test888 <<- result
+    result
+    
+  })
+  
+  output$network_ppi <- renderForceNetwork({
+
+    
     validate(
-      need(nrow(df_links) != 0, "No protein-protein interactions found.")
+      need(nrow(temporal_network()[[2]]) != 0, "No protein-protein interactions found.")
     )
     
-    forceNetwork(Links = df_links, Nodes = df_nodes,
+    ColourScale <- 'd3.scaleOrdinal()
+            .domain(["CNV", "Enhancer", "lncRNAs", "miRNAs", "TFs"])
+           .range(["#66C2A5","#FC8D62", "#8DA0CB", "#E78AC3", "#A6D854"]);'
+    
+    forceNetwork(Links = temporal_network()[[2]], Nodes = temporal_network()[[1]],
                  Source = "id_from", Target = "id_to",
                  NodeID = "gene", 
                  zoom = TRUE,
-                 Group = "source",
-                 opacity = 1)
+                 Group = 'source',
+                 opacity = 1,
+                 colourScale = JS(ColourScale))
     
     
   })
   
+  
+  
+  output$frequency_network <- renderPlot({
+    
+    validate(
+      need(nrow(temporal_network()[[2]]) != 0, "No protein-protein interactions found.")
+    )
+
+    selected_nodes <- temporal_network()[[2]] %>% count(id_from)
+    
+    temporal_network()[[1]] %>% 
+      left_join(selected_nodes, by = c('id' = 'id_from')) %>% 
+      na.omit() %>% 
+      arrange(desc(n)) %>%
+      slice(1:10) %>%
+      mutate(gene = paste0(gene, ' (', source, ')')) %>%
+      ggplot(aes(reorder(gene, -n), n)) +
+        geom_col(aes(fill =n), color = 'black', show.legend = FALSE) +
+        scale_color_viridis_c() +
+        scale_y_continuous(breaks = pretty_breaks()) +
+        theme_minimal() +
+      labs(y = 'Number of interactions', x = 'Gene')
+
+  })
   
   output$drugbank_df <- renderDT({
     
