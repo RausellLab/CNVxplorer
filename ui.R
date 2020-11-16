@@ -840,14 +840,26 @@ tablerDashPage(
         )),
         column(width = 3,
                tablerCard(title = 'Color legend', width = 12,
-                         htmlOutput("legend_html")),
+                          htmlOutput('legend_html')),
+               
+               tablerCard(title = 'Filter by gene', width = 12,
+                          prettyRadioButtons(
+                            inputId = "filter_by_gene_ppi",
+                            label = "Choose:", 
+                            choices = c("No", "Yes"),
+                            inline = TRUE, 
+                            status = "primary",
+                            fill = TRUE
+                          ),
+                          conditionalPanel(
+                            condition = "input.filter_by_gene_ppi == 'Yes'",
+                            uiOutput("output_select_gene"))
+                          
+               
                          
-               tablerCard(title = 'Filter gene', width = 12,
-               selectInput(
-                 "gtex_gen231e_tissue", "",
-                 c(Gene = "Gene",
-                   Tissue = "Tissue"),
-                 selected = 'Tissue'))),
+               
+               
+               )),
                
         tablerCard(title = 'Nº of protein-protein interactions',
                    width = 12,

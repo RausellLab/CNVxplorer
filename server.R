@@ -470,6 +470,8 @@ function(input, output, session) {
       ungroup() %>%
       select(-startdelete, -enddelete, -.overlap) %>%
       distinct()
+    
+    test2021 <<- df_output
 
     df_output
     
@@ -5501,6 +5503,18 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
     
   })
   
+  output$output_select_gene <- renderUI({
+    
+    genes_selected <- setNames(as.list(temporal_network()[[1]]$gene), temporal_network()[[1]]$gene)
+    
+    
+               selectInput(
+                 "network_ppi_select_gene", '', genes_selected
+               )
+    
+  })
+  
+  
   output$network_ppi <- renderForceNetwork({
 
     
@@ -5512,17 +5526,62 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
             .domain(["CNV", "Enhancer", "lncRNAs", "miRNAs", "TFs"])
            .range(["#66C2A5","#FC8D62", "#8DA0CB", "#E78AC3", "#A6D854"]);'
     
-    forceNetwork(Links = temporal_network()[[2]], Nodes = temporal_network()[[1]],
-                 Source = "id_from", Target = "id_to",
-                 NodeID = "gene", 
-                 zoom = TRUE,
-                 Group = 'source',
-                 opacity = 1,
-                 colourScale = JS(ColourScale))
+    
+    if (input$filter_by_gene_ppi == 'No') {
+      
+      forceNetwork(Links = as.data.frame(temporal_network()[[2]]), Nodes = as.data.frame(temporal_network()[[1]]),
+                   Source = "id_from", Target = "id_to",
+                   NodeID = "gene", 
+                   zoom = TRUE,
+                   Group = 'source',
+                   opacity = 1,
+                   colourScale = JS(ColourScale))
+      
+    } else {
+
+      
+      req(input$network_ppi_select_gene)
+      
+      tmp_node <-  temporal_network()[[1]] %>% filter(gene == input$network_ppi_select_gene) %>% pull(id)
+      
+      gene_chosen2 <-  temporal_network()[[2]] %>% filter(id_from == tmp_node)
+      
+      
+      validate(
+        need(nrow(gene_chosen2) != 0, paste("No protein-protein interactions with the ", input$network_ppi_select_gene, 'gene'))
+      )
+      
+
+      gene_chosen1 <-  temporal_network()[[1]] %>% 
+        filter(id %in% c(gene_chosen2 %>% pull(id_from), gene_chosen2 %>% pull(id_to))) %>%
+        mutate(id2 = row_number() - 1)
+
+      
+      
+      gene_chosen2 <- gene_chosen2 %>% 
+        left_join(gene_chosen1, by = c('id_from' = 'id')) %>% 
+        rename(id_from_real = id2) %>% 
+        left_join(gene_chosen1, by = c('id_to' = 'id')) %>% 
+        rename(id_to_real = id2)
+      
+      gene_chosen1 <- gene_chosen1 %>% select(-id) %>% rename(id = id2)
+
+      forceNetwork(Links = as.data.frame(gene_chosen2), Nodes = as.data.frame(gene_chosen1),
+                   Source = "id_from_real", Target = "id_to_real",
+                   NodeID = "gene", 
+                   zoom = TRUE,
+                   Group = 'source',
+                   opacity = 1,
+                   colourScale = JS(ColourScale))
+ 
+    }
+    
+
     
     
   })
   
+
   
   
   output$frequency_network <- renderPlot({
