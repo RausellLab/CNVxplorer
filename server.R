@@ -67,6 +67,10 @@ function(input, output, session) {
     
     shinyjs::reset('lncrnas_on_off')
     shinyjs::reset('data_selected_lncrnas')
+    #
+    shinyjs::reset('filter_by_gene_ppi')
+    
+    
     
     #
     shinyjs::reset('counter_header')
@@ -4862,29 +4866,31 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
     req(isTRUE(input$enable_do_analysis))
     
     
-    if (is.null(input$dgenes_rows_all)) {
-      df_genes <- data_selected()
-    } else {
-      df_genes <- data_selected()[input$dgenes_rows_all,]
-    }
+    # if (is.null(input$dgenes_rows_all)) {
+    #   df_genes <- data_selected()
+    # } else {
+    #   df_genes <- data_selected()[input$dgenes_rows_all,]
+    # }
     
+    df_genes <- data_selected()
+
     filtered_genes <- df_genes %>% select(entrez_id) %>% pull()  %>% as.character()
     
     validate(
       need(length(filtered_genes) != 0, "0 enriched diseases found.")
     )
     
+    
+    
     enrich_dgn <- enrichDO(gene  = filtered_genes,
                            universe      = hgcn_genes %>% select(entrez_id) %>% pull() %>% as.character(),
                            pvalueCutoff  = as.numeric(input$pvalue_do),
-                           readable = TRUE) %>%
-      as_tibble() %>%
-      filter(n > 1)
+                           readable = TRUE)
     
 
 
     validate(
-      need(nrow(enrich_dgn) != 0, "0 enriched terms found.")
+      need(nrow(enrich_dgn %>% as_tibble() %>% filter(Count > 1)) != 0, "0 enriched terms found.")
     )
     
     enrich_dgn
@@ -4893,22 +4899,18 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
   
   
   output$df_do <- renderDT({
-    
-    test883 <<- running_do()  
-    
+
     df <- running_do() %>%
       as_tibble() %>%
-      filter(Count != 0) %>%
+      filter(Count > 1) %>%
       arrange(desc(Count)) %>%
-      # separate(geneID, sep = '/', into = as.character(1:1000)) %>%
-      # gather('delete', 'gene', -ID, -Description, -Count, -GeneRatio, -pvalue, -p.adjust, -qvalue, -BgRatio) %>%
-      # select(-delete, -qvalue) %>%
       separate_rows(geneID, sep = '/') %>%
       na.omit() %>%
       distinct() %>%
       mutate(pvalue = round(pvalue, 3)) %>%
       mutate(p.adjust = round(p.adjust, 3)) %>%
       mutate(qvalue = round(qvalue, 3)) %>%
+      mutate(ID = str_replace(ID, ':', '_')) %>%
       mutate(ID = paste0("<a href='", paste0('https://www.ebi.ac.uk/ols/ontologies/doid/terms?iri=http%3A%2F%2Fpurl.obolibrary.org%2Fobo%2F', ID),"' target='_blank'>", ID,"</a>"))
     
     
@@ -4918,7 +4920,7 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
   
   output$func_do  <- renderPlot({
     
-    
+
     cnetplot(running_do(), foldChange= hgcn_genes$entrez_id, readable = TRUE)
   })
 
