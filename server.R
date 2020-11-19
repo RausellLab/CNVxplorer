@@ -689,6 +689,9 @@ function(input, output, session) {
     
     genes_selected <- hpo_filter() %>% select(gene) %>% distinct() %>% pull()
     hpo_from_gene <- hpo_genes %>% filter(gene %in% genes_selected)  %>% pull(hp)
+    
+  test94113 <<- genes_selected
+  test94114 <<- hpo_from_gene
 
    unlist(map(hpo_from_gene, function(x) get_ancestors(hpo_dbs, x))) %>% 
    enframe()  %>% 
@@ -1011,8 +1014,11 @@ function(input, output, session) {
   
   output$n_mortality <- renderUI({
     
+    if (nrow(model_genes_phenotype() > 0)) {
     tmp_n <- model_genes_phenotype() %>%  filter(description == 'mortality/aging') %>% nrow()
-    
+    } else {
+    tmp_n <- 0
+    }
 
     tablerStatCard(
       value =  tmp_n,
@@ -1025,9 +1031,13 @@ function(input, output, session) {
   
   output$n_embryo <- renderUI({
     
-    tmp_n <- model_genes_phenotype() %>%  
-      filter(description == 'embryo phenotype') %>% 
-      nrow()
+    if (nrow(model_genes_phenotype() > 0)) {
+      tmp_n <- model_genes_phenotype() %>%  
+        filter(description == 'embryo phenotype') %>% 
+        nrow()
+    } else {
+      tmp_n <- 0
+    }
 
     tablerStatCard(
       value =   tmp_n,
@@ -2255,9 +2265,7 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
     
     server <- TRUE
     
-    tmp_df <-  data_selected() 
-    
-    data_input <- tmp_df %>% 
+    data_input <- data_selected()  %>% 
       select(-start, -end, -chrom) %>%
       filter(source == 'CNV') %>%
       select(band, gene, disease, fusil, ohnolog, imprinted, pLI, rvis, ccr, hi, gdi, snipre, ncrvis, 
@@ -2356,25 +2364,51 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
   
   
   output$genes_from_reg_regions <- renderDT({
+    
+    server <- TRUE
 
     validate(
       need(!is.null(input$select_reg_region), "0 non-disease target genes found."),
       need(length(input$select_reg_region) != 0, "0 non-disease target genes found.")
     )
     
-    server <- TRUE
-    data_input <- data_selected() %>% filter(source ==  input$select_reg_region) %>%
+    data_input <- data_selected() %>% 
       select(-start, -end, -chrom) %>%
-      select(band, gene, disease, essent, pLI, rvis, ccr, hi, gdi, snipre, ncrvis, 
-             ncgerp) %>%
-      filter(disease == 'No')
+      filter(source ==  input$select_reg_region) %>%
+      select(band, gene, disease, fusil, ohnolog, imprinted, pLI, rvis, ccr, hi, gdi, snipre, ncrvis, 
+             ncgerp)
     
-    datatable(data_input, rownames = FALSE, filter = list(position = 'top'),
-              colnames = c('Band', 'Gene', 'Disease', 'Essential', 'pLI', 'RVIS', 'CCR', 'HI', 'GDI', 'SnIPRE', 'ncRVIS',
-                           'ncGERP')) %>%
+    validate(
+      need(nrow(data_input) > 0, "0 no disease genes.")
+    )
+    
+    
+    tmp_output <- datatable(data_input, rownames = FALSE, 
+                            colnames = c('Band', 'Gene', 'Disease', 'Essentiality',
+                                         'Ohnolog', 'Imprinted',
+                                         'pLI', 'RVIS', 'CCR', 'HI', 'GDI', 'SnIPRE', 'ncRVIS',
+                                         'ncGERP'),
+                            filter = list(position = 'top'), 
+                            selection = 'single') %>%
       formatStyle(c('pLI', 'rvis', 'hi', 'gdi', 'snipre', 'ncrvis', 'ncgerp'), color = styleInterval(94, c('weight', '#ff7f7f'))) %>%
-      formatStyle(c('ccr'), color = styleInterval(1, c('weight', '#ff7f7f'))) %>%
-      formatStyle(c('disease'), color = styleEqual(c('No', 'Yes'), c('weight', '#ff7f7f')))
+      formatStyle(c('ccr'), color = styleInterval(1, c('weight', '#ff7f7f')))
+    
+    
+    tmp_output
+
+    # server <- TRUE
+    # data_input <- data_selected() %>% filter(source ==  input$select_reg_region) %>%
+    #   select(-start, -end, -chrom) %>%
+    #   select(band, gene, disease, essent, pLI, rvis, ccr, hi, gdi, snipre, ncrvis, 
+    #          ncgerp) %>%
+    #   filter(disease == 'No')
+    # 
+    # datatable(data_input, rownames = FALSE, filter = list(position = 'top'),
+    #           colnames = c('Band', 'Gene', 'Disease', 'Essential', 'pLI', 'RVIS', 'CCR', 'HI', 'GDI', 'SnIPRE', 'ncRVIS',
+    #                        'ncGERP')) %>%
+    #   formatStyle(c('pLI', 'rvis', 'hi', 'gdi', 'snipre', 'ncrvis', 'ncgerp'), color = styleInterval(94, c('weight', '#ff7f7f'))) %>%
+    #   formatStyle(c('ccr'), color = styleInterval(1, c('weight', '#ff7f7f'))) %>%
+    #   formatStyle(c('disease'), color = styleEqual(c('No', 'Yes'), c('weight', '#ff7f7f')))
     
     # formatStyle(c('disease', 'haplo', 'triplo', 'omim', 'dev', 'fda', 'gwas'), color = styleEqual(c('No', 'Yes'), c('weight', '#ff7f7f')))
     
@@ -2593,6 +2627,12 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
       filtered_tissue <- input$input_tissue
       tmp_df <- tmp_df %>% filter(tissue == !!filtered_tissue)
     }
+    
+    validate(
+      need(nrow(tmp_df) != 0, "No data found.")
+    )
+    
+    
 
     datatable(tmp_df, 
               colnames = c('Gene','Tissue', 'Cell type', 'Level', 'Reliability'),
@@ -3575,7 +3615,7 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
       value =  paste(n_target_genes, 'target-genes'),
       status = "primary",
       icon = "database",
-      description =  'Not mapping with the variant(s)'
+      description =  'Not mapping the CNV(s)'
       
     )
 
@@ -3968,7 +4008,14 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
     
     hpo_genes_filter <- hpo_genes %>% 
       filter(gene %in% hpo_yes)
+    
+    validate(
+      need(nrow(hpo_genes_filter) > 0, 'No gene-disease associations found.')
+    )
+    
+    test0331 <<- hpo_genes_filter
 
+    hpo_genes_filter
   })
   
   
@@ -4036,6 +4083,14 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
     # req(input$start_analysis > 0)
     
     req(input$input_inheritance != '')
+    
+    
+      validate(
+        need(nrow(data_selected()) != 0, "0 genes found.")
+
+      )
+    
+    
     
     
     tmp_tbl <- data_selected() %>% 

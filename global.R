@@ -43,7 +43,7 @@ library(tidytext)
 library(tidyverse)
 library(bioloupe)
 library(networkD3)
-
+library(scales)
 
 # # Files needed to run the app
 # 

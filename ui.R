@@ -5,9 +5,7 @@ tablerDashPage(
     
     shinyjs::useShinyjs(),
     useShinyalert(),
-    
-    
-    
+
     navMenu = tablerNavMenu(
       
       tablerNavMenuItem(
