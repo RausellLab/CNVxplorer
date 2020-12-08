@@ -122,7 +122,7 @@ tablerDashPage(
       tablerTabItem(
         tabName = "overview",
         shinyjs::useShinyjs(),
-        use_waiter(),
+        # use_waiter(),
         setShadow(class = 'card'),
         chooseSliderSkin("Nice"),
         
@@ -139,21 +139,21 @@ tablerDashPage(
                        prettyRadioButtons(
                          inputId = "input_geno_karyo",
                          label = "Choose:", 
-                         choices = c("Genomic coordinates", "G banding", 'Multiple coordinates'),
+                         choices = c("Genomic coordinates", "G banding", 'Multiple coordinates (NGS)'),
                          inline = TRUE, 
                          status = "primary",
                          fill = TRUE
                        ),
                        conditionalPanel(
-                         condition = "input.input_geno_karyo != 'Multiple coordinates'",
+                         condition = "input.input_geno_karyo != 'Multiple coordinates (NGS)'",
                        selectizeInput(inputId = 'input_chrom', label = 'Chromosome', choices = human_chrom,
                                       selected = NULL, multiple = FALSE,
                                       options = NULL),
                        uiOutput('choose_geno_karyo1'),
                        uiOutput('choose_geno_karyo2')),
                        conditionalPanel(
-                         condition = "input.input_geno_karyo == 'Multiple coordinates'",
-                         fileInput("file_cnv", label = h5("Upload file:")),
+                         condition = "input.input_geno_karyo == 'Multiple coordinates (NGS)'",
+                         fileInput("file_cnv", label = h5("Upload file (.bed):")),
                          downloadLink('download_file_1', label = "Download file example [#1]")
                        ),
                        
@@ -175,7 +175,7 @@ tablerDashPage(
           ),
           column(6,
                  conditionalPanel(
-                   condition = "input.input_geno_karyo == 'Multiple coordinates'",
+                   condition = "input.input_geno_karyo == 'Multiple coordinates (NGS)'",
                  tablerCard(width = 12,
                             title = 'Input file',
                             collapsible = FALSE,
@@ -195,7 +195,7 @@ tablerDashPage(
             width = 3,
             
             conditionalPanel(
-              condition = "input.input_geno_karyo == 'Multiple coordinates'",
+              condition = "input.input_geno_karyo == 'Multiple coordinates (NGS)'",
 
               tablerCard(width = 12,
                          title = NULL,
@@ -211,7 +211,8 @@ tablerDashPage(
                                         options = NULL),
            uiOutput('n_variants'),
            uiOutput('ref_user_region_file'),
-           uiOutput('checking_quality_file')
+           uiOutput('checking_quality_file'),
+           tags$p('After each row selection, you need to click on the button "Run".')
                          
               ), 
               ),
@@ -657,7 +658,7 @@ tablerDashPage(
             )
           )),
         tablerCard(
-          title = "Overlap with non-disease genes",
+          title = "Overlap with disease & non-disease genes",
           DTOutput("dgenes_no_disease") %>% withSpinner(type = 5),
           width = 12,
           collapsible = FALSE,
@@ -746,7 +747,7 @@ tablerDashPage(
           ),
           
           tablerCard(
-            title = "Non-disease target genes from disrupted regulatory elements",
+            title = "Disease & non-disease target genes from disrupted regulatory elements",
             DTOutput("genes_from_reg_regions") %>% withSpinner(type = 5),
             width = 12,
             collapsible = FALSE,
@@ -837,9 +838,6 @@ tablerDashPage(
                    forceNetworkOutput("network_ppi")
         )),
         column(width = 3,
-               tablerCard(title = 'Color legend', width = 12,
-                          htmlOutput('legend_html')),
-               
                tablerCard(title = 'Filter by gene', width = 12,
                           prettyRadioButtons(
                             inputId = "filter_by_gene_ppi",
@@ -852,12 +850,21 @@ tablerDashPage(
                           conditionalPanel(
                             condition = "input.filter_by_gene_ppi == 'Yes'",
                             uiOutput("output_select_gene"))
-                          
+               ),
+               # tablerCard(title = 'Include external genes (1 degree)', width = 12,
+               #            prettyRadioButtons(
+               #              inputId = "add_external_genes",
+               #              label = "Choose:", 
+               #              choices = c("No", "Yes"),
+               #              inline = TRUE, 
+               #              status = "primary",
+               #              fill = TRUE
+               #            )
+               # ),
+               tablerCard(title = 'Color legend', width = 12,
+                          htmlOutput('legend_html'))
                
-                         
-               
-               
-               )),
+),
                
         tablerCard(title = 'Nº of protein-protein interactions',
                    width = 12,
@@ -1146,6 +1153,9 @@ tablerDashPage(
           tablerCard(title = 'Anatomical entities associated with HPO terms',
                      highchartOutput('plot_anatomy'),
                      width = 12),
+          tablerCard(title = 'DECIPHER CNVs - Phenotypic similarity',
+                     DTOutput('decipher_similarity'),
+                     width = 12),
           tablerCard(title = 'Phenotypic similarity score',
                      
                      plotOutput('plot_similarity_genes'),
@@ -1155,7 +1165,7 @@ tablerDashPage(
                        prettyRadioButtons(
                          inputId = "select_sim_gene_disease",
                          label = '', 
-                         choices = list('Genes' = 'genes', 'OMIM diseases' = 'diseases'),
+                         choices = list('Genes' = 'genes', 'OMIM diseases' = 'diseases', 'DECIPHER CNVs' = 'decipher'),
                          inline = TRUE, 
                          status = "primary",
                          fill = TRUE
@@ -1192,9 +1202,24 @@ tablerDashPage(
           tablerCard(
             collapsible = FALSE,
             closable = FALSE,
-            title = 'Overview',
-            # tags$img(src='overview.jpg'),
-            includeMarkdown('doc/documentation.Rmd'),
+            title = 'Documentation',
+            fluidRow(
+            column(12, align="center",
+                   
+            prettyRadioButtons(
+              inputId = "select_doc_element",
+              label = '', 
+              choices = list('Overview' = 'overview',
+                             'Tutorials' = 'tutorials',
+                             'FAQs' = 'faqs',
+                             'Installation' = 'installation',
+                             'Browser compatibility' = 'browser', 
+                             'Contact' = 'contact'),
+              inline = TRUE, 
+              status = "primary",
+              fill = TRUE
+            ))),
+            uiOutput('doc_chosen'),
                      width = 12)
         
       ),

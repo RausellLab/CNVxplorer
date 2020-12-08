@@ -1009,8 +1009,6 @@ gnomad_sv_raw <-  read_tsv('data/gnomad_v2.1_sv.sites.bed', col_types = list(`#c
 gnomad_sv <- gnomad_sv_raw %>%
   select(chrom, start, end, id, source) 
   
-    
-
 
 # ------------------------------------------------------------------------------
 # Dataset: Structural Variants (SV) - Population CNVs
@@ -1019,7 +1017,7 @@ gnomad_sv <- gnomad_sv_raw %>%
 # Variables: duplicated - deletion - general // observations - frequency - se
 # ------------------------------------------------------------------------------
 # 
-decipher_control_raw <- read_tsv('/home/cbl02/Storage/data/population_cnv.txt', col_names = TRUE) %>%
+decipher_control_raw <- read_tsv('https://decipher.sanger.ac.uk/files/downloads/population_cnv.txt.gz', col_names = TRUE) %>%
   mutate(source = 'decipher_control') %>%
   rename(id = population_cnv_id, chrom = chr) %>%
   mutate(id = as.character(id)) %>%
@@ -1238,20 +1236,23 @@ df_enhancers <- df_enhancers %>%
 plot_p100 <- df_enhancers %>% 
   select(id, phast100) %>% 
   distinct() %>% 
+  na.omit() %>%
   ggplot(aes(phast100)) + 
   geom_density() +
   xlab('Phast100way score')
 
 plot_p46pla <-  df_enhancers %>% 
   select(id, phast46pla) %>% 
-  distinct() %>% 
+  distinct() %>%
+  na.omit() %>%
   ggplot(aes(phast46pla)) + 
   geom_density() +
   xlab('Phast46way placental score')
 
 plot_p46pri <-  df_enhancers %>% 
   select(id, phast46pri) %>% 
-  distinct() %>% 
+  distinct() %>%
+  na.omit() %>%
   ggplot(aes(phast46pri)) + 
   geom_density() +
   xlab('Phast46way primate score')
@@ -1741,31 +1742,77 @@ denovo <- denovo_raw %>%
 # Sources: 1000 Genomes Consortium + gnomAD + Sudmant2015 + Genome_in_a_Bottle
 # ------------------------------------------------------------------------------
 
-dbvar_deletion_patho <- fread('ftp://ftp.ncbi.nlm.nih.gov/pub/dbVar/sandbox/sv_datasets/nonredundant/deletions/GRCh38.nr_deletions.pathogenic.tsv.gz',
-                                 skip = 1) %>% as_tibble()
-dbvar_deletion_common <- fread('ftp://ftp.ncbi.nlm.nih.gov/pub/dbVar/sandbox/sv_datasets/nonredundant/deletions/GRCh38.nr_deletions.common.tsv.gz', 
-                                   skip = 1) %>% as_tibble()
-dbvar_duplication_patho <- fread('ftp://ftp.ncbi.nlm.nih.gov/pub/dbVar/sandbox/sv_datasets/nonredundant/duplications/GRCh38.nr_duplications.pathogenic.tsv.gz',
-                                 skip = 1) %>% as_tibble()
-dbvar_duplication_common <- fread('ftp://ftp.ncbi.nlm.nih.gov/pub/dbVar/sandbox/sv_datasets/nonredundant/duplications/GRCh38.nr_duplications.common.tsv.gz', 
-                                  skip = 1) %>% as_tibble()
 
-dbvar <- dbvar_deletion_patho %>%
-  rbind(dbvar_deletion_common, dbvar_duplication_patho, dbvar_duplication_common)
+# ------------------------------------------------------------------------------
+# Dataset: nstd186 (dbVar)
+# Source: https://ftp.ncbi.nlm.nih.gov/pub/dbVar/data/Homo_sapiens/by_study/csv/all_variants_for_nstd186.csv.gz
+# Info: https://www.ncbi.nlm.nih.gov/dbvar/content/common_summary/#homepage
+# More info: https://github.com/ncbi/dbvar/blob/master/Structural_Variant_Sets/Nonredundant_Structural_Variants/README.md
+# source legend -> gnomAD(1) + 1K (2) + DECIPHER Population (3)
+# ------------------------------------------------------------------------------
+# 
+dbvar_raw <- read_csv('https://ftp.ncbi.nlm.nih.gov/pub/dbVar/data/Homo_sapiens/by_study/csv/all_variants_for_nstd186.csv.gz',
+                  col_types = cols(
+                    Chromosome = col_character(),
+                    `Remap Score` = col_number()
+                  ))
 
-dbvar <- dbvar %>%
-  rename(chrom = `#chr`, start = outermost_start, end = outermost_stop) %>%
-  filter(clinical_assertion %in% c('Pathogenic', NA)) %>%
+dbvar <- dbvar_raw %>% filter(`Assembly Name` == 'GRCh37 (hg19)') %>%
+              filter(`Variant Call type` %in% c('deletion', 'duplication', 'copy number gain', 'copy number loss')) %>%
+              rename(variant_id = `Variant ID`, variant_type = `Variant Call type`, source = `Sampleset ID`,
+                     chrom = Chromosome, start = Start, end = End) %>% 
+              mutate(start = if_else(is.na(start), `Inner Start`, start)) %>%
+              mutate(end = if_else(is.na(end), `Inner End`, end)) %>%
+              select(variant_id, chrom, start, end, variant_type, source ) %>% 
+              mutate(variant_type = case_when(
+                str_detect(variant_type, 'loss') ~ 'deletion',
+                str_detect(variant_type, 'deletion') ~ 'deletion',
+                str_detect(variant_type, 'gain') ~ 'duplication',
+                str_detect(variant_type, 'duplication') ~ 'duplication'
+                
+                )) %>%  
+              distinct(chrom, start, end, .keep_all = TRUE) %>%
+              mutate(source = case_when(
+              source == 1 ~ 'gnomAD',
+              source == 2 ~ '1000 Genomes Phase3',
+              source == 3 ~ 'DECIPHER Population'
+              ))
+  
+
+dbvar_deletion_common <- read_tsv('ftp://ftp.ncbi.nlm.nih.gov/pub/dbVar/sandbox/sv_datasets/nonredundant/deletions/GRCh37.nr_deletions.common.tsv.gz', 
+                                   skip = 1,
+                                  col_types = cols(
+                                    `#chr` = col_character()
+                                  )) 
+
+dbvar_duplication_common <- read_tsv('ftp://ftp.ncbi.nlm.nih.gov/pub/dbVar/sandbox/sv_datasets/nonredundant/duplications/GRCh37.nr_duplications.common.tsv.gz', 
+                                  skip = 1,
+                                  col_types = cols(
+                                    `#chr` = col_character()
+                                  )) 
+
+dbvar <- dbvar_deletion_common %>% bind_rows(dbvar_duplication_common) %>%
+  rename(chrom = `#chr`, start = outermost_start, end = outermost_stop) %>% 
   filter(!str_detect(study, ';')) %>%
-  filter(variant_type != 'copy_number_variation') %>%
-  mutate(clinical_assertion = if_else(is.na(clinical_assertion), 'control', 'pathogenic')) %>%
+  filter(variant_type %in% c('deletion', 'duplication', 'copy_number_gain', 'copy_number_loss')) %>%
+  mutate(clinical_assertion = if_else(is.na(clinical_assertion), 'control', 'pathogenic')) %>% 
   mutate(category_variant = case_when(
     str_detect(variant_type, 'deletion') ~ 'deletion',
     str_detect(variant_type, 'gain') ~ 'duplication',
     str_detect(variant_type, 'duplication') ~ 'duplication',
     str_detect(variant_type, 'loss') ~ 'deletion'
-  )) %>%
-  select(chrom, start, end, clinical_assertion, category_variant)
+  )) %>% 
+  distinct(chrom, start, end, .keep_all = TRUE) %>%
+  select(chrom, start, end, category_variant, study) %>%
+  mutate(length_cnv = end - start + 1) %>%
+  rename(source = study)
+  
+
+model_df %>% filter(clinical == 'Pathogenic') %>% filter(str_detect(type_inheritance, 'De novo')) %>% 
+  mutate(source = 'decipher_patho') %>%
+  select(length_cnv, source) %>% 
+  bind_rows(dbvar %>% mutate(length_cnv = end - start + 1) ) %>% 
+  ggplot(aes(length_cnv)) + geom_density(aes(fill = source), alpha = 0.4) + scale_x_log10()
 
 
 # ------------------------------------------------------------------------------
@@ -1781,7 +1828,17 @@ dbvar <- dbvar %>%
 #   filter(disease_name != 'LDLR(MIM 606945)') %>% # field with two genes
 #   bind_rows(tibble(gene = 'LDLR', disease_name = 'Familial hypercholesterolemia (MIM 143890)', MIM_gene = '(MIM 606945)' ))
 
+# ------------------------------------------------------------------------------
+# UCNEbase
+# More info: https://ccg.epfl.ch//UCNEbase/
+# ------------------------------------------------------------------------------
 
+ucne <- read_tsv('https://ccg.epfl.ch//UCNEbase/data/download/ucnes/hg19_UCNE_coord.bed')
+colnames(ucne) <- c('chrom', 'start', 'end', 'delete1', 'delete2')
+ucne <- ucne %>% 
+  select(-contains('delete')) %>%
+  mutate(start = start + 1) # 0-based -> 1-based
+  
 
 # ------------------------------------------------------------------------------
 # Get ontologies (Gene ontology (GO), The Mammalian Phenotype Ontology (mp))

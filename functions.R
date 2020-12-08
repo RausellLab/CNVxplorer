@@ -1,5 +1,4 @@
 
-# library(GenomicScores)
 select <- dplyr::select
 count <- dplyr::count
 rename <- dplyr::rename
@@ -88,10 +87,6 @@ get_perc_overlap <- function(df, input_tbl,
                              is_a_gene = FALSE,
                              is_patho = FALSE) {
 
-
-  
-  input_tbl <- test2020
-  
   
   df <- df %>%
     mutate(id_tmp = row_number())

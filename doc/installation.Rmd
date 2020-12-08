@@ -1,0 +1,18 @@
+---
+title: "installation"
+author: "frequena"
+date: "13/5/2020"
+output:
+  html_document:
+    toc: true
+---
+
+
+We provide instructions to install CNVxplorer locally or on a server (through Docker) with just 3 lines of code. 
+
+You can find the instructions on the <a href="https://github.com/frequena/cnvxplorer" target="_blank">Github Page</a>.
+
+
+
+For any technical problem, please open a issue on the Github page, we will be happy to help :).
+

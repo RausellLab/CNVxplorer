@@ -12,7 +12,6 @@ library(gghighlight)
 library(ReactomePA)
 library(shinycssloaders)
 library(plotly)
-library(waiter)
 library(DescTools)
 library(clusterProfiler)
 library(org.Hs.eg.db)
@@ -33,8 +32,6 @@ library(ontologyIndex)
 library(formattable)
 library(valr)
 library(TissueEnrich)
-# library(arules)
-# library(arulesCBA)
 library(shinyalert)
 library(ggraph)
 library(igraph) 
@@ -85,8 +82,8 @@ library(scales)
 # # interactions_db - protein-protein high-confidence interactions from STRING
 
 # 
-file.remove('local_data.RData.gz')
-file.remove('local_data.RData')
+# file.remove('local_data.RData.gz')
+# file.remove('local_data.RData')
 # save(hgcn_genes, ## hg19
 #     df_enhancers, ## hg19
 #     tad, ## hg19
@@ -125,11 +122,11 @@ file.remove('local_data.RData')
 #     interactions_db, ## -
 #     syndromes_total, ## hg19
 #     file = "local_data.RData")
-# 
+
 # system("gzip local_data.RData")
 
 source('functions.R')
-
+# 
 system('gunzip -c local_data.RData.gz > local_data.RData')
 load('local_data.RData')
 

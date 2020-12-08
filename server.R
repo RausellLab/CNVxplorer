@@ -41,9 +41,7 @@ function(input, output, session) {
   
   # })
   
-  
-  
-  
+
   
   observeEvent(input$start_analysis, {
     
@@ -70,6 +68,8 @@ function(input, output, session) {
     #
     shinyjs::reset('filter_by_gene_ppi')
     
+    shinyjs::reset('input_gene_tissue')
+    shinyjs::reset('input_tissue')
     
     
     #
@@ -79,16 +79,10 @@ function(input, output, session) {
     #
     shinyjs::reset('enable_net')
     shinyjs::reset('choose_net_source')
-    
-    
-    
-
-    
     #
+    shinyjs::reset("input_inheritance")
     shinyjs::reset("hpo_filter_genes_rows_selected")
     shinyjs::reset("hpo_filter_diseases_rows_selected")
-    
-    
     #
     shinyjs::reset("enable_func_analysis")
     shinyjs::reset("enable_path_analysis")
@@ -97,6 +91,7 @@ function(input, output, session) {
     shinyjs::reset("enable_tsea")
     #
     shinyjs::reset('only_omim')
+    shinyjs::reset('select_del_dup')
     #
     shinyjs::reset('chosen_hp')
     
@@ -245,13 +240,7 @@ function(input, output, session) {
     
     
   })
-  
-  
-  
-  
-  
-  
-  
+
   observeEvent(input$take_intersect, {
     
     
@@ -406,17 +395,20 @@ function(input, output, session) {
   
   output$gene_tissue <- renderUI({
     
-    if (is.null(input$dgenes_rows_all)) {
-      df_genes <- data_selected()
-    } else {
-      df_genes <- data_selected()[input$dgenes_rows_all,]
-    }
+    # if (is.null(input$dgenes_rows_all)) {
+    #   df_genes <- data_selected()
+    # } else {
+    #   df_genes <- data_selected()[input$dgenes_rows_all,]
+    # }
     
-    input_data <- df_genes %>% select(gene) %>% pull()
+    # test93 <<- running_hpa()
+    
+    input_data <- running_hpa() %>% select(gene) %>% distinct() %>% pull()
+    
+    test94111 <<- input_data
     
     pickerInput(
       inputId = "input_gene_tissue",
-      # label = "Select gene:", 
       choices = input_data,
       options = list(
         size = 5,
@@ -653,7 +645,7 @@ function(input, output, session) {
       value =  paste(length(input$chosen_hp), 'HPO terms'),
       status = "primary",
       icon = "database",
-      description =  'Select more terms in the panel below'
+      description =  'We recommend more than three HP terms'
       
     )
     
@@ -768,7 +760,7 @@ function(input, output, session) {
   query_pubmed_del <- reactive({
     
     
-    if ((input$input_geno_karyo == 'Multiple coordinates' | input$input_geno_karyo == 'Genomic coordinates')) {
+    if ((input$input_geno_karyo == 'Multiple coordinates (NGS)' | input$input_geno_karyo == 'Genomic coordinates')) {
 
       tmp_query <-  coord_cytobands %>%
         rename(chrom = Chrom, start = Start, end = End) %>%
@@ -965,7 +957,7 @@ function(input, output, session) {
   
   query_pubmed_dup <- reactive({
 
-    if ((input$input_geno_karyo == 'Multiple coordinates' | input$input_geno_karyo == 'Genomic coordinates')) {
+    if ((input$input_geno_karyo == 'Multiple coordinates (NGS)' | input$input_geno_karyo == 'Genomic coordinates')) {
       
       tmp_query <-  coord_cytobands %>%
         rename(chrom = Chrom, start = Start, end = End) %>%
@@ -1014,7 +1006,7 @@ function(input, output, session) {
   
   output$n_mortality <- renderUI({
     
-    if (nrow(model_genes_phenotype() > 0)) {
+    if (nrow(model_genes_phenotype()) > 0) {
     tmp_n <- model_genes_phenotype() %>%  filter(description == 'mortality/aging') %>% nrow()
     } else {
     tmp_n <- 0
@@ -1031,13 +1023,17 @@ function(input, output, session) {
   
   output$n_embryo <- renderUI({
     
-    if (nrow(model_genes_phenotype() > 0)) {
-      tmp_n <- model_genes_phenotype() %>%  
-        filter(description == 'embryo phenotype') %>% 
+    test9999999991 <<- model_genes_phenotype()
+    
+    if (nrow(model_genes_phenotype()) > 0) {
+      tmp_n <- model_genes_phenotype() %>%
+        filter(description == 'embryo phenotype') %>%
         nrow()
     } else {
       tmp_n <- 0
     }
+    
+
 
     tablerStatCard(
       value =   tmp_n,
@@ -1423,7 +1419,9 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
       rename(entity = word) %>%
       distinct()
     
-    datatable(df, rownames = FALSE, options = list(dom = 't'), class = 'cell-border stripe')
+    datatable(df, 
+              colnames = c('Entity', 'Category', 'Identifier'),
+              rownames = FALSE, options = list(dom = 't'), class = 'cell-border stripe')
     
   })
     
@@ -1714,14 +1712,7 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
   
   
   data_selected <- reactive({
-    
-    # observeEvent({input$start_analysis,
-    #   
-    #   data_selected_prev()
-    #   
-    #   
-    # })
-    
+
     
     table_output <- data_selected_prev() %>% 
       mutate(source = 'CNV') %>% 
@@ -2269,8 +2260,7 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
       select(-start, -end, -chrom) %>%
       filter(source == 'CNV') %>%
       select(band, gene, disease, fusil, ohnolog, imprinted, pLI, rvis, ccr, hi, gdi, snipre, ncrvis, 
-             ncgerp, p_overlap) %>%
-      filter(disease == 'No')
+             ncgerp, p_overlap)
     
     validate(
       need(nrow(data_input) > 0, "0 no disease genes.")
@@ -2289,38 +2279,36 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
 
     
     tmp_output
-    
-    
-    
+
   })
 
   
   
-  output$run_network <- renderPlot({
-
-    
-    
-    test <- data_selected() %>%
-      mutate(id = as.character(row_number())) %>%
-      select(id, source)
-    
-    
-    test1 <- tibble('from' = '1', 'to' = '2')
-    
-    
-    mygraph <- graph_from_data_frame( test1, vertices= test )
-    
-    
-    ggraph(mygraph, layout = 'dendrogram', circular = TRUE) + 
-      geom_node_text(aes(label= name)) +
-      geom_node_point(aes(filter = leaf, x = x*1.07, y=y*1.07, colour=source, alpha=0.2)) +
-      theme_void() +
-      theme(
-        legend.position="none",
-        plot.margin=unit(c(0,0,0,0),"cm"),
-      ) +
-      expand_limits(x = c(-1.3, 1.3), y = c(-1.3, 1.3))
-  })
+  # output$run_network <- renderPlot({
+  # 
+  #   
+  #   
+  #   test <- data_selected() %>%
+  #     mutate(id = as.character(row_number())) %>%
+  #     select(id, source)
+  #   
+  #   
+  #   test1 <- tibble('from' = '1', 'to' = '2')
+  #   
+  #   
+  #   mygraph <- graph_from_data_frame( test1, vertices= test )
+  #   
+  #   
+  #   ggraph(mygraph, layout = 'dendrogram', circular = TRUE) + 
+  #     geom_node_text(aes(label= name)) +
+  #     geom_node_point(aes(filter = leaf, x = x*1.07, y=y*1.07, colour=source, alpha=0.2)) +
+  #     theme_void() +
+  #     theme(
+  #       legend.position="none",
+  #       plot.margin=unit(c(0,0,0,0),"cm"),
+  #     ) +
+  #     expand_limits(x = c(-1.3, 1.3), y = c(-1.3, 1.3))
+  # })
   
   
   output$choose_reg_region <- renderUI({
@@ -2610,19 +2598,30 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
     
   })
   
-  output$tissue_hpa <- renderDT({
+  
+  running_hpa <- reactive({
     
     vector_genes <- data_selected() %>% pull(gene)
+    
     tmp_df <- hpa %>% filter(gene %in% vector_genes)
     
+    tmp_df
+
+  })
+  
+  output$tissue_hpa <- renderDT({
+    
+    tmp_df <- running_hpa()
+    
     if (input$gene_yes_no == 'Yes') {
+      
       req(input$input_gene_tissue)
       filtered_gene <- input$input_gene_tissue
-      test99 <<- filtered_gene
       tmp_df <- tmp_df %>% filter(gene == !!filtered_gene)
     }
     
     if (input$tissue_yes_no == 'Yes') {
+      
       req(input$input_tissue)
       filtered_tissue <- input$input_tissue
       tmp_df <- tmp_df %>% filter(tissue == !!filtered_tissue)
@@ -2631,8 +2630,7 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
     validate(
       need(nrow(tmp_df) != 0, "No data found.")
     )
-    
-    
+
 
     datatable(tmp_df, 
               colnames = c('Gene','Tissue', 'Cell type', 'Level', 'Reliability'),
@@ -2743,7 +2741,7 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
   
   plot_chrom_react <- reactive({
     
-  req(input$input_geno_karyo != 'Multiple coordinates')
+  req(input$input_geno_karyo != 'Multiple coordinates (NGS)')
   req(!is.null(coord_user()))
   req(nrow(coord_user()) == 1)
 
@@ -2853,7 +2851,7 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
       textInput(
         inputId = "int_start",
         label = "Genomic interval - Start",
-        value = '185787209')
+        value = '153613593')
       
     } else {
       
@@ -3006,7 +3004,7 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
   
   output$ref_user_region <- renderUI({
     
-    req(input$input_geno_karyo != 'Multiple coordinates')
+    req(input$input_geno_karyo != 'Multiple coordinates (NGS)')
     
     tmp_start <- coord_user() %>% pull(start)
     tmp_end <- coord_user() %>% pull(end)
@@ -3082,7 +3080,7 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
   
   output$ref_user_cytoband <- renderUI({
     
-    req(input$input_geno_karyo != 'Multiple coordinates')
+    req(input$input_geno_karyo != 'Multiple coordinates (NGS)')
     
     if (input$input_geno_karyo == 'Genomic coordinates') {
       
@@ -3436,15 +3434,10 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
       slice(input$df_enhancer_rows_selected) %>% 
       select(phast100) %>% 
       pull()
-    
-    # prev_enhancer() %>% ggplot(aes(phast100)) +
-    #   geom_histogram() +
-    #   theme_fancy() +
-    #   geom_vline(xintercept = score_filtered, color = 'red')
+
     plot_p100 +
       theme_fancy() +
       geom_vline(xintercept = score_filtered, color = 'red')
-
   })
   
   output$p46pla_enhancer <- renderPlot({
@@ -4089,15 +4082,16 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
         need(nrow(data_selected()) != 0, "0 genes found.")
 
       )
-    
-    
-    
-    
+
     tmp_tbl <- data_selected() %>% 
       select(source, gene) %>%
       left_join(hpo_genes %>% select(identifier, gene, hp), by = 'gene') %>%
       rename(hp_gene = hp) %>%
       na.omit()
+    
+    validate(
+      need(nrow(tmp_tbl) > 0, 'No gene-disease associations found.')
+    )
     
     if (input$input_inheritance != 'Any') {
       
@@ -4169,11 +4163,68 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
       distinct()
     
   })
+  
+  
+  
+  
+  running_sim_decipher <- reactive({
+
+    
+    validate(
+      need(length(input$chosen_hp) != 0, "Please, select at least one HP term to describe patient's symptoms")
+      
+    )
+    
+    
+    tmp_main <- df_overlap_cnvs_running() %>% filter(source == 'decipher') %>% 
+      filter(pathogenicity %in% c('Pathogenic', 'Likely pathogenic')) %>%
+      select(id, chrom, start, end, pathogenicity, genotype, variant_class, phenotypes, length_cnv, p_overlap) %>%
+      arrange(desc(p_overlap))
+    
+    validate(
+      need(nrow(tmp_main) != 0, "No DECIPHER CNVs found.")
+    )
+    
+    
+    tmp_df <- tmp_main %>% 
+      filter(phenotypes != '-') %>% 
+      select(id, phenotypes) %>%
+      separate_rows(phenotypes, sep = '<br>') %>%
+      left_join(vector_total_terms %>% select(term, value), by = c('phenotypes' = 'value')) %>%
+      na.omit() %>%
+      select(id, term)
+    
+    validate(
+      need(nrow(tmp_df) != 0, "No DECIPHER CNVs with phenotype information found.")
+    )
+    
+    # test014411 <<- tmp_df
+    
+    # test014412 <<- list('patient' = 'HP:0000002')
+    
+      list_hpo_decipher <- base::split(tmp_df$term, tmp_df$id)      
+      
+      hpo_patient  <- list('patient' = input$chosen_hp)
+      
+      output_decipher <- get_sim_grid(ontology=hpo_dbs, 
+                                   term_sets= hpo_patient,
+                                   term_sets2 = list_hpo_decipher,
+                                   term_sim_method = 'resnik') %>%
+        t() %>% 
+        as_tibble(rownames = 'id') %>%
+        rename(sim_decipher = patient) %>%
+        mutate(sim_decipher = round(sim_decipher, 2))
+
+      
+      return_tbl <- tmp_main %>% 
+        left_join(output_decipher, by = 'id')
+
+      return_tbl
+  })
     
     output$dt_running_sim_score <- renderDT({
       
       
-      test1412 <<- running_sim_score()
       
       datatable(running_sim_score() %>% replace_na(list(sim_gene = '-', sim_mim = '-')) %>%
                   mutate(identifier = paste0(identifier, '(', disease_source, ')')) %>%
@@ -4182,6 +4233,22 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
                 selection = 'single',
                 colnames = c('Source', 'Gene', 'Identifier', 'Disease description', 'Similarity score (gene)',
                              'Similarity score (disease)'))
+    })
+    
+    
+    output$decipher_similarity <-  renderDT({
+      
+      datatable(running_sim_decipher() %>% arrange(desc(sim_decipher)), 
+                escape = FALSE,
+                colnames = c('ID', 'Chrom', 'Start', 'End', 'Pathogenicity', 'Genotype', 'Class', 'Phenotype',
+                             'CNV size', 'Overlap (%)', 'Similarity score'),
+                selection = 'single',
+                filter = list(position = 'top'), 
+                options = list(
+                  columnDefs = list(list(className = 'dt-center',  targets = c(0:6,8,9, 10)))),  rownames= FALSE)
+      
+      
+      
     })
     
   output$n_diseases <- renderUI({
@@ -4249,7 +4316,7 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
       
       mutate(identifier = if_else(disease_source == 'OMIM', paste0("<a href='", paste0('https://www.omim.org/entry/', identifier),"' target='_blank'>", identifier,"</a>"),
                                   paste0("<a href='", 
-                                         paste0('https://www.orpha.net/consor/cgi-bin/Disease_Search.php?lng=EN&data_id=8648&Disease_Disease_Search_diseaseGroup=', identifier),"' target='_blank'>", identifier,"</a>"))
+                                         paste0('https://www.orpha.net/consor/cgi-bin/OC_Exp.php?lng=en&Expert=', identifier),"' target='_blank'>", identifier,"</a>"))
       ) %>%
       mutate(identifier = paste0(identifier, ' (', disease_source, ')')) %>%
       select(-disease_source)
@@ -4448,7 +4515,7 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
               axis.title.x = element_text(size = 16),
               axis.title.y = element_text(size = 16))
 
-    } else {
+    } else if (input$select_sim_gene_disease == 'diseases') {
 
       tmp_df  %>%
         select(identifier, sim_mim) %>%
@@ -4467,6 +4534,31 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
               axis.title.x = element_text(size = 16),
               axis.title.y = element_text(size = 16))
 
+    } else {
+      
+      
+      running_sim_decipher()  %>%
+        select(id, sim_decipher) %>%
+        distinct() %>%
+        arrange(desc(sim_decipher)) %>%
+        # filter(similarity_score >= filter_higher_than) %>%
+        ggplot(aes(reorder(id, -sim_decipher), sim_decipher)) +
+        geom_col(aes(fill = sim_decipher), color = 'black', show.legend = FALSE) +
+        # coord_flip() +
+        ylab('Phenotypic similarity score') +
+        xlab('DECIPHER CNVs identifiers') +
+        scale_fill_viridis_c() +
+        # scale_x_reverse() +
+        theme_fancy() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1),
+              axis.title.x = element_text(size = 16),
+              axis.title.y = element_text(size = 16))
+      
+      
+      
+      
+      
+      
     }
 
 
@@ -4496,14 +4588,18 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
       textInput(
         inputId = "int_end",
         label = "Genomic interval - End",
-        value = '188405222')
+        value = '153724866')
     }
   })
   
   model_genes_phenotype <- reactive({
-    
+ 
     # chosen_genes <- test2019 %>% select(gene) %>% pull()
     chosen_genes <- data_selected() %>% select(gene) %>% pull()
+    
+    # validate(
+    #   need(length(chosen_genes) != 0, '0 genes found.')
+    # )
     
    if (length(chosen_genes) == 0) {
      
@@ -4512,7 +4608,7 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
    } else {
     
     mgi_tmp <- mgi %>% filter(gene %in% chosen_genes) %>%
-      separate_rows(pheno, sep = ' ') %>%
+      separate_rows(pheno, sep = ', ') %>%
       rename(term = pheno)
     
 
@@ -4788,15 +4884,15 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
     
     req(isTRUE(input$enable_path_analysis))
     
-    if (is.null(input$dgenes_rows_all)) {
-      df_genes <- data_selected()
-    } else {
-      df_genes <- data_selected()[input$dgenes_rows_all,]
-    }
+    # if (is.null(input$dgenes_rows_all)) {
+    #   df_genes <- data_selected()
+    # } else {
+    #   df_genes <- data_selected()[input$dgenes_rows_all,]
+    # }
     
-    filtered_genes <- df_genes %>% select(entrez_id) %>% pull()  %>% as.character()
+    filtered_genes <- data_selected() %>% select(entrez_id) %>% pull()  %>% as.character()
     
-    test01441414 <<- filtered_genes
+    # test01441414 <<- filtered_genes
     validate(
       need(length(filtered_genes) != 0, "0 genes found.")
     )
@@ -5005,7 +5101,7 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
   
   reading_cnv_file <- reactive({
 
-    req(input$input_geno_karyo == 'Multiple coordinates')
+    req(input$input_geno_karyo == 'Multiple coordinates (NGS)')
     
       validate(
         need(!is.null(input$file_cnv), "Please upload a file.")
@@ -5016,10 +5112,14 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
     data1 <- read_tsv(file1$datapath, col_names = TRUE,
                       col_types = list(chrom = col_character(),
                                        start = col_integer(),
-                                       end = col_integer()))
+                                       end = col_integer(),
+                                       type = col_character()))
     
-    colnames(data1) <- c('chrom', 'start', 'end')
-    data1 
+    colnames(data1) <- c('chrom', 'start', 'end', 'type')
+    data1 <- data1 %>% 
+      mutate(start = start + 1) %>% # 0-based to 1-based 
+      filter(!across(everything(), is.na)) # remove empty lines (common in txt files)
+    data1
   })
   
   
@@ -5029,13 +5129,13 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
     
     tmp_tbl <- reading_cnv_file() %>% mutate(length_cnv = end - start + 1)
     
-    datatable(tmp_tbl, colnames = c('Chrom', 'Start', 'End', 'Lenght'))
+    datatable(tmp_tbl, colnames = c('Chrom', 'Start', 'End','Type', 'Lenght'))
     
   })
   
   cnv_file_to_analyze <- reactive({
     
-    tmp_tbl <- reading_cnv_file()
+    tmp_tbl <- reading_cnv_file() %>% select(-type)
     
 
     if (input$select_all_cnvs == 'yes') {
@@ -5048,6 +5148,7 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
         need(length(input$cnv_file_rows_selected) > 0, 'Please, click on the rows to select, at least,
              one variant')
       )
+      
       
       tmp_tbl[input$cnv_file_rows_selected,]
     }
@@ -5109,7 +5210,6 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
     )
     
   
-    test91232131333 <<- tmp_df
     
     tmp_df <- tmp_df %>%
       rowwise() %>%
@@ -5506,12 +5606,7 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
     
     
   })
-  
-  
-  
-  
-  
-  
+
   output$ui_intersect <- renderUI({
     
     
@@ -5541,8 +5636,7 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
     
     df_nodes <- data_selected() %>% 
       select(gene, source) %>% 
-      mutate(id =  row_number() - 1) %>% 
-      tibble::as_data_frame()
+      mutate(id =  row_number() - 1)
     
     df_links <- interactions_db %>% 
       filter(from %in% df_nodes$gene | to %in% df_nodes$gene) %>%
@@ -5551,8 +5645,7 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
       left_join(df_nodes %>% select(-source), by = c( 'to' = 'gene')) %>% 
       rename(id_to = id) %>% 
       na.omit() %>%
-      select(id_from, id_to) %>%
-      tibble::as_data_frame()
+      select(id_from, id_to)
     
     result <- list('nodes' = df_nodes, 'links' = df_links)
     test888 <<- result
@@ -5685,6 +5778,37 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
     
     datatable(tmp_df, escape = FALSE,
               colnames = c('Target gene', 'Description', 'Uniprot ID', 'DrugBank ID', 'Name', 'Synonyms'))
+  })
+  
+  
+  output$doc_chosen <- renderUI({
+    
+    
+    if (input$select_doc_element == 'overview') {
+      
+      includeMarkdown('doc/documentation.Rmd')
+      
+      
+    } else if (input$select_doc_element == 'browser') {
+      
+      includeMarkdown('doc/browser_compatibility.Rmd')
+      
+    } else if (input$select_doc_element == 'contact') {
+    
+      includeMarkdown('doc/contact.Rmd')
+    
+    } else if (input$select_doc_element == 'tutorials') {
+      
+      includeMarkdown('doc/tutorials.Rmd')
+      
+    } else if (input$select_doc_element == 'faqs') {
+      
+      includeMarkdown('doc/faqs.Rmd')
+      
+    } else if (input$select_doc_element == 'installation') {
+      
+      includeMarkdown('doc/installation.Rmd')
+    }
   })
   
   
