@@ -824,8 +824,8 @@ tablerDashPage(
                    closable = FALSE,
                    width = 12,
                    options = tagList(
-                     uiOutput('ui_tad')
-                     # uiOutput('switch_tads')
+                     # uiOutput('ui_tad')
+                     uiOutput('switch_tads')
                    )),
         
       ),

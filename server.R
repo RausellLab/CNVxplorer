@@ -1403,11 +1403,14 @@ function(input, output, session) {
     # .domain(["CNV", "Enhancer", "lncRNAs", "miRNAs", "TFs"])
     # .range(["#66C2A5","#FC8D62", "#8DA0CB", "#E78AC3", "#A6D854"]);'
 
-HTML('<span style="color:#66C2A5">CNV</span> <br>
+HTML('<center>
+     <span style="color:#66C2A5">CNV</span> <br>
      <span style="color:#FC8D62">Enhancer</span> <br>
      <span style="color:#8DA0CB">lncRNAs</span> <br>
      <span style="color:#E78AC3">miRNAs</span> <br>
-     <span style="color:#A6D854">TFs</span>')
+     <span style="color:#A6D854">TFs</span>  <br>
+     <span style="color:#ae7373">TADs</span>
+     </center>')
 
   })
   
@@ -1549,38 +1552,7 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
     # Output
     table_output
   })
-  
-  data_selected_tads <- reactive({
-    
-    if (!is.null(input$tads_on_off)) {
-      if (input$tads_on_off) {
-        
-        # Genes  mapped in CNV
-        genes_cnv <- data_selected_prev()
-        genes_cnv <- genes_cnv %>% select(gene) %>% pull()
-        # Genes NOT mapped in CNV
-        if (is.null(input$df_tads_rows_all)) {
-          tads_df <- prev_tads()
-        } else {
-          tads_df <- prev_tads()[input$df_tads_rows_all,]
-        }
-        genes_no_cnv <- tads_df %>% select(genes_not_cnv) %>% pull() %>% str_split(pattern = ', ') %>% unlist() %>% unique()
-        genes_no_cnv <- genes_no_cnv[! genes_no_cnv %in% genes_cnv]
-        # ADAPT IT WHEN ADDING OMIM OR OTHERS!!!
-        table_output <- hgcn_genes %>% filter(gene %in% genes_no_cnv) %>%
-          select(-vg, -ensembl_gene_id) %>%
-          mutate(source = 'TAD')
-        
-        
-      } else {
-        table_output <- tibble()
-      }
-    } else {
-      table_output <- tibble()
-    }
-    
-  })
-  
+
   data_selected_mirnas <- reactive({
     
     
@@ -1665,31 +1637,9 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
   
   data_selected_tfs <- reactive({
     
-    
-    
     if (!is.null(input$tfs_on_off)) {
       if (input$tfs_on_off) {
-        
-        # # Genes  mapped in CNV
-        # genes_cnv <- data_selected_prev()
-        # genes_cnv <- genes_cnv %>% select(gene) %>% pull()
-        # # Genes NOT mapped in CNV
-        # 
-        # if (is.null(input$tf_df_rows_all)) {
-        #   tfs_df <- tf_raw()
-        # } else {
-        #   # tfs_df <- tf_raw()[input$tf_df_rows_all,]
-        #   tfs_df <- tf_raw()
-        #   
-        # }
-        # 
-        # 
-        # 
-        # 
-        # genes_no_cnv <- tfs_df %>% select(target) %>% distinct() %>% pull()
-        # genes_no_cnv <- genes_no_cnv[! genes_no_cnv %in% genes_cnv]
-        
-        
+
         genes_no_cnv <- tf_raw() %>% filter(is_mapping == 'No') %>% pull(target)
         
         
@@ -1705,6 +1655,37 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
       table_output <- tibble()
     }
     
+    # Output
+    table_output
+  })
+  
+  data_selected_tads <- reactive({
+    
+
+    if (!is.null(input$tads_on_off)) {
+      if (input$tads_on_off) {
+
+        genes_no_cnv <- tads_reactive() %>% pull(no_mapping)
+        
+        if (length(genes_no_cnv) == 2) genes_no_cnv <- paste(genes_no_cnv[1], genes_no_cnv[2])
+        
+        test888884 <<- genes_no_cnv
+        genes_no_cnv <- (genes_no_cnv %>% str_split(pattern = ', '))[[1]] %>% unique()
+       
+        table_output <- hgcn_genes %>% filter(gene %in% genes_no_cnv) %>%
+          select(-vg, -ensembl_gene_id) %>%
+          mutate(source = 'TADs')
+        
+        test9991144 <<- table_output
+
+
+      } else {
+        table_output <- tibble()
+      }
+    } else {
+      table_output <- tibble()
+    }
+
     # Output
     table_output
   })
@@ -2283,40 +2264,12 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
   })
 
   
-  
-  # output$run_network <- renderPlot({
-  # 
-  #   
-  #   
-  #   test <- data_selected() %>%
-  #     mutate(id = as.character(row_number())) %>%
-  #     select(id, source)
-  #   
-  #   
-  #   test1 <- tibble('from' = '1', 'to' = '2')
-  #   
-  #   
-  #   mygraph <- graph_from_data_frame( test1, vertices= test )
-  #   
-  #   
-  #   ggraph(mygraph, layout = 'dendrogram', circular = TRUE) + 
-  #     geom_node_text(aes(label= name)) +
-  #     geom_node_point(aes(filter = leaf, x = x*1.07, y=y*1.07, colour=source, alpha=0.2)) +
-  #     theme_void() +
-  #     theme(
-  #       legend.position="none",
-  #       plot.margin=unit(c(0,0,0,0),"cm"),
-  #     ) +
-  #     expand_limits(x = c(-1.3, 1.3), y = c(-1.3, 1.3))
-  # })
-  
-  
   output$choose_reg_region <- renderUI({
     
     
     tmp_data <- data_selected() %>% 
       filter(source != 'CNV') %>%
-      filter(disease != 'Yes') %>%
+      # filter(disease != 'Yes') %>%
       count(source) %>%
       mutate(source = as.character(source)) %>%
       na.omit()
@@ -3122,8 +3075,7 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
       count(source) %>%
       na.omit()
     
-    test9 <<- tmp_tbl
-    
+
     tmp_n_genes_reg <- tmp_tbl %>% nrow()
     
     req(tmp_n_genes_reg > 0)
@@ -3726,21 +3678,13 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
   })
   
   output$switch_tads <- renderUI({
-    
-    
-    validate(
-      need(number_tads() > 0, "Need a region with at least one enhancer.")
-    )
-    
-    
+
     switchInput(
       inputId = "tads_on_off",
       label = "Add genes to analysis?",
       inline = TRUE,
       width = 'auto',
-      # status = "warning",
       value = FALSE
-      # right = TRUE
     )
     
   })
@@ -3784,57 +3728,103 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
   
   
   
-  prev_tads <- reactive({
+  # prev_tads <- reactive({
+  #   
+  #   # req(input$start_analysis > 0)
+  #   
+  # 
+  #   tmp_df <- data_selected_prev()
+  #   
+  # 
+  #   
+  #   n_tads <- check_tads(coord_user(), tad )
+  #   
+  #   validate(
+  #     need(!is.null(nrow(n_tads)), "0 TADs found.")
+  #   )
+  #   
+  #   n_tads <- n_tads %>%
+  #     mutate(n_genes = NA) %>%
+  #     mutate(n_genes_not_cnv = NA) %>%
+  #     mutate(genes_not_cnv = NA)
+  #   
+  #   
+  #   for (i in 1:nrow(n_tads)){
+  #     
+  #     tmp_start <- n_tads$start[i]
+  #     tmp_end <- n_tads$end[i]
+  #     
+  #     tmp_genes <- hgcn_genes %>%
+  #       bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
+  #       select(-startdelete, -enddelete, -.overlap) %>%
+  #       pull(gene)
+  #     
+  #     genes_not_cnv <- tmp_genes[!tmp_genes %in% (tmp_df %>% pull(gene))]
+  #     
+  #     n_tads$n_genes[i] <- length(tmp_genes)
+  #     n_tads$n_genes_not_cnv[i] <- length(genes_not_cnv)
+  #     n_tads$genes_not_cnv[i] <- paste(genes_not_cnv, collapse = ', ')
+  #     
+  #   }
+  #   n_tads
+  # })
+  
+  
+  
+  tads_reactive <- reactive({
     
-    # req(input$start_analysis > 0)
-    
-
-    tmp_df <- data_selected_prev()
-    
-
-    
-    n_tads <- check_tads(coord_user(), tad )
+    tads_one_hit <- coord_user() %>%
+      bed_intersect(tad %>%
+                      pivot_longer(-c(id, chrom), names_to = 'coord', values_to = 'start') %>%
+                      mutate(end = start)) %>%
+      select(id.y) %>%
+      count(id.y) %>%
+      filter(n == 1) %>%
+      pull(id.y)
     
     validate(
-      need(!is.null(nrow(n_tads)), "0 TADs found.")
+      need(length(tads_one_hit) > 0, 'No TADs disrupted found.')
     )
+
+
+    tmp_tads <-   tad %>% 
+      filter(id %in% tads_one_hit) %>%
+      rowwise() %>%
+      mutate(vector_genes = paste(bed_intersect(hgcn_genes, tibble('chrom' = chrom,
+                                                             'start' = start,
+                                                             'end' = end)) %>% pull(gene.x),
+                                  collapse = ', '))
     
-    n_tads <- n_tads %>%
-      mutate(n_genes = NA) %>%
-      mutate(n_genes_not_cnv = NA) %>%
-      mutate(genes_not_cnv = NA)
+
     
     
-    for (i in 1:nrow(n_tads)){
+    tmp_tads2 <- tmp_tads %>%
+      # ungroup() %>%
+      mutate(vector_genes_2 = vector_genes) %>%
+      select(id, vector_genes_2) %>%
+      separate_rows(vector_genes_2, sep = ', ') %>%
+      mutate(is_mapping = if_else(vector_genes_2 %in% data_selected_prev()$gene, 'yes', 'no')) %>%
+      filter(is_mapping == 'no') %>%
+      select(-is_mapping) %>%
+      mutate(just_name = 1:nrow(.)) %>%
+      pivot_wider(names_from = just_name, values_from = vector_genes_2) %>%
+      unite('no_mapping', -id,  sep = ', ', na.rm = TRUE)
+    
+    tmp_tads3 <- tmp_tads %>%
+      left_join(tmp_tads2, by = 'id')
+    
+
+    tmp_tads3
       
-      tmp_start <- n_tads$start[i]
-      tmp_end <- n_tads$end[i]
-      
-      tmp_genes <- hgcn_genes %>%
-        bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
-        select(-startdelete, -enddelete, -.overlap) %>%
-        pull(gene)
-      
-      genes_not_cnv <- tmp_genes[!tmp_genes %in% (tmp_df %>% pull(gene))]
-      
-      n_tads$n_genes[i] <- length(tmp_genes)
-      n_tads$n_genes_not_cnv[i] <- length(genes_not_cnv)
-      n_tads$genes_not_cnv[i] <- paste(genes_not_cnv, collapse = ', ')
-      
-    }
-    n_tads
   })
-  
   
   output$df_tads <- renderDT({
     
-    tmp_df <- prev_tads() %>% select(-n_genes_not_cnv, -genes_not_cnv,
-                                     -n_genes)
-    
-    
-    datatable(tmp_df, 
+
+
+    datatable(tads_reactive() %>% select(-id), 
               rownames= FALSE,
-              colnames = c('ID', 'Chromosome', 'Start', 'End')
+              colnames = c('Chromosome', 'Start', 'End', 'Genes mapping TAD', 'Genes no mapping CNV(s)')
     )
     
   })
@@ -5673,8 +5663,8 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
     )
     
     ColourScale <- 'd3.scaleOrdinal()
-            .domain(["CNV", "Enhancer", "lncRNAs", "miRNAs", "TFs"])
-           .range(["#66C2A5","#FC8D62", "#8DA0CB", "#E78AC3", "#A6D854"]);'
+            .domain(["CNV", "Enhancer", "lncRNAs", "miRNAs", "TFs", "TADs"])
+           .range(["#66C2A5","#FC8D62", "#8DA0CB", "#E78AC3", "#A6D854", "#ae7373"]);'
     
     
     if (input$filter_by_gene_ppi == 'No') {
@@ -5685,6 +5675,7 @@ HTML('<span style="color:#66C2A5">CNV</span> <br>
                    zoom = TRUE,
                    Group = 'source',
                    opacity = 1,
+                   opacityNoHover = 1,
                    colourScale = JS(ColourScale))
       
     } else {

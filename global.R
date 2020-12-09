@@ -128,7 +128,7 @@ library(scales)
 source('functions.R')
 # 
 # system('gunzip -c local_data.RData.gz > local_data.RData')
-load('local_data.RData')
+# load('local_data.RData')
 
 ridges_home <- cnv_df %>%
   filter(length_cnv >= 50) %>%
@@ -168,3 +168,29 @@ coord_chrom_hg19 <- read_tsv('https://hgdownload.cse.ucsc.edu/goldenPath/hg19/bi
 
 
 coord_cytobands <- chromPlot::hg_cytoBandIdeo %>% mutate(Start = Start + 1)
+
+
+plot_p100 <- df_enhancers %>% 
+  select(id, phast100) %>% 
+  distinct() %>% 
+  na.omit() %>%
+  ggplot(aes(phast100)) + 
+  geom_density() +
+  xlab('Phast100way score')
+
+plot_p46pla <-  df_enhancers %>% 
+  select(id, phast46pla) %>% 
+  distinct() %>%
+  na.omit() %>%
+  ggplot(aes(phast46pla)) + 
+  geom_density() +
+  xlab('Phast46way placental score')
+
+plot_p46pri <-  df_enhancers %>% 
+  select(id, phast46pri) %>% 
+  distinct() %>%
+  na.omit() %>%
+  ggplot(aes(phast46pri)) + 
+  geom_density() +
+  xlab('Phast46way primate score')
+
