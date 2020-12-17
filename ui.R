@@ -5,6 +5,7 @@ tablerDashPage(
     
     shinyjs::useShinyjs(),
     useShinyalert(),
+    tags$head(includeHTML("www/google_analytics.html")),
     # tags$script(HTML("
     #     var openTab = function(tabName){
     #       $('a', $('.sidebar')).each(function() {
@@ -193,7 +194,7 @@ tablerDashPage(
                  conditionalPanel(
                    condition = "input.input_geno_karyo == 'Multiple coordinates (NGS)'",
                  tablerCard(width = 12,
-                            title = 'Input file',
+                            title = 'Input variants',
                             collapsible = FALSE,
                             closable = FALSE,
                             zoomable = FALSE,
@@ -235,25 +236,7 @@ tablerDashPage(
                          
               )
               ),
-            # tablerCard(width = 12,
-            #            title = NULL,
-            #            collapsible = FALSE,
-            #            closable = FALSE,
-            #            zoomable = FALSE,
-            #            statusSide = 'left',
-            #            pickerInput(
-            #              inputId = "11type_cnv",
-            #              label = tags$b("CNV type"), 
-            #              choices = list("-" = NA, "Deletion" = 1, "Duplication" = 0)
-            #            ),
-            #            pickerInput(
-            #              inputId = "11denovo_yes_no",
-            #              label = tags$b("de novo CNV?"), 
-            #              choices = list("-" = NA, 'Yes' = 1, 'No' = 0)
-            #            ),
-            #            
-            # ), 
-           
+
             uiOutput('ref_user_region'),
             uiOutput('ref_user_cytoband'),
             uiOutput('ref_user_length'),
@@ -329,7 +312,7 @@ tablerDashPage(
                               zoomable = FALSE,
                               status = 'success',
                               statusSide = 'left',
-                              title = "Clinical information"), 
+                              title = "Clinical information", 
                               fluidRow(
                                 column(width = 6,
                                        
@@ -960,16 +943,6 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
                             condition = "input.filter_by_gene_ppi == 'Yes'",
                             uiOutput("output_select_gene"))
                ),
-               # tablerCard(title = 'Include external genes (1 degree)', width = 12,
-               #            prettyRadioButtons(
-               #              inputId = "add_external_genes",
-               #              label = "Choose:", 
-               #              choices = c("No", "Yes"),
-               #              inline = TRUE, 
-               #              status = "primary",
-               #              fill = TRUE
-               #            )
-               # ),
                tablerCard(title = 'Color legend', width = 12,
                           htmlOutput('legend_html'))
                
@@ -987,9 +960,6 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
       tablerTabItem(
         tabName = "cnv_ngs",
         fluidRow(
-          # column(3,
-          # uiOutput('n_upload_cnv'),
-          # uiOutput('n_upload_filter_cnv')),
           column(4,
                  tablerCard(title = 'Input variants' %>% helper(type = "inline",
                                                             # icon = "exclamation",
