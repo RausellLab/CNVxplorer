@@ -10,26 +10,26 @@ slice <- dplyr::slice
 # in that case, the function retrieves a vector with the TADs disrupted.
 # ------------------------------------------------------------------------------
 
-
-check_tads <- function(coord_tbl, tad_object = NULL) {
-
- 
-  
-  select_tads_disrupted <-  tad_object %>%
-    pivot_longer(-c(id,chrom), names_to = 'coord', values_to = 'start') %>%
-    mutate(end = start) %>%
-    select(-coord) %>%
-    bed_intersect(coord_tbl) %>%
-    pull(id.x)
-  
- df_tads <- tad_object %>% filter(id %in% select_tads_disrupted)
-  
-  if (nrow(df_tads) == 0) df_tads <- 0
-  
-  return(df_tads)
-  
-  
-}
+# 
+# check_tads <- function(coord_tbl, tad_object = NULL) {
+# 
+#  
+#   
+#   select_tads_disrupted <-  tad %>%
+#     pivot_longer(-c(id,chrom), names_to = 'coord', values_to = 'start') %>%
+#     mutate(end = start) %>%
+#     select(-coord) %>%
+#     bed_intersect(coord_tbl) %>%
+#     pull(id.x)
+#   
+#  df_tads <- tad_object %>% filter(id %in% select_tads_disrupted)
+#   
+#   if (nrow(df_tads) == 0) df_tads <- 0
+#   
+#   return(df_tads)
+#   
+#   
+# }
 
 
 # ------------------------------------------------------------------------------
@@ -88,8 +88,13 @@ get_perc_overlap <- function(df, input_tbl,
                              is_patho = FALSE) {
 
   
+  # df <- hgcn_genes
+  # input_tbl <- test2020
+  
   df <- df %>%
     mutate(id_tmp = row_number())
+  
+  
 
   
   if (is_a_gene == TRUE) {

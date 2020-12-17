@@ -1233,30 +1233,7 @@ df_enhancers <- df_enhancers %>%
   mutate(phast46pri = round(phast46pri, 2))
   
 
-plot_p100 <- df_enhancers %>% 
-  select(id, phast100) %>% 
-  distinct() %>% 
-  na.omit() %>%
-  ggplot(aes(phast100)) + 
-  geom_density() +
-  xlab('Phast100way score')
 
-plot_p46pla <-  df_enhancers %>% 
-  select(id, phast46pla) %>% 
-  distinct() %>%
-  na.omit() %>%
-  ggplot(aes(phast46pla)) + 
-  geom_density() +
-  xlab('Phast46way placental score')
-
-plot_p46pri <-  df_enhancers %>% 
-  select(id, phast46pri) %>% 
-  distinct() %>%
-  na.omit() %>%
-  ggplot(aes(phast46pri)) + 
-  geom_density() +
-  xlab('Phast46way primate score')
-  
 # 
 # enh_post <- mod_remot('from_remot/enhancer_apolo_crossmap_cleaned_7_result.txt', 'EUR', 7, TRUE)
 # 

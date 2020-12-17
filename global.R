@@ -21,6 +21,8 @@ library(enrichplot)
 library(rentrez)
 library(reactable)
 library(ggridges)
+library(ggrepel)
+library(shinyhelper)
 library(shinymanager)
 library(UpSetR)
 library(chromPlot)
@@ -122,7 +124,7 @@ library(scales)
 #     interactions_db, ## -
 #     syndromes_total, ## hg19
 #     file = "local_data.RData")
-
+# 
 # system("gzip local_data.RData")
 
 source('functions.R')

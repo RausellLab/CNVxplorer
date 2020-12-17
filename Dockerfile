@@ -25,6 +25,8 @@ RUN R -e "install.packages(c('shinydashboard', \
 'shinyjs', \
 'highcharter', \
 'ggraph', \
+'ggrepel', \
+'shinyhelper', \
 'igraph', \
 'widyr', \
 'prettydoc', \

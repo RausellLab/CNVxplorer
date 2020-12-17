@@ -5,6 +5,15 @@ tablerDashPage(
     
     shinyjs::useShinyjs(),
     useShinyalert(),
+    # tags$script(HTML("
+    #     var openTab = function(tabName){
+    #       $('a', $('.sidebar')).each(function() {
+    #         if(this.getAttribute('data-value') == tabName) {
+    #           this.click()
+    #         };
+    #       });
+    #     }
+    #   ")),
 
     navMenu = tablerNavMenu(
       
@@ -153,9 +162,16 @@ tablerDashPage(
                        uiOutput('choose_geno_karyo2')),
                        conditionalPanel(
                          condition = "input.input_geno_karyo == 'Multiple coordinates (NGS)'",
-                         fileInput("file_cnv", label = h5("Upload file (.bed):")),
+                         fileInput("file_cnv", label = h5("Upload file (.bed):")%>% helper(type = "inline",
+                                                                                                               # icon = "exclamation",
+                                                                                                               style = "text-indent: 0.5em;",
+                                                                                                               title = "File missing",
+                                                                                                               size = "m",
+                                                                                                               buttonLabel = 'OK',
+                                                                                                               content = c("If you can not find your file, please make sure the filename ends with .bed")
+                         ), accept = '.bed' ),
                          downloadLink('download_file_1', label = "Download file example [#1]")
-                       ),
+                       )
                        
                        
             ),
@@ -184,7 +200,7 @@ tablerDashPage(
                             statusSide = 'left',
 
 
-                     DTOutput('cnv_file')),
+                     DTOutput('cnv_file'))
    
                  ),
                  plotOutput('plot_chrom', height = 200)
@@ -209,12 +225,15 @@ tablerDashPage(
                                         selected = NULL,
                                         multiple = FALSE,
                                         options = NULL),
+                         conditionalPanel(
+                           condition = "input.select_all_cnvs == 'no'",
+                           tags$p(tags$b('To refresh the app after each row selection, you need to click on the button "Run".'))),
            uiOutput('n_variants'),
            uiOutput('ref_user_region_file'),
-           uiOutput('checking_quality_file'),
-           tags$p('After each row selection, you need to click on the button "Run".')
+           uiOutput('checking_quality_file')
+           
                          
-              ), 
+              )
               ),
             # tablerCard(width = 12,
             #            title = NULL,
@@ -252,7 +271,9 @@ tablerDashPage(
                             zoomable = FALSE,
                             status = 'success',
                             statusSide = 'left',
-                            title = tagList(shiny::icon("database"), "Overlap with reference CNV databases"),
+                            title = tagList(shiny::icon("database"), "Overlap with reference CNV databases"
+                                            # actionLink("link_to_docu", "Link to panel B")
+                                            ),
                             fluidRow(
                               column(width = 4,
                                      uiOutput('n_syndromes')),
@@ -308,7 +329,7 @@ tablerDashPage(
                               zoomable = FALSE,
                               status = 'success',
                               statusSide = 'left',
-                              title = tagList(shiny::icon("hospital"), "Clinical information"), 
+                              title = "Clinical information"), 
                               fluidRow(
                                 column(width = 6,
                                        
@@ -383,8 +404,21 @@ tablerDashPage(
                  tags$hr(),
                  
                  tablerCard(
-                   title = "Comparison CNV size with other CNVs databases",
-                   plotOutput('plot_size'),
+                   title = "Comparison CNV size with other CNVs databases" %>% helper(type = "inline",
+                                                                                      # icon = "exclamation",
+                                                                                      style = "text-indent: 0.5em;",
+                                                                                      title = "Two options: global & local",
+                                                                                      size = "m",
+                                                                                      buttonLabel = 'OK',
+                                                                                      content = c("
+CNVxplorer compares the length of the CNV provided by the user and the length distribution of the CNVs found in four databases (DGV, gnomAD, DECIPHER Control, DECIPHER). To make a comparison, we provide two approaches:",
+                                                                                                  
+                                                                                                  "<b> Global: </b> The length of the CNV is compared with the total number of CNVs available in the databases.",
+                                                                                                  "<b> Local: </b> The comparison is made exclusively with the CNVs mapping the query.",
+                                                                                                  "Both options usually provide similar results. But this does not always have to be the case, especially on those queries with a short length.")
+                                                                                      
+                   ),
+                   plotOutput('plot_size') ,
                    width = 12,
                    overflow = TRUE,
                    collapsible = FALSE,
@@ -403,7 +437,7 @@ tablerDashPage(
                      
                      
                    )
-                 )
+                 ) 
           )
         ),
         fluidRow(
@@ -428,7 +462,14 @@ tablerDashPage(
         tabName = "fa",
 
         tablerCard(
-          title = "Functional Profile",
+          title = "Functional Profile" %>% helper(type = "inline",
+                                                  # icon = "exclamation",
+                                                  style = "text-indent: 0.5em;",
+                                                  title = "Functional profile",
+                                                  size = "m",
+                                                  buttonLabel = 'OK',
+                                                  content = c("This panel does not provide a functional enrichment analysis but the functional annotation of the selected genes. The specificity of the annotation can be increased by setting the parameter 'Level'")
+                                                  ),
           width = 12,
           collapsible = FALSE,
           closable = FALSE,
@@ -591,7 +632,20 @@ tablerDashPage(
       tablerTabItem(
         tabName = "genetic_evidence",
         tablerCard(
-          title = "Overlap with CNV Syndromes",
+          title = "Overlap with CNV Syndromes" %>% helper(type = "inline",
+                                                          # icon = "exclamation",
+                                                          style = "text-indent: 0.5em;",
+                                                          title = "CNV Syndromes",
+                                                          size = "m",
+                                                          buttonLabel = 'OK',
+                                                          content = 
+                                                            c("<b>How is the overlap calculated?</b>",
+                                                               "To calculate the overlap, we use CNV Syndromes from ClinGen and DECIPHER  as a reference and, as a query, the CNV(s) entered by the user. For instance, a 100% overlap means that the CNV syndrome is completely mapping the user's CNV. ",
+                                                               "In the Documentation - FAQ tab, you can find a picture where we illustrate this point",
+                                                               "<b>Duplicated entries</b>",
+                                                               "We collect CNV Syndromes from two curated databases: ClinGen and DECIPHER. These two databases share multiple entries. Therefore, it is expected that you will find some entries in both sources.")
+
+                                                            ),
           DTOutput("cnv_syndromes"),
           width = 12,
           collapsible = FALSE,
@@ -603,7 +657,19 @@ tablerDashPage(
           )
         ),
         tablerCard(
-          title = "Overlap with pathogenic/likely pathogenic CNVs (DECIPHER)",
+          title = "Overlap with pathogenic/likely pathogenic CNVs (DECIPHER)" %>% helper(type = "inline",
+                                                                                     # icon = "exclamation",
+                                                                                     style = "text-indent: 0.5em;",
+                                                                                     title = "Likely pathogenic/pathogenic CNVs",
+                                                                                     size = "m",
+                                                                                     buttonLabel = 'OK',
+                                                                                     content = c("<b> Overlap calculation </b>",
+                                                                                                  "To calculate the overlap, we use likely pathogenic/pathogenic CNVs from DECIPHE.R as a reference and, as a query, the CNV(s) entered by the user. For instance, a 100% overlap means that the DECIPHER's CNV is completely mapping the user's CNV. ",
+                                                                                                  "In the Documentation - FAQ tab, you can find a picture where we illustrate this point.",
+                                                                                                  "<b> Phenotypic similarity </b>",
+                                                                                                  "For every CNV associated with HP terms, you can calculate the phenotypic similarity with the patient’s clinical symptoms. To do so, go to the Phenotypic analysis tab, enter HP terms and you will find a panel with the list of DECIPHER CNVs and their respective scores.")
+                                                                                     
+          ),
           DTOutput('df_overlap_cnvs'),
           width = 12,
           collapsible = FALSE,
@@ -615,7 +681,16 @@ tablerDashPage(
           )
         ),
         tablerCard(
-          title = "Overlap with non-pathogenic CNVs",
+          title = "Overlap with non-pathogenic CNVs"  %>% helper(type = "inline",
+                                                                 # icon = "exclamation",
+                                                                 style = "text-indent: 0.5em;",
+                                                                 title = "Likely pathogenic/pathogenic CNVs",
+                                                                 size = "m",
+                                                                 buttonLabel = 'OK',
+                                                                 content = c("To calculate the overlap, we use the user's CNV(s) as a reference and, as a query, the non-pathogenic CNVs from databases. For instance, a 100% overlap means that the user's query is completely mapping the non-pathogenic CNV.",
+                                                                             "In Documentation - FAQs, you can find a picture where we illustrate this point.")
+          ),
+                                                                 
           DTOutput('df_overlap_cnvs_nonpatho'),
           width = 12,
           collapsible = FALSE,
@@ -628,7 +703,14 @@ tablerDashPage(
           )
         ),
         tablerCard(
-          title = "Intersection of disease gene databases",
+          title = "Intersection of disease gene databases" %>% helper(type = "inline",
+                                                                      # icon = "exclamation",
+                                                                      style = "text-indent: 0.5em;",
+                                                                      title = "Intersection of disease evidence",
+                                                                      size = "m",
+                                                                      buttonLabel = 'OK',
+                                                                      content = c("To assess whether a gene is disease-associated, we collect information from 5 databases. This panel shows, for each gene, the number of databases that support this association. The maximum number /(five/) represents that the gene-disease association is well supported and widely known.")
+          ),
           plotOutput("plot_upset_disease"),
           width = 12,
           collapsible = FALSE,
@@ -646,7 +728,7 @@ tablerDashPage(
             overflow = TRUE
           ),
           tablerCard(
-            title = "Disease evidences",
+            title = "Disease evidence",
             DTOutput("select_gene_disease") %>% withSpinner(type = 5),
             width = 8,
             collapsible = FALSE,
@@ -658,7 +740,15 @@ tablerDashPage(
             )
           )),
         tablerCard(
-          title = "Overlap with disease & non-disease genes",
+          title = "Overlap with disease & non-disease genes"  %>% helper(type = "inline",
+                                                                         # icon = "exclamation",
+                                                                         style = "text-indent: 0.5em;",
+                                                                         title = "Pathogenicity scores",
+                                                                         size = "m",
+                                                                         buttonLabel = 'OK',
+                                                                         content = c("To facilitate the interpretation of the pathogenicity prediction scores, we transform each one of them into a percentile scale. For each score, percentiles near 100 reflect greater pathogenicity.",
+                                                                                     "You can find more information about each score in Documentation - FAQs")),
+                                                                         
           DTOutput("dgenes_no_disease") %>% withSpinner(type = 5),
           width = 12,
           collapsible = FALSE,
@@ -706,7 +796,7 @@ tablerDashPage(
 
           
           tablerCard(
-            title = "Intersection of disease target-genes from regulatory elements",
+            title = "Intersection of disease target-genes databases (from disrupted regulatory elements)",
             plotOutput("plot_upset_disease_reg"),
             width = 12,
             collapsible = FALSE,
@@ -716,7 +806,7 @@ tablerDashPage(
           column(12,
           fluidRow(
             tablerCard(
-              title = "Overlap with disease target-genes from regulatory elements",
+              title = "Disease target-genes from regulatory elements",
               DTOutput("dgenes_reg") %>% withSpinner(type = 5),
               width = 4,
               collapsible = FALSE,
@@ -733,7 +823,13 @@ tablerDashPage(
               )
             ),
             tablerCard(
-              title = "Disease evidences",
+              title = "Disease evidence" %>% helper(type = "inline",
+                                                     # icon = "exclamation",
+                                                     style = "text-indent: 0.5em;",
+                                                     title = "Intersection of disease evidence",
+                                                     size = "m",
+                                                     buttonLabel = 'OK',
+                                                     content = c("To assess whether a gene is disease-associated, we collect information from 5 databases. This panel shows, for each gene, the number of databases that support this association. The maximum number (five) represents that the gene-disease association is well supported and widely known.")),
               DTOutput("select_gene_disease_reg") %>% withSpinner(type = 5),
               width = 8,
               collapsible = FALSE,
@@ -747,7 +843,14 @@ tablerDashPage(
           ),
           
           tablerCard(
-            title = "Disease & non-disease target genes from disrupted regulatory elements",
+            title = "Disease & non-disease target genes from disrupted regulatory elements" %>% helper(type = "inline",
+                                                                                                       # icon = "exclamation",
+                                                                                                       style = "text-indent: 0.5em;",
+                                                                                                       title = "Pathogenicity scores",
+                                                                                                       size = "m",
+                                                                                                       buttonLabel = 'OK',
+                                                                                                       content = c("To facilitate the interpretation of the pathogenicity prediction scores, we transform each one of them into a percentile scale. For each score, percentiles near 100 reflect greater pathogenicity.",
+                                                                                                                   "You can find more information about each score in Documentation - FAQs")),
             DTOutput("genes_from_reg_regions") %>% withSpinner(type = 5),
             width = 12,
             collapsible = FALSE,
@@ -826,14 +929,20 @@ tablerDashPage(
                    options = tagList(
                      # uiOutput('ui_tad')
                      uiOutput('switch_tads')
-                   )),
+                   ))
         
       ),
       
       tablerTabItem(
         tabName = "genomic_interactions",
         column(width = 9,
-        tablerCard(title = 'Protein interaction network',
+        tablerCard(title = 'Protein interaction network' %>% helper(type = "inline",
+                                                                    # icon = "exclamation",
+                                                                    style = "text-indent: 0.5em;",
+                                                                    title = "Interactions evidence",
+                                                                    size = "m",
+                                                                    buttonLabel = 'OK',
+                                                                    content = c("CNVxplorer represents only interactions from STRING with a high evidence score (equal or higher than 700)")),
                    width = 12,
                    forceNetworkOutput("network_ppi")
         )),
@@ -882,7 +991,15 @@ tablerDashPage(
           # uiOutput('n_upload_cnv'),
           # uiOutput('n_upload_filter_cnv')),
           column(4,
-                 tablerCard(title = 'Input file',
+                 tablerCard(title = 'Input variants' %>% helper(type = "inline",
+                                                            # icon = "exclamation",
+                                                            style = "text-indent: 0.5em;",
+                                                            title = "+1 start - genome interval",
+                                                            size = "m",
+                                                            buttonLabel = 'OK',
+                                                            content = c("BED files are 0-based and CNVxplorer works with 1-based data. Therefore, before the analysis, CNVxplorer adds 1 b.p to the start of the genomic interval.")
+                 ),
+
                             width = 12,
                             collapsible = FALSE,
                             closable = FALSE,
@@ -1120,7 +1237,17 @@ tablerDashPage(
           column(width = 12,
                  fluidRow(width = 12,
 
-                          tablerCard(title = 'Gene-disease associations',
+                          tablerCard(title = 'Gene-disease associations' %>% helper(type = "inline",
+                                                                                    # icon = "exclamation",
+                                                                                    style = "text-indent: 0.5em;",
+                                                                                    title = "Similarity score",
+                                                                                    size = "m",
+                                                                                    buttonLabel = 'OK',
+                                                                                    content = c(
+                                                                                      "<b>Similarity score column is empty</b>",
+                                                                                      "If you can not see any scores, you should first enter the patient's clinical symptoms in the panel above called 'Phenotype terms'.",
+                                                                                      "<b>Two phenotypic similarity scores</b>",
+                                                                                      "CNVxplorer calculates two phenotypic similarity scores for the gene and the disease, respectively. This is because you can have multiple diseases for the same gene and vice versa. Therefore, a gene and a disease that are associated may have a different phenotypic annotation.")),
                                      closable = FALSE,
                                      collapsible = FALSE,
                                      zoomable = FALSE,
@@ -1155,6 +1282,7 @@ tablerDashPage(
                      width = 12),
           tablerCard(title = 'DECIPHER CNVs - Phenotypic similarity',
                      DTOutput('decipher_similarity'),
+                     overflow = TRUE,
                      width = 12),
           tablerCard(title = 'Phenotypic similarity score',
                      
@@ -1165,7 +1293,10 @@ tablerDashPage(
                        prettyRadioButtons(
                          inputId = "select_sim_gene_disease",
                          label = '', 
-                         choices = list('Genes' = 'genes', 'OMIM diseases' = 'diseases', 'DECIPHER CNVs' = 'decipher'),
+                         choices = list('Genes' = 'genes', 
+                                        'OMIM diseases' = 'diseases', 
+                                        'DECIPHER CNVs' = 'decipher',
+                                        'DECIPHER CNVs / Overlap' = 'decipher_overlap'),
                          inline = TRUE, 
                          status = "primary",
                          fill = TRUE

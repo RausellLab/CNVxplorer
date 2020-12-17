@@ -2,7 +2,6 @@ function(input, output, session) {
   
   
   
-  
   # res_auth <- secure_server(
   #   check_credentials = check_credentials(credentials)
   # )
@@ -198,6 +197,9 @@ function(input, output, session) {
 
     }
   })
+  
+  
+  observe_helpers()
 
   
   map_blacklist <- reactive({
@@ -294,6 +296,8 @@ function(input, output, session) {
       tbl_output <- cnv_file_to_analyze()
 
     }
+    
+    test999134 <<- tbl_output
     
     tmp_check_1 <- tbl_output %>% 
       filter(start < 0 | end < 0)
@@ -968,8 +972,8 @@ function(input, output, session) {
         mutate(result = paste('(','(', 'chromosome', chrom,'AND' , Name, ')' ,'OR', chrom_name, ')')) %>%
         pull(result) %>%
         paste(collapse = ' OR ') %>%
-        paste('AND duplication AND homo sapiens')
-      
+        paste('AND (duplication OR microduplication) AND homo sapiens')
+
       
 
       # if (length(tmp_query) > 1) tmp_query %>% coll 
@@ -1404,12 +1408,12 @@ function(input, output, session) {
     # .range(["#66C2A5","#FC8D62", "#8DA0CB", "#E78AC3", "#A6D854"]);'
 
 HTML('<center>
-     <span style="color:#66C2A5">CNV</span> <br>
-     <span style="color:#FC8D62">Enhancer</span> <br>
-     <span style="color:#8DA0CB">lncRNAs</span> <br>
-     <span style="color:#E78AC3">miRNAs</span> <br>
-     <span style="color:#A6D854">TFs</span>  <br>
-     <span style="color:#ae7373">TADs</span>
+     <span style="color:#66C2A5"> <b> CNV </b> </span> <br>
+     <span style="color:#FC8D62"><b>Enhancer</b></span> <br>
+     <span style="color:#8DA0CB"><b>lncRNAs</b></span> <br>
+     <span style="color:#E78AC3"><b>miRNAs</b></span> <br>
+     <span style="color:#A6D854"><b>TFs</b></span>  <br>
+     <span style="color:#ae7373"><b>TADs</b></span>
      </center>')
 
   })
@@ -1665,7 +1669,10 @@ HTML('<center>
     if (!is.null(input$tads_on_off)) {
       if (input$tads_on_off) {
 
-        genes_no_cnv <- tads_reactive() %>% pull(no_mapping)
+        genes_no_cnv <- tads_reactive() %>% 
+          filter(boundaries_affected == 1) %>% 
+          select(-boundaries_affected) %>% 
+          pull(no_mapping)
         
         if (length(genes_no_cnv) == 2) genes_no_cnv <- paste(genes_no_cnv[1], genes_no_cnv[2])
         
@@ -1901,30 +1908,15 @@ HTML('<center>
   output$dgenes <- renderDT({
     
     server <- TRUE
-    
-    # test021321 <<- running_upset_disease()
 
-  # data_input <-   test2019  %>%
-  #     select(-start, -end, -chrom) %>%
-  #     filter(source == 'CNV') %>%
-  #     select(-source) %>%
-  #     select(band, gene, disease, orphanet, dev, clingen, omim, gwas, p_overlap) %>%
-  #     filter(disease == 'Yes')
-    # data_input %>%
-    #   left_join(test021321 %>% count(gene, value), by = 'gene') %>%
-    #   select(gene, n, p_overlap) %>% nrow()
-    # datatable(rownames = FALSE, colnames = c('Gene', 'Nº evidences', 'Overlap (%)'),
-    #                         filter = list(position = 'top'), 
-    #                         selection = 'single',
-    #                         options = list(columnDefs = list(list(className = 'dt-center', targets = '_all'))))
-    
-    
     data_input <- data_selected()  %>% 
       select(-start, -end, -chrom) %>%
       filter(source == 'CNV') %>%
       select(-source) %>%
       select(band, gene, disease, orphanet, dev, clingen, omim, gwas, p_overlap) %>%
       filter(disease == 'Yes')
+    
+    test993113 <<- data_input
     
     data_tmp <- data_input %>% 
       left_join(running_upset_disease() %>% 
@@ -3471,13 +3463,12 @@ HTML('<center>
 
     # req(input$start_analysis > 0)
 
-    n_tads <- check_tads(coord_user(), tad )
-    n_tads <- nrow(n_tads)
+    n_tads <- tads_reactive()
     
     if (is.null(n_tads)) {
       n_tads <- 0
     } else {
-      n_tads <- as.double(n_tads)
+      n_tads <- nrow(n_tads)
     }
     n_tads
 
@@ -3489,7 +3480,6 @@ HTML('<center>
     tablerStatCard(
       value =  number_tads(),
       title = "TADs",
-      # trend = -10,
       width = 12
     )
     
@@ -3725,67 +3715,28 @@ HTML('<center>
     )
     
   })
-  
-  
-  
-  # prev_tads <- reactive({
-  #   
-  #   # req(input$start_analysis > 0)
-  #   
-  # 
-  #   tmp_df <- data_selected_prev()
-  #   
-  # 
-  #   
-  #   n_tads <- check_tads(coord_user(), tad )
-  #   
-  #   validate(
-  #     need(!is.null(nrow(n_tads)), "0 TADs found.")
-  #   )
-  #   
-  #   n_tads <- n_tads %>%
-  #     mutate(n_genes = NA) %>%
-  #     mutate(n_genes_not_cnv = NA) %>%
-  #     mutate(genes_not_cnv = NA)
-  #   
-  #   
-  #   for (i in 1:nrow(n_tads)){
-  #     
-  #     tmp_start <- n_tads$start[i]
-  #     tmp_end <- n_tads$end[i]
-  #     
-  #     tmp_genes <- hgcn_genes %>%
-  #       bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
-  #       select(-startdelete, -enddelete, -.overlap) %>%
-  #       pull(gene)
-  #     
-  #     genes_not_cnv <- tmp_genes[!tmp_genes %in% (tmp_df %>% pull(gene))]
-  #     
-  #     n_tads$n_genes[i] <- length(tmp_genes)
-  #     n_tads$n_genes_not_cnv[i] <- length(genes_not_cnv)
-  #     n_tads$genes_not_cnv[i] <- paste(genes_not_cnv, collapse = ', ')
-  #     
-  #   }
-  #   n_tads
-  # })
-  
-  
+
+ 
   
   tads_reactive <- reactive({
     
-    tads_one_hit <- coord_user() %>%
+    n_hits <- coord_user() %>%
       bed_intersect(tad %>%
                       pivot_longer(-c(id, chrom), names_to = 'coord', values_to = 'start') %>%
                       mutate(end = start)) %>%
       select(id.y) %>%
-      count(id.y) %>%
-      filter(n == 1) %>%
+      count(id.y)
+    
+    tads_one_hit <- n_hits %>%
+      filter(n >= 1) %>%
       pull(id.y)
     
-    validate(
-      need(length(tads_one_hit) > 0, 'No TADs disrupted found.')
-    )
-
+    
+    if (length(tads_one_hit) == 0) {
+      
+      return(tibble())
+      
+    } else {
 
     tmp_tads <-   tad %>% 
       filter(id %in% tads_one_hit) %>%
@@ -3794,10 +3745,7 @@ HTML('<center>
                                                              'start' = start,
                                                              'end' = end)) %>% pull(gene.x),
                                   collapse = ', '))
-    
 
-    
-    
     tmp_tads2 <- tmp_tads %>%
       # ungroup() %>%
       mutate(vector_genes_2 = vector_genes) %>%
@@ -3811,46 +3759,30 @@ HTML('<center>
       unite('no_mapping', -id,  sep = ', ', na.rm = TRUE)
     
     tmp_tads3 <- tmp_tads %>%
-      left_join(tmp_tads2, by = 'id')
+      left_join(tmp_tads2, by = 'id') %>%
+      left_join(n_hits %>% rename(boundaries_affected = n), by = c('id' = 'id.y'))
     
 
     tmp_tads3
-      
+    }
   })
   
   output$df_tads <- renderDT({
     
+    test411224 <<- tads_reactive()
 
-
-    datatable(tads_reactive() %>% select(-id), 
+    validate(
+      need(nrow(tads_reactive()) > 0, 'No TADs disrupted found.')
+    )
+    
+    datatable(tads_reactive() %>% select(-id) %>% mutate(boundaries_affected = paste0(boundaries_affected, '/2')), 
               rownames= FALSE,
-              colnames = c('Chromosome', 'Start', 'End', 'Genes mapping TAD', 'Genes no mapping CNV(s)')
+              colnames = c('Chromosome', 'Start', 'End', 'Genes mapping TAD', 'Genes no mapping CNV(s)',
+                           'TAD boundaries disrupted')
     )
     
   })
-  
-  
-  output$n_dev <- renderUI({
-    
-    
-    n_dev_yes <- data_selected() %>% filter(dev == 'Yes') %>% nrow()
-    n_total <- nrow(data_selected())
-    tablerStatCard(
-      value =  paste(n_dev_yes, n_total, sep = '/'),
-      title = "Developmental disorder genes",
-      # trend = -10,
-      width = 12
-    )
-    
-    # tablerInfoCard(
-    #   value = paste(n_dev_yes, n_total, sep = '/'),
-    #   status = "primary",
-    #   icon = 'book',
-    #   description = "Developmental disorder genes",
-    #   width = 12
-    # )
-    
-  })
+
   
   output$n_clinvar <- renderUI({
     
@@ -4228,6 +4160,7 @@ HTML('<center>
     
     output$decipher_similarity <-  renderDT({
       
+      
       datatable(running_sim_decipher() %>% arrange(desc(sim_decipher)), 
                 escape = FALSE,
                 colnames = c('ID', 'Chrom', 'Start', 'End', 'Pathogenicity', 'Genotype', 'Class', 'Phenotype',
@@ -4240,6 +4173,8 @@ HTML('<center>
       
       
     })
+    
+
     
   output$n_diseases <- renderUI({
     
@@ -4524,7 +4459,7 @@ HTML('<center>
               axis.title.x = element_text(size = 16),
               axis.title.y = element_text(size = 16))
 
-    } else {
+    } else if (input$select_sim_gene_disease == 'decipher') {
       
       
       running_sim_decipher()  %>%
@@ -4549,6 +4484,31 @@ HTML('<center>
       
       
       
+    } else {
+      p1 <- running_sim_decipher() %>% 
+        filter(variant_class == 'Deletion') %>%
+        ggplot(aes(p_overlap, sim_decipher, label = id)) + 
+        geom_point(aes(fill = variant_class), color = 'black', shape = 21, show.legend = FALSE) + 
+        geom_text_repel() +
+        theme_minimal() +
+        labs(title = 'Deletion', x = 'Overlap (%)', y = 'Phenotypic similarity') +
+        theme(plot.title = element_text(size=25),
+              axis.title=element_text(size=15,face="bold"))
+        
+        p2 <- running_sim_decipher() %>% 
+          filter(variant_class == 'Duplication') %>%
+        ggplot(aes(p_overlap, sim_decipher, label = id)) + 
+          geom_point(aes(fill = variant_class), color = 'black', shape = 21, show.legend = FALSE) + 
+          geom_text_repel() +
+          theme_minimal() +
+          labs(title = 'Duplication', x = 'Overlap (%)', y = 'Phenotypic similarity') +
+          theme(plot.title = element_text(size=25),
+                axis.title=element_text(size=15,face="bold"))
+        
+        p1 + p2
+        
+        
+
     }
 
 
@@ -5101,15 +5061,23 @@ HTML('<center>
 
     data1 <- read_tsv(file1$datapath, col_names = TRUE,
                       col_types = list(chrom = col_character(),
-                                       start = col_integer(),
-                                       end = col_integer(),
+                                       start = col_character(),
+                                       end = col_character(),
                                        type = col_character()))
     
     colnames(data1) <- c('chrom', 'start', 'end', 'type')
+    
     data1 <- data1 %>% 
-      mutate(start = start + 1) %>% # 0-based to 1-based 
-      filter(!across(everything(), is.na)) # remove empty lines (common in txt files)
-    data1
+      filter(!across(everything(), is.na)) %>% # remove empty lines (common in txt files)
+      mutate(chrom = str_remove(chrom, 'chr')) %>% #remove chr from chrom column
+      mutate(start = str_remove_all(start, ',')) %>%
+      mutate(end = str_remove_all(end, ',')) %>%
+      mutate(start = as.integer(start)) %>%
+      mutate(end = as.integer(end)) %>%
+      mutate(start = start + 1)  %>% # 0-based to 1-based 
+      filter((end - start  + 1) <= 15e6) # remove variants larger than 15 millions b.p
+      
+      data1
   })
   
   
@@ -5393,7 +5361,7 @@ HTML('<center>
     req(upload_raw())
     
     test131311111 <<- upload_raw()
-    tmp_df <- upload_raw() %>% mutate(size = end - start + 1) %>%
+    tmp_df <- upload_raw() %>% mutate(size = end - start) %>%
       filter(size >= input$filter_length)
     
     tmp_df
@@ -5822,19 +5790,29 @@ HTML('<center>
     
   })
   
+    # 
+    # observeEvent(input$link_to_docu, {
+    #   tags$a(href = "#shiny-tab-docu")
+    # })
+  
+  # observeEvent(input$link_to_docu, {
+  #   newvalue <- "docu"
+  #   updateTabItems(session, "panels", newvalue)
+  # })
+  
   down_file1 <- reactive({
     
     
-    tibble('chrom' = c('1','1', '1', '10', '16', '22'),
-           'start' = c(34813719, 34813719, 34813719, 1000000, 1000000, 1200000),
-           'end' = c(36278623, 36278623, 36278630, 1000010, 1200000, 1800000))
+    tibble('chrom' = c('1','16', '6', '20', 'X', '22'),
+           'start' = c(1002999, 34813719, 34813719, 1499999, 1309999, 1199999),
+           'end' = c(1009000, 36278623, 36278630, 1600000, 1370000, 1800000),
+           'type' = c('DEL', 'DEL', 'DEL', 'DUP', 'DUP', 'DEL'))
     
   })
 
-  
-  
+
   output$download_file_1 <- downloadHandler(
-    filename = 'file_example.txt',
+    filename = 'file_example.bed',
     content = function(file) {
       
       write_tsv(down_file1(), file)
