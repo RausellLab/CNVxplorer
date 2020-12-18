@@ -305,21 +305,20 @@ tablerDashPage(
                               column(width = 6,
                                      uiOutput('n_embryo')
                               ))),
-                 fluidRow(
                    tablerCard(width = 12,
                               collapsible = FALSE,
                               closable = FALSE,
                               zoomable = FALSE,
                               status = 'success',
                               statusSide = 'left',
-                              title = "Clinical information", 
+                              title = tagList(shiny::icon("hospital"), "Clinical information"), 
                               fluidRow(
                                 column(width = 6,
                                        
                                        uiOutput('hpo_unique')), 
                                 column(width = 6,
                                        uiOutput('hpo_unique_genes') 
-                                ))))
+                                )))
 
                  
           ),
