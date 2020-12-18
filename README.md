@@ -43,7 +43,7 @@
 
 You can find an instance of CNVxplorer running at this address:
 
-<http://compute.users-imagine.fr:3838/>
+<http://cnvxplorer.com>
 
 ## Installation
 
@@ -63,6 +63,7 @@ R -e 'load('local_data.RData')'
 # comment the same two lines above in global.R so the app doesn't need
 # to load the data every session but only once.
 
+# Make sure you have all the packages installed
 R -e 'shiny:runApp()'
 ```
 
@@ -70,16 +71,15 @@ R -e 'shiny:runApp()'
 
 ``` bash
 
+# Note: the first session after the deployment is slower since the application loads all the data required
+
 git clone https://github.com/frequena/cnvxplorer.git
 
-# The tag "cnvxplorer" is optional, you can choose your own tag
-docker build -t cnvxplorer .
+docker build -t cnvxplorer . # The tag "cnvxplorer" is optional
 
-# -p Specify the port. The default port is 3838. If you select a different port, you
-# need to change it before in the Dockerfile (command: EXPOSE)
-# Please, make sure the port is listening and not blocked by firewalls
-# -d Detached mode
-docker run -d -p 3838:3838 cnvxplorer
+docker run -d -p 3838:3838 cnvxplorer # -p (specify the port) -d (detached mode)
 
-# Note: the first session after the deployment is slower since the application loads all the data required
+# The port 3838 is optional. Please make sure you set a port that
+# is not blocked by firewalls. Also, if you change 3838 for any other port, you need to specify it before 
+# in the Dockerfile (EXPOSE instruction)
 ```
