@@ -9,7 +9,6 @@ output: github_document
 - [Features](#Features)
 - [Access](#Access)
 - [Installation](#Installation)
-- [Contributions](#Contributions)
 
 
 

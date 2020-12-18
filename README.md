@@ -7,7 +7,6 @@
   - [Features](#Features)
   - [Access](#Access)
   - [Installation](#Installation)
-  - [Contributions](#Contributions)
 
 ## Overview
 
