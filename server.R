@@ -5068,7 +5068,8 @@ HTML('<center>
     colnames(data1) <- c('chrom', 'start', 'end', 'type')
     
     data1 <- data1 %>% 
-      filter(!across(everything(), is.na)) %>% # remove empty lines (common in txt files)
+      # filter(!across(everything(), is.na)) %>% 
+      filter_all(any_vars(!is.na(.))) %>% # remove empty lines (common in txt files)
       mutate(chrom = str_remove(chrom, 'chr')) %>% #remove chr from chrom column
       mutate(start = str_remove_all(start, ',')) %>%
       mutate(end = str_remove_all(end, ',')) %>%
