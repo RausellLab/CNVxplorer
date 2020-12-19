@@ -23,6 +23,7 @@ RUN R -e "devtools::install_github('frequena/bioloupe')"
 # install CRAN packages
 RUN R -e "install.packages(c('shinydashboard', \
 'shinyjs', \
+'dplyr', \
 'highcharter', \
 'ggraph', \
 'ggrepel', \
