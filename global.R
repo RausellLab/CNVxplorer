@@ -91,6 +91,15 @@ library(scales)
 #     tad, ## hg19
 #     gtex, ## -
 #     hpa, ## -
+#     prot_complex,##  -
+#     hotspot_hg19,
+#     lads,
+#     mean_median_expression,
+#     ohno_genes,##  -
+#     recomb,##  hg19 -
+#     region_gaps, ## hg19
+#     gene_density_tbl, ## hg19
+#     pubmed_df, ##
 #     hpo_genes, ## -
 #     cnv_df, ## hg19
 #     vector_total_terms, ## -
