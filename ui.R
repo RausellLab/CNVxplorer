@@ -26,17 +26,12 @@ tablerDashPage(
       tablerNavMenuItem(
         tabName = "genetic_evidence",
         icon = "box",
-        "Genetic evidence"
+        "Clinical genetics evidence"
       ),
       tablerNavMenuItem(
         tabName = "reg_region",
         icon = "box",
-        "Regulatory elements"
-      ),
-      tablerNavMenuItem(
-        tabName = "genomic_interactions",
-        icon = "box",
-        "Protein interaction network"
+        "Regulatory regions"
       ),
       tablerNavMenuItem(
         tabName = "disease",
@@ -44,35 +39,35 @@ tablerDashPage(
         "Phenotypic analysis"
         
       ),
+
       tablerNavMenuItem(
         tabName = "model",
         icon = "box",
-        "Model organism"
+        "KO mouse phenotypes"
       ),
 
-
+      tablerNavMenuItem(
+        tabName = "fa",
+        icon = "box",
+        "Functional enrichment analysis"
+      ),
+      tablerNavMenuItem(
+        tabName = "tissue",
+        icon = "box",
+        "Tissue expression patterns"
+      ),
+      
+      tablerNavMenuItem(
+        tabName = "genomic_interactions",
+        icon = "box",
+        "Protein interaction"
+      ),
       tablerNavMenuItem(
         tabName = "pubmed",
         icon = "book",
         "Biomedical literature"
       ),
-      tablerNavMenuItem(
-        tabName = "tissue",
-        icon = "box",
-        "Tissue-specificity"
-      ),
-      
-      tablerNavMenuItem(
-        tabName = "fa",
-        icon = "box",
-        "Functional analysis"
-      ),
-      
-      tablerNavMenuItem(
-        tabName = "drugs",
-        icon = 'book',
-        "Druggable genome"
-      ),
+
       tablerNavMenuItem(
         tabName = "docu",
         icon = "book",
@@ -1066,15 +1061,8 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
           tablerCard(title = 'RNA Expression (GTEx)',
                      plotOutput('tissue_gtex'),
                      width = 9)
-          
-          
-          
+
         ),
-
-        
-        
-        
-
         fluidRow(
           column(width = 3,
                  tablerCard(title = 'Configuration:',
@@ -1237,16 +1225,16 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
                                      )),
                           # fluidRow(width = 12,
                                    
-                          tablerCard(title = 'HPO terms associated with genes',
+                          tablerCard(title = 'HP terms associated with genes',
                                      DTOutput('hpo_assoc_genes'),
                                      width = 6),
-                          tablerCard(title = 'HPO terms associated with diseases',
+                          tablerCard(title = 'HP terms associated with diseases',
                                      DTOutput('hpo_assoc_diseases'),
                                      width = 6)
                           # )
                  )),
           
-          tablerCard(title = 'Anatomical entities associated with HPO terms',
+          tablerCard(title = 'Anatomical entities associated with HP terms',
                      highchartOutput('plot_anatomy'),
                      width = 12),
           tablerCard(title = 'DECIPHER CNVs - Phenotypic similarity',
@@ -1286,16 +1274,16 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
                      width = 12))
         
       ),
-      tablerTabItem(
-        tabName = "drugs",
-        fluidRow(
-          tablerCard(title = 'Approved drugs associated with genes',
-                     DTOutput('drugbank_df'),
-                     width = 12)
-
-          )
-        
-      ),
+      # tablerTabItem(
+      #   tabName = "drugs",
+      #   fluidRow(
+      #     tablerCard(title = 'Approved drugs associated with genes',
+      #                DTOutput('drugbank_df'),
+      #                width = 12)
+      # 
+      #     )
+      #   
+      # ),
       tablerTabItem(
         tabName = "docu",
       
@@ -1312,6 +1300,7 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
               choices = list('Overview' = 'overview',
                              'Tutorials' = 'tutorials',
                              'FAQs' = 'faqs',
+                             'Input data and software' = 'versions',
                              'Installation' = 'installation',
                              'Browser compatibility' = 'browser', 
                              'Contact' = 'contact'),
@@ -1326,6 +1315,25 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
       tablerTabItem(
         tabName = "pubmed",
         fluidRow(
+          tablerCard(
+            title = "Frequency of genetic and phenotypic entities in titles and abstracts",
+            
+            collapsible = FALSE,
+            closable = FALSE,
+            plotOutput('pubtator_plot_disease') %>% withSpinner(type = 5),
+            overflow = TRUE,
+            width = 12,
+            options = tagList(
+              prettyRadioButtons(
+                inputId = "select_del_dup_frequency",
+                label = '',   
+                choices =  split(c('deletions', 'duplications'), c('Deletions', 'Duplications')),
+                inline = TRUE, 
+                status = "primary",
+                fill = TRUE
+              )
+            )
+          ),
           tablerCard(
             title = "Pubmed articles associated with the region",
             
@@ -1366,9 +1374,16 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
             title = NULL,
             width = 3,
             sliderInput("min_threshold_cooccurrence", label = tags$b("Select minimum co-occurrence:"), min = 2, 
-                        max = 50, value = 2)
+                        max = 50, value = 2),
+            prettyRadioButtons(
+              inputId = "entity_title_abstract",
+              label = tags$b("Choose:"),
+              choices = c("Title", 'Title + abstract'),
+              inline = FALSE, 
+              status = "primary",
+              fill = TRUE
+            )
           ),
-            
           tablerCard(
             collapsible = FALSE,
             closable = FALSE,
