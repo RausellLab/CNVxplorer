@@ -777,8 +777,6 @@ function(input, output, session) {
         paste(collapse = ' OR ') %>%
         paste('AND (deletion OR microdeletion) AND homo sapiens')
         
-
-      test1005 <<- tmp_query
       
       query_region <- tmp_query
       
@@ -871,10 +869,7 @@ function(input, output, session) {
 
     
     query_link <- entrez_link(db= 'omim', id= ids_query, dbfrom="pubmed", by_id = TRUE)
-    
 
-
-    
     tmp_df <- tibble(pubmed_id = ids_query, omim_assoc = NA)
     
     for (i in 1:length(query_link)) {
@@ -1229,11 +1224,16 @@ function(input, output, session) {
     req(query_pubmed_dup())
     
     if (length(query_pubmed_dup()[['ids']]) == 0) {
+      
       df_output <- tibble()
       
     } else {
     
     query_tmp <- entrez_summary(db="pubmed", id= query_pubmed_dup()[['ids']])
+    
+    test2024 <<- query_tmp
+    
+    if (length(query_tmp[[1]]) > 1) {
     
     title <- unname(map_chr(query_tmp, function(x) x[["title"]]))
     n_cites <- unname(map_chr(query_tmp, function(x) x[["pmcrefcount"]]))
@@ -1243,6 +1243,17 @@ function(input, output, session) {
     pmid_id <- unname(map_chr(query_tmp, function(x) x[["uid"]]))
     journal_id <- unname(map_chr(query_tmp, function(x) x[["fulljournalname"]]))
     
+    } else {
+      
+      title <- query_tmp[["title"]]
+      n_cites <- query_tmp[["pmcrefcount"]]
+      first_author <- query_tmp[["sortfirstauthor"]]
+      last_author <- query_tmp[["lastauthor"]]
+      date_release <- query_tmp[["pubdate"]]
+      pmid_id <- query_tmp[["uid"]]
+      journal_id <- query_tmp[["fulljournalname"]]
+      
+    }
     
     df_output <- tibble(title = title, first_author = first_author, last_author = last_author, 
                         n_cites = n_cites, journal = journal_id, date_release = date_release, 
@@ -1291,7 +1302,9 @@ function(input, output, session) {
       
     } else {
       
-
+      test2021 <<- tmp_df
+      
+      
       tmp_df <- tmp_df %>% 
         select(pmid, everything()) %>%
         mutate(pmid = paste0("<a href='", paste0('https://pubmed.ncbi.nlm.nih.gov/', pmid),"' target='_blank'>", pmid,"</a>"))
@@ -1300,6 +1313,7 @@ function(input, output, session) {
       vector_colnames <- c('PMID', 'Title','First author', 'Last author', 'N°cites','Journal', 'Published date')
       
     }
+    
     
     datatable(tmp_df, rownames = FALSE, filter = 'top', selection = 'single', escape = FALSE,
               
@@ -1313,61 +1327,147 @@ function(input, output, session) {
   })
   
   
-
   
   
-  output$plot_net_pubmed <- renderPlot({
+  running_pubtator <- reactive({
     
-    req(isTRUE(input$enable_net))
+    req(running_pubmed_del())
+    req(running_pubmed_del())
     
-    if (input$choose_net_source == 'both') {
+    if (input$select_del_dup_frequency == 'deletions') {
       
-      tmp_del <- running_pubmed_del() %>% mutate(type = 'deletion')
-      tmp_dup <- running_pubmed_dup() %>% mutate(type = 'duplication')
-      
-      tmp_to_plot <- bind_rows(tmp_del, tmp_dup)
-      
-    } else if (input$choose_net_source == 'deletion') {
-      
-      tmp_to_plot <- running_pubmed_del() %>% mutate(type = 'deletion')
-      
-      
+      input_pubmed <- running_pubmed_del()
+        
     } else {
       
+      input_pubmed <- running_pubmed_dup()
+        
+    }
+    
+    n_pubmed <- nrow(input_pubmed)
+    test2222 <<- n_pubmed
+    limit_n_articles <- ifelse(n_pubmed > 100, 100, n_pubmed)
+    
+    test3333 <<- input_pubmed
+
+    tryCatch(
+      pubtator_list <- find_pubtator(pmid = input_pubmed$pmid[1:limit_n_articles], bioconcept = 'all', raw_abstract = TRUE),
+      error= function(e) stop("The server is not available, please try later.")
+    )
+
+    return(pubtator_list)
+  })
+  
+  
+  
+  output$pubtator_plot_disease <- renderPlot({
+    
+    test2311 <<- running_pubtator()
+    
+    
+    entities_df <- running_pubtator() %>% map_dfr(~.[['dataframe']])
+    
+    p1 <- entities_df %>%
+      filter(category == 'Gene') %>%
+      distinct(id, word) %>%
+      count(word) %>%
+      arrange(desc(n)) %>%
+      slice(1:10) %>%
+      ggplot(aes(reorder(word, n), n)) +
+      geom_col(aes( fill = n),color = 'black', show.legend = FALSE) +
+      scale_fill_viridis_c() +
+      coord_flip() +
+      theme_minimal() +
+      labs(title = 'Frequency of genetic entities in titles and abstracts',
+           x = 'Genetic entity', y = 'Number of articles')
+    
+    
+    p2 <- entities_df %>%
+      filter(category == 'Disease') %>%
+      distinct(id, word) %>%
+      count(word) %>%
+      arrange(desc(n)) %>%
+      slice(1:10) %>%
+      ggplot(aes(reorder(word, n), n)) +
+      geom_col(aes( fill = n),color = 'black', show.legend = FALSE) +
+      scale_fill_viridis_c() +
+      coord_flip() +
+      theme_minimal() +
+      labs(title = 'Frequency of phenotypic entities in titles and abstracts',
+           x = 'Disease entity', y = 'Number of articles')
+    
+    p1 + p2
+
+  })
+
+
+  output$plot_net_pubmed <- renderPlot({
+
+    req(isTRUE(input$enable_net))
+
+    if (input$choose_net_source == 'both') {
+
+      tmp_del <- running_pubmed_del() %>% mutate(type = 'deletion')
+      tmp_dup <- running_pubmed_dup() %>% mutate(type = 'duplication')
+
+      tmp_to_plot <- bind_rows(tmp_del, tmp_dup)
+
+    } else if (input$choose_net_source == 'deletion') {
+
+      tmp_to_plot <- running_pubmed_del() %>% mutate(type = 'deletion')
+
+
+    } else {
+
       validate(
         need(nrow(running_pubmed_dup()) != 0, '0 articles associated with duplications found.')
       )
-      
+
       tmp_to_plot <- running_pubmed_dup() %>% mutate(type = 'duplication')
-      
+
     }
     
-
+    tmp_result <- tmp_to_plot %>%
+      select(pmid, title) %>%
+      unnest_tokens(word, title)
     
-    tmp_to_plot <-   tmp_to_plot %>%
-      select(pmid, title, type) %>%
-      unnest_tokens(word, title) %>%
+    test881 <<- tmp_result
+
+    if (input$entity_title_abstract != 'Title') {
+
+      tmp_result <- running_pubtator() %>%
+        map_dfr(~.[['dataframe']]) %>%
+        rename(pmid = id) %>%
+        select(pmid, word) %>%
+        bind_rows(tmp_result)
+
+    }
+    
+    test94112224141 <<- tmp_result
+    
+    
+    tmp_result <- tmp_result %>%
       anti_join(stop_words, by = 'word') %>%
       pairwise_count(word, pmid, sort = TRUE) %>%
-      filter(n >= input$min_threshold_cooccurrence) 
-    
-    validate(
-      need(nrow(tmp_to_plot) != 0, 'Please, reduce the minimum threshold of co-occurrence.')
-    )
+      filter(!str_detect(item1, 'patient'), !str_detect(item2, 'patient')) %>%
+      filter(n >= input$min_threshold_cooccurrence)
 
-      tmp_to_plot %>%
+    validate(
+      need(nrow(tmp_result) != 0, 'Please, reduce the minimum threshold of co-occurrence.')
+    )
+    
+
+    tmp_result %>%
       graph_from_data_frame() %>%
       ggraph(layout = "fr") +
       geom_edge_link(aes(edge_alpha = n, edge_width = n), edge_colour = "cyan4") +
       geom_node_point(size = 5) +
-      geom_node_text(aes(label = name), repel = TRUE, 
+      geom_node_text(aes(label = name), repel = TRUE,
                      point.padding = unit(0.2, "lines")) +
       theme_void()
-    
-    
-    
+
   })
-  
+
   abstract_pubmed <- reactive({
     
       validate(
@@ -4628,8 +4728,6 @@ HTML('<center>
       
     }
     
-    
-    
     filtered_genes <- df_genes %>% select(entrez_id) %>% pull()  %>% as.character()
     univ <- hgcn_genes %>% select(entrez_id) %>% pull() %>% as.character()
     
@@ -5764,6 +5862,10 @@ HTML('<center>
     } else if (input$select_doc_element == 'faqs') {
       
       includeMarkdown('doc/faqs.Rmd')
+      
+    } else if (input$select_doc_element == 'versions') {
+      
+      includeMarkdown('doc/versions.Rmd')
       
     } else if (input$select_doc_element == 'installation') {
       
