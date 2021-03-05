@@ -98,6 +98,10 @@ Probably, that gene is in OMIM but was filtered out because it did not meet any 
 
 ### Regulatory elements
 
+- **Why do I find less enhancers in CNVxplorer than GeneCards in a specific region?**
+
+We only display enhancers and target-enhancer associations with a quality score above 1.
+
 - **Do all miRNAs and lncRNAs in the region are displayed?**
 
 No, we only consider miRNAs and lncRNAs with, at least, one target-gene association.
