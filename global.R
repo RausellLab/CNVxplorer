@@ -44,46 +44,6 @@ library(bioloupe)
 library(networkD3)
 library(scales)
 
-# # Files needed to run the app
-# 
-# # 1. hgcn_genes - List all the genes with scores
-# # 2. df_enhancers - List enhancers with phast100vert  + phast46pla + phast46pri
-# # 3. lncrna_coord - coordinates lncRNA
-# # 4. lncrna - Features per lncRNA
-# # 5. tad - List of TADs with coordinates
-# # 6. gtex - gene expression data across tissues
-# # 7. hpa - human protein expression
-# # 8. hpo - Human phenotype ontology
-# # 9. mgi - mouse model data
-# # 10. blacklist_encode - problematics regions
-# # 11. mpo_dbs - Mammalian Phenotype Ontology 
-# # 12. hpo_dbs - HPO ontology
-# # 13. clinvar_variants - Variants from ClinVar (chrom - pos - id)
-# # 14. omim - OMIM information
-# # 15. orphanet_raw - ORPHANET
-# # 16. dev_raw - DECIPHER (DEVELOPMENTAL DISORDER GENES)
-# # 17- gnomad_sv_raw
-# # 18. decipher_control_raw
-# # 19. dgv_df_raw
-# # 20. vector_total_terms (Dataframe of term - description - term_description)
-# # 21. anato_df (Anatomies entities: description - term)
-# # 22. mirtarbase - miRNA database + coordinates from miRbase
-# # vector_inheritance - Terms associated with mode of inheritances
-# # trrust - Transcription factor - target genes
-# # drugbank
-# # prot_complex - Protein complex genes
-# # ohno_genes - Ohnologs genes 
-# # recomb rates - recomb
-# # genes_promoter - Mean phastCons46 - o/e CpG sites
-# # para_genes - Paralogous genes
-# # string_db - centrality measures (degree, page_rank)
-# # pubmed_df - Nº hits deletion - duplication
-# # ensembl_reg  - Ensembl Regulatory Build
-# # region_gaps - Centromeric and telomeric regions
-# # coord_chrom_hg19 - chromosome length
-# # interactions_db - protein-protein high-confidence interactions from STRING
-
-# 
 # file.remove('local_data.RData.gz')
 # file.remove('local_data.RData')
 # save(hgcn_genes, ## hg19
@@ -93,13 +53,6 @@ library(scales)
 #     hpa, ## -
 #     prot_complex,##  -
 #     hotspot_hg19,
-#     lads,
-#     mean_median_expression,
-#     ohno_genes,##  -
-#     recomb,##  hg19 -
-#     region_gaps, ## hg19
-#     gene_density_tbl, ## hg19
-#     pubmed_df, ##
 #     hpo_genes, ## -
 #     cnv_df, ## hg19
 #     vector_total_terms, ## -
@@ -112,7 +65,6 @@ library(scales)
 #     vector_inheritance, ## -
 #     trrust, ## hg19
 #     tf_genes, ## -
-#     drugbank, ## -
 #     dev_raw,
 #     panel_total,
 #     omim,
@@ -133,7 +85,7 @@ library(scales)
 #     interactions_db, ## -
 #     syndromes_total, ## hg19
 #     file = "local_data.RData")
-# 
+#
 # system("gzip local_data.RData")
 
 source('functions.R')

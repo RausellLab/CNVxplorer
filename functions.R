@@ -214,7 +214,7 @@ get_upset <- function(df) {
 
         upset(fromList(list_result), order.by = "freq" ,
         point.size = 3.5, line.size = 2, number.angles = 0,
-        mainbar.y.label = 'Gene intersections', sets.x.label = 'Number of genes',
+        mainbar.y.label = 'Number of genes', sets.x.label = 'Number of genes',
         text.scale = c(1.3, 1.3, 2, 2, 2, 2))
   
   
