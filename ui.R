@@ -271,7 +271,7 @@ tablerDashPage(
                             zoomable = FALSE,
                             status = 'primary',
                             statusSide = 'left',
-                            title = tagList(shiny::icon("database"), "Overlap with disease associated genes"),
+                            title = tagList(shiny::icon("database"), "Overlap with disease associated genes and SNV variants"),
                             fluidRow(
                               column(width = 4,
                                      uiOutput('n_disease')),
@@ -325,7 +325,7 @@ tablerDashPage(
                             zoomable = FALSE,
                             status = 'success',
                             statusSide = 'left',
-                            title = tagList(shiny::icon("book"), "Regulatory elements disrupted"),
+                            title = tagList(shiny::icon("book"), "Overlap with regulatory elements and TADs"),
                             
                             
                             
@@ -439,7 +439,7 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
         tabName = "fa",
 
         tablerCard(
-          title = "Functional Profile" %>% helper(type = "inline",
+          title = "GO term annotation" %>% helper(type = "inline",
                                                   # icon = "exclamation",
                                                   style = "text-indent: 0.5em;",
                                                   title = "Functional profile",
@@ -680,7 +680,7 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
           )
         ),
         tablerCard(
-          title = "Intersection of disease gene databases" %>% helper(type = "inline",
+          title = "Overlap with disease-associated genes from different databases" %>% helper(type = "inline",
                                                                       # icon = "exclamation",
                                                                       style = "text-indent: 0.5em;",
                                                                       title = "Intersection of disease evidence",
@@ -773,7 +773,7 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
 
           
           tablerCard(
-            title = "Intersection of disease target-genes databases (from disrupted regulatory elements)",
+            title = "Intersection of disease target-genes databases (from overlapping regulatory elements)",
             plotOutput("plot_upset_disease_reg"),
             width = 12,
             collapsible = FALSE,
@@ -820,7 +820,7 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
           ),
           
           tablerCard(
-            title = "Disease & non-disease target genes from disrupted regulatory elements" %>% helper(type = "inline",
+            title = "Disease & non-disease target genes from overlapping regulatory elements" %>% helper(type = "inline",
                                                                                                        # icon = "exclamation",
                                                                                                        style = "text-indent: 0.5em;",
                                                                                                        title = "Pathogenicity scores",
@@ -837,7 +837,7 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
               uiOutput('choose_reg_region')
             )
           ),
-          tablerCard(title = 'Enhancers disrupted',
+          tablerCard(title = 'Overlapping enhancers',
                      collapsible = FALSE,
                      closable = FALSE,
                      dataTableOutput('df_enhancer') %>% withSpinner(type = 5),
@@ -867,7 +867,7 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
         ),
         
 
-        tablerCard(title = 'micro-RNAs (miRNAs) disrupted',
+        tablerCard(title = 'Overlapping micro-RNAs (miRNAs)',
                    DTOutput('df_mirna'),
                    collapsible = FALSE,
                    closable = FALSE,
@@ -877,7 +877,7 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
                      uiOutput('n_target_mirna'),
                      uiOutput('switch_mirnas')
                    )),
-        tablerCard(title = 'Transcription factors (TFs) disrupted',
+        tablerCard(title = 'Overlapping Transcription factors (TFs)',
                    DTOutput('tf_df'),
                    collapsible = FALSE,
                    closable = FALSE,
@@ -888,7 +888,7 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
                      uiOutput('switch_tfs')
                    )),
 
-        tablerCard(title = 'Long noncoding RNAs (lncRNAs) disrupted',
+        tablerCard(title = 'Overlapping long noncoding RNAs (lncRNAs)',
                    DTOutput('lncrna_df'),
                    collapsible = FALSE,
                    closable = FALSE,
@@ -898,7 +898,7 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
                      uiOutput('n_target_lncrna'),
                      uiOutput('switch_lncrnas')
                    )),
-        tablerCard(title = 'Topologically Associating Domains (TADs) disrupted',
+        tablerCard(title = 'Overlapping Topologically Associating Domains (TADs)',
                    DTOutput('df_tads'),
                    collapsible = FALSE,
                    closable = FALSE,
@@ -1140,7 +1140,7 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
         # 
         # ),
         fluidRow(
-          tablerCard(title = 'Phenotype terms',
+          tablerCard(title = 'Indicate here phenotype terms of the patient',
                      width = 8,
                      closable = FALSE,
                      collapsible = FALSE,
@@ -1269,7 +1269,7 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
                    width = 12),
         fluidRow(
 
-          tablerCard(title = 'Genes associated with phenotypes in mouse (MGI)',
+          tablerCard(title = 'Orthologous genes associated with phenotypes in mouse (MGI)',
                      DTOutput('model_genes'),
                      width = 12))
         
