@@ -35,5 +35,6 @@ CNVxplorer is a user-friendly web application developed to assist in the clinica
 
 ## News
 
-- **v. 0.11 (17/12/2020)**. Added help buttons + Fixed minor bugs + changed structure FAQs 
+- **v. 0.12 (06/03/2021)**. Added genetic and phenotypic entities information (bar and co-occurrence plot) + search entities in Title+Abstract; Change of titles; New Documentation tab with the version of databases used
+- **v. 0.11 (17/12/2020)**. Added help buttons; Fixed minor bugs; changed structure FAQs 
 - **v. 0.1 (8/12/2020)**. Public release.
