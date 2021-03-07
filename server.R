@@ -1396,7 +1396,34 @@ function(input, output, session) {
       labs(title = 'Frequency of phenotypic entities in titles and abstracts',
            x = 'Disease entity', y = 'Number of articles')
     
-    p1 + p2
+    df_gene <- entities_df %>%
+      filter(category == 'Gene') %>%
+      distinct(id, word) %>%
+      rename(genetic = word) 
+    
+    df_disease <- entities_df %>%
+      filter(category == 'Disease') %>%
+      distinct(id, word) %>%
+      rename(phenotypic = word)
+    
+    p3 <- df_gene %>%
+      left_join(df_disease, by = 'id') %>%
+      count(genetic, phenotypic, sort = TRUE) %>%
+      rowwise() %>%
+      mutate(tag = paste(genetic, phenotypic, sep = ' - ')) %>%
+      ungroup() %>%
+      slice(1:10) %>%
+      ggplot(aes(reorder(tag, n), n)) +
+      geom_col(aes( fill = n), color = 'black', show.legend = FALSE) +
+      scale_fill_viridis_c() +
+      coord_flip() +
+      theme_minimal() +
+      labs(title = 'Associations between genetic and phenotypic entities',
+           x = 'Entity association', y = 'Number of articles') +
+      theme(plot.title = element_text(size=10))
+    
+    
+    p1 + p2 + p3
 
   })
 
@@ -1456,6 +1483,7 @@ function(input, output, session) {
       need(nrow(tmp_result) != 0, 'Please, reduce the minimum threshold of co-occurrence.')
     )
     
+    test91331321311 <<- tmp_result
 
     tmp_result %>%
       graph_from_data_frame() %>%
@@ -4791,9 +4819,6 @@ HTML('<center>
       as_tibble() %>%
       filter(Count != 0) %>%
       arrange(desc(Count)) %>%
-      # separate(geneID, sep = '/', into = as.character(1:1000)) %>%
-      # gather('delete', 'gene', -ID, -Description, -Count, -GeneRatio, -pvalue, -p.adjust, -qvalue, -BgRatio) %>%
-      # select(-delete) %>%
       separate_rows(geneID,sep = '/') %>%
       na.omit() %>%
       distinct() %>%
