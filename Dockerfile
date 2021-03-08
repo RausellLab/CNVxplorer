@@ -45,7 +45,6 @@ RUN R -e "install.packages(c('shinydashboard', \
 'shinymanager', \
 'gghighlight', \
 'shinycssloaders', \
-'plotly', \
 'DescTools', \
 'rentrez', \
 'reactable', \
