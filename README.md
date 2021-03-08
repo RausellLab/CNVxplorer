@@ -50,7 +50,7 @@ You can find an instance of CNVxplorer running at this address:
 
 ``` bash
 
-# Note: the first session after the deployment is slower since the application loads all the data required (from global.R)
+# Note: the first session after the deployment is slower since the application loads all the data required
 
 git clone https://github.com/frequena/cnvxplorer.git
 
@@ -59,7 +59,8 @@ docker build -t cnvxplorer . # The tag "cnvxplorer" is optional
 docker run -d -p 3838:3838 cnvxplorer # -p (specify port) -d (detached mode)
 
 # The port 3838 is optional. Please make sure you set a port not blocked by firewalls.
-# If you change the port number (3838) by any other, make sure to set it in the Dockerfile (EXPOSE instruction)
+# If you change the port number (3838) by any other, make sure to set it in the Dockerfile 
+# (EXPOSE instruction)
 ```
 
 ### Local installation
