@@ -80,29 +80,6 @@ tablerDashPage(
     uiOutput('ref_user_genes_cnv'),
     uiOutput('counter_header'),
     uiOutput('ref_user_genes')
-    
-    # uiOutput('ref_user_filter_genes')
-    
-    # tablerDropdown(
-    #   tablerDropdownItem(
-    #     title = "Item 1 title",
-    #     href = "http://google.com",
-    #     url = "https://image.flaticon.com/icons/svg/1301/1301804.svg",
-    #     status = "danger",
-    #     date = "now",
-    #     "This is the first dropdown item"
-    #   ),
-    #   tablerDropdownItem(
-    #     url = "https://image.flaticon.com/icons/svg/1301/1301809.svg",
-    #     status = "warning",
-    #     "This is the second dropdown item",
-    #     date = "yesterday"
-    #   ),
-    #   tablerDropdownItem(
-    #     title = "Item 3 title",
-    #     "This is the third dropdown item"
-    #   )
-    # )
   ),
   footer = tablerDashFooter(
     tablerIcon(name = "maestro", lib = "payment"),
@@ -250,7 +227,6 @@ tablerDashPage(
                             status = 'success',
                             statusSide = 'left',
                             title = tagList(shiny::icon("database"), "Overlap with reference CNV databases"
-                                            # actionLink("link_to_docu", "Link to panel B")
                                             ),
                             fluidRow(
                               column(width = 4,
@@ -382,7 +358,6 @@ tablerDashPage(
                  
                  tablerCard(
                    title = "Comparison CNV size with other CNVs databases" %>% helper(type = "inline",
-                                                                                      # icon = "exclamation",
                                                                                       style = "text-indent: 0.5em;",
                                                                                       title = "Two options: global & local",
                                                                                       size = "m",
@@ -440,7 +415,6 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
 
         tablerCard(
           title = "GO term annotation" %>% helper(type = "inline",
-                                                  # icon = "exclamation",
                                                   style = "text-indent: 0.5em;",
                                                   title = "Functional profile",
                                                   size = "m",
@@ -610,7 +584,6 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
         tabName = "genetic_evidence",
         tablerCard(
           title = "Overlap with CNV Syndromes" %>% helper(type = "inline",
-                                                          # icon = "exclamation",
                                                           style = "text-indent: 0.5em;",
                                                           title = "CNV Syndromes",
                                                           size = "m",
@@ -630,12 +603,10 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
           overflow = TRUE,
           options = tagList(
             uiOutput('ui_select_cnv_syndrome')
-            # downloadButton("downl323rtfgsoad_dgenes", "Download table")
           )
         ),
         tablerCard(
           title = "Overlap with pathogenic/likely pathogenic CNVs (DECIPHER)" %>% helper(type = "inline",
-                                                                                     # icon = "exclamation",
                                                                                      style = "text-indent: 0.5em;",
                                                                                      title = "Likely pathogenic/pathogenic CNVs",
                                                                                      size = "m",
@@ -651,15 +622,10 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
           width = 12,
           collapsible = FALSE,
           closable = FALSE,
-          overflow = TRUE,
-          options = tagList(
-            # downloadButton("download_df_overlap_cnvs", "Download table")
-            
-          )
+          overflow = TRUE
         ),
         tablerCard(
           title = "Overlap with non-pathogenic CNVs"  %>% helper(type = "inline",
-                                                                 # icon = "exclamation",
                                                                  style = "text-indent: 0.5em;",
                                                                  title = "Likely pathogenic/pathogenic CNVs",
                                                                  size = "m",
@@ -675,13 +641,10 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
           overflow = TRUE,
           options = tagList(
             uiOutput('select_db_no_patho_cnvs')
-            # downloadButton("download_df_overlap_cnvs_nonpatho", "Download table")
-            
           )
         ),
         tablerCard(
           title = "Overlap with disease-associated genes from different databases" %>% helper(type = "inline",
-                                                                      # icon = "exclamation",
                                                                       style = "text-indent: 0.5em;",
                                                                       title = "Intersection of disease evidence",
                                                                       size = "m",
@@ -713,12 +676,10 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
             overflow = TRUE,
             options = tagList(
               uiOutput('input_source')
-              # downloadButton("downloadfdsfs_dgenes", "Download table")
             )
           )),
         tablerCard(
           title = "Overlap with disease & non-disease genes"  %>% helper(type = "inline",
-                                                                         # icon = "exclamation",
                                                                          style = "text-indent: 0.5em;",
                                                                          title = "Pathogenicity scores",
                                                                          size = "m",
@@ -730,10 +691,7 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
           width = 12,
           collapsible = FALSE,
           closable = FALSE,
-          overflow = TRUE,
-          options = tagList(
-            # downloadButton("download_adsasdasdasdasdasdgenes", "Download table")
-          )
+          overflow = TRUE
         ),
 
 
@@ -748,7 +706,6 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
             overflow = TRUE,
             options = tagList(
               uiOutput('ui_select_clinvar_gwas')
-              # downloadButton("downlda323rtfgsoad_dgenes", "Download table")
             )
           ),
           tablerCard(
@@ -759,8 +716,7 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
             closable = FALSE,
             overflow = TRUE,
             options = tagList(
-              # downloadButton("download_dadasdasdasdasdasdasde_novos", "Download table")
-              
+
             )
           )
 
@@ -788,20 +744,10 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
               width = 4,
               collapsible = FALSE,
               closable = FALSE,
-              overflow = TRUE,
-              options = tagList(
-                # actionBttn(
-                #   inputId = "Id111",
-                #   label = "Reset table",
-                #   style = "minimal",
-                #   color = "primary"
-                # ),
-                # downloadButton("download_dgenes", "Download table")
-              )
+              overflow = TRUE
             ),
             tablerCard(
               title = "Disease evidence" %>% helper(type = "inline",
-                                                     # icon = "exclamation",
                                                      style = "text-indent: 0.5em;",
                                                      title = "Intersection of disease evidence",
                                                      size = "m",
@@ -814,14 +760,12 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
               overflow = TRUE,
               options = tagList(
                 uiOutput('input_source_reg')
-                # downloadButton("downloadfdsfs_dgenes", "Download table")
               )
             ))
           ),
           
           tablerCard(
             title = "Disease & non-disease target genes from overlapping regulatory elements" %>% helper(type = "inline",
-                                                                                                       # icon = "exclamation",
                                                                                                        style = "text-indent: 0.5em;",
                                                                                                        title = "Pathogenicity scores",
                                                                                                        size = "m",
@@ -904,7 +848,6 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
                    closable = FALSE,
                    width = 12,
                    options = tagList(
-                     # uiOutput('ui_tad')
                      uiOutput('switch_tads')
                    ))
         
@@ -914,7 +857,6 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
         tabName = "genomic_interactions",
         column(width = 9,
         tablerCard(title = 'Protein interaction network' %>% helper(type = "inline",
-                                                                    # icon = "exclamation",
                                                                     style = "text-indent: 0.5em;",
                                                                     title = "Interactions evidence",
                                                                     size = "m",
@@ -1023,18 +965,6 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
         
       ),
       
-      # tablerTabItem(
-      #   tabName = "gene",
-      #   fluidRow(
-      #     tablerCard(title = '19,281 protein-coding genes ',
-      #                reactableOutput("table_all_genes"),
-      #                width = 12)),
-      #   tablerCard(title = 'RNA Expression (GTEx)',
-      #              DTOutput('lncrn2a_df'),
-      #              width = 12)
-      #   
-      # ),
-      
       tablerTabItem(
         tabName = "tissue",
         fluidRow(
@@ -1092,7 +1022,6 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
                          size = 'mini'
                          
                        )
-                       
                      ))
           
           
@@ -1134,11 +1063,7 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
         tablerCard(title = 'Top 10 most frequent anatomical entities (gene annotation)',
                    plotOutput('overview_hp_anatomy'),
                    width = 6)),
-        # fluidRow(
-        #   uiOutput('n_hp_chosen')
-        # 
-        # 
-        # ),
+
         fluidRow(
           tablerCard(title = 'Indicate here phenotype terms of the patient',
                      width = 8,
@@ -1195,7 +1120,6 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
                  fluidRow(width = 12,
 
                           tablerCard(title = 'Gene-disease associations' %>% helper(type = "inline",
-                                                                                    # icon = "exclamation",
                                                                                     style = "text-indent: 0.5em;",
                                                                                     title = "Similarity score",
                                                                                     size = "m",
@@ -1223,15 +1147,13 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
                                        
                                        
                                      )),
-                          # fluidRow(width = 12,
-                                   
+
                           tablerCard(title = 'HP terms associated with genes',
                                      DTOutput('hpo_assoc_genes'),
                                      width = 6),
                           tablerCard(title = 'HP terms associated with diseases',
                                      DTOutput('hpo_assoc_diseases'),
                                      width = 6)
-                          # )
                  )),
           
           tablerCard(title = 'Anatomical entities associated with HP terms',
@@ -1274,16 +1196,6 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
                      width = 12))
         
       ),
-      # tablerTabItem(
-      #   tabName = "drugs",
-      #   fluidRow(
-      #     tablerCard(title = 'Approved drugs associated with genes',
-      #                DTOutput('drugbank_df'),
-      #                width = 12)
-      # 
-      #     )
-      #   
-      # ),
       tablerTabItem(
         tabName = "docu",
       
@@ -1419,49 +1331,8 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
           
         )
         
-      ),
-      tablerTabItem(
-        tabName = "down_report",
-        fluidRow(
-          tablerCard(
-            title = "Personalize your report:",
-            
-            fluidRow(
-              column(width = 2,
-                     tags$b('Patient information'),
-                     tags$hr(),
-                     # textInput("name_report", "Name:", "Doctor Requena"),
-                     # textInput("age_report", "Age:", "4"),
-                     dateInput("age_report", "Date of birth (mm/dd/yy):", value = "", format = "mm/dd/yy"),
-                     pickerInput("sex_report", "Sex:", c("Male", "Female"))),
-              column(width = 2,
-                     tags$b('Clinician information'),
-                     tags$hr(),
-                     textInput("name_report", "Name:", placeholder = '')),
-              # textInput("age_report", "Age:", "4"),
-              # dateInput("age_report", "Date of birth:", value = "2012-02-29", format = "mm/dd/yy"),
-              # pickerInput("sex_report", "Sex:", c("Male", "Female"))),
-              column(width = 8,
-                     textAreaInput("comment_report", "Notes:", placeholder =  "Notes...", 
-                                   # width = '700px', 
-                                   heigh = '250px'))),
-            overflow = TRUE,
-            width = 7
-          ),
-          tablerCard(
-            title = "Funnel overview",
-            
-            echarts4rOutput("funnel_genes"),
-            width = 5,
-            overflow = TRUE
-          ),
-          tablerCard(title = 'Download report (.html)',
-                     downloadButton('button_download', label = "Download"),                       
-                     width = 7)
-          
-        )
-        
       )
+
     )
     
   )
