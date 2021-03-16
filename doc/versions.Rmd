@@ -202,7 +202,7 @@ output:
 </tr>
 <tr>
 <td width="247">
-<p>GWAS catalog</p>
+<p>GWAS Catalog</p>
 </td>
 <td width="83">
 <p>v.1.0</p>
@@ -266,6 +266,18 @@ output:
 <p>https://www.grnpedia.org/trrust/</p>
 </td>
 </tr>
+<tr>
+<td width="247">
+<p>HI index</p>
+</td>
+<td width="83">
+<p>v.3</p>
+</td>
+<td width="273">
+<p>https://decipher.sanger.ac.uk/about/downloads/data</p>
+</td>
+</tr>
+<tr>
 <tr>
 <td width="247">
 <p>lncrna2target</p>
