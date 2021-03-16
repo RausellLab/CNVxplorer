@@ -5316,33 +5316,36 @@ HTML('<center>
     
     if (input$select_doc_element == 'overview') {
       
-      includeMarkdown('doc/documentation.Rmd')
+      includeMarkdown('../doc/documentation.Rmd')
       
       
     } else if (input$select_doc_element == 'browser') {
       
-      includeMarkdown('doc/browser_compatibility.Rmd')
+      includeMarkdown('../doc/browser_compatibility.Rmd')
       
     } else if (input$select_doc_element == 'contact') {
     
-      includeMarkdown('doc/contact.Rmd')
+      includeMarkdown('../doc/contact.Rmd')
     
     } else if (input$select_doc_element == 'tutorials') {
       
-      includeMarkdown('doc/tutorials.Rmd')
+      includeMarkdown('../doc/tutorials.Rmd')
       
     } else if (input$select_doc_element == 'faqs') {
       
-      includeMarkdown('doc/faqs.Rmd')
+      includeMarkdown('../doc/faqs.Rmd')
       
     } else if (input$select_doc_element == 'versions') {
       
-      includeMarkdown('doc/versions.Rmd')
+      includeMarkdown('../doc/versions.Rmd')
       
     } else if (input$select_doc_element == 'installation') {
       
-      includeMarkdown('doc/installation.Rmd')
-    }
+      includeMarkdown('../doc/installation.Rmd')
+    } else if (input$select_doc_element == 'terms_of_use') {
+    
+    includeMarkdown('../doc/terms_of_use.Rmd')
+  }
   })
   
   
