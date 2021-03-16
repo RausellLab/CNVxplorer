@@ -202,7 +202,7 @@ output:
 </tr>
 <tr>
 <td width="247">
-<p>GWAS Catalog</p>
+<p>GWAS Catalog (*)</p>
 </td>
 <td width="83">
 <p>v.1.0</p>
@@ -257,6 +257,17 @@ output:
 </tr>
 <tr>
 <td width="247">
+<p>mirBase (*)</p>
+</td>
+<td width="83">
+<p>8.0</p>
+</td>
+<td width="273">
+<p>http://www.mirbase.org/index.shtml</p>
+</td>
+</tr>
+<tr>
+<td width="247">
 <p>TRRUST</p>
 </td>
 <td width="83">
@@ -292,7 +303,7 @@ output:
 <tr>
 <tr>
 <td width="247">
-<p>GeneHancer</p>
+<p>GeneHancer (*)</p>
 </td>
 <td width="83">
 <p>v.4.11</p>
@@ -327,6 +338,8 @@ output:
 </table>
 
 </center>
+
+(*) These datasets were converted from hg38 to hg19 with liftOver
 
 ## R session
 
