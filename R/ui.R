@@ -5,7 +5,7 @@ tablerDashPage(
     
     shinyjs::useShinyjs(),
     useShinyalert(),
-    tags$head(includeHTML("www/google_analytics.html")),
+    tags$head(includeHTML("../www/google_analytics.html")),
     # tags$script(HTML("
     #     var openTab = function(tabName){
     #       $('a', $('.sidebar')).each(function() {
@@ -1215,7 +1215,8 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
                              'Input data and software' = 'versions',
                              'Installation' = 'installation',
                              'Browser compatibility' = 'browser', 
-                             'Contact' = 'contact'),
+                             'Contact' = 'contact',
+                             'Terms of use' = 'terms_of_use'),
               inline = TRUE, 
               status = "primary",
               fill = TRUE
