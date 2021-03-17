@@ -1,5 +1,5 @@
 
-# CNVxplorer: A webtool for the clinical interpretation of CNVs in rare disease patients
+# CNVxplorer: a web tool to assist clinical interpretation of CNVs in rare disease patients
 
 ----------------------------------------
 
