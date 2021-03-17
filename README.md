@@ -11,13 +11,13 @@ A companion preprint is presented in BioRxiv: [CNVxplorer: a web tool to assist 
 # Table of contents
 
   - [Overview](#Overview)
-  - [Features](#Features)
-  - [Access](#Access)
+  - [Features highlight](#Features highlight)
+  - [Availability](#Availability)
   - [Installation](#Installation)
-  - [Authors](#Authors)
+  - [Authors and contact](#Authors)
   - [License](#License)
   - [References](#References)
-  - [Updates] (#Updates)
+  - [News] (#News)
 
 ## Overview
 
@@ -28,7 +28,7 @@ CNVxplorer, a web server suited for the functional assessment of CNVs in a clini
 
 </p>
 
-## Feature highlights
+## Features highlight
 
   - Query a genomic interval, cytoband, or upload a file with multiple
     genomic regions.
@@ -51,7 +51,7 @@ CNVxplorer, a web server suited for the functional assessment of CNVs in a clini
     co-presence network, and filter articles by association
     with Mendelian diseases and genes.
 
-### Availability
+## Availability
 
 CNVxplorer is publicly available at <http://cnvxplorer.com>
 
@@ -59,9 +59,9 @@ Detailed tutorials, comprehensive documentation, and a Frequently Asked Question
 
 In addition, a stand-alone open-source R implementation with a shiny interface is offered in this repository, allowing its deployment as a private server through a Docker image without external dependencies. Instructions to locally deploy the application are provided in the next section.
 
-## Installation as a local private server.
+## Local installation
 
-## Docker installation (3 lines)
+### Docker installation
 
 ``` bash
 
@@ -78,7 +78,7 @@ docker run -d -p 3838:3838 cnvxplorer # -p (specify port) -d (detached mode)
 # (EXPOSE instruction)
 ```
 
-### Local installation of CNVxplorer
+### Installation of CNVxplorer as a local private server
 
 ``` bash
 
@@ -111,6 +111,6 @@ This project is licensed under the GNU General Public License 3 - see the [LICEN
 
 CNVxplorer: a web tool to assist clinical interpretation of CNVs in rare disease patients. Requena F, Abdallah HA, García A, Nitschké P, Romana S, Malan V, Rausell A. BioRxiv 2021. doi: [https://doi.org/](https://doi.org/)
 
-## Updates 
-You may follow us in Twitter for regular updates: https://twitter.com/AntonioRausell
+## News 
+You may follow us in Twitter for regular news and updates: https://twitter.com/AntonioRausell
 
