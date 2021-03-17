@@ -12,7 +12,7 @@ output:
 CNVxplorer is a user-friendly web application developed to assist in the clinical interpretation of CNVs. For this purpose, CNVxplorer provides the user with the following main features:
 
 <p align="center">
-  <img  src="overview.jpg" width='750' height='400'>
+  <img  src="overview.jpg" width='750' height='1000'>
 </p>
 
 ## Features 
@@ -34,7 +34,7 @@ CNVxplorer is a user-friendly web application developed to assist in the clinica
 </center>
 
 ## News
-
+- **v. 0.13 (17/03/2021)**. Added Imagine logo, overview figure and terms of use
 - **v. 0.12 (06/03/2021)**. Added genetic and phenotypic entities information (bar and co-occurrence plot) + search entities in Title+Abstract; Change of titles; New Documentation tab with the version of databases used
 - **v. 0.11 (17/12/2020)**. Added help buttons; Fixed minor bugs; changed structure FAQs 
 - **v. 0.1 (8/12/2020)**. Public release.
