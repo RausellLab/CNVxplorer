@@ -2,7 +2,7 @@
 tablerDashPage(
   
   navbar = tablerDashNav(
-    
+    img(src = 'imagine_logo.png', height = '75px', width = '150px'),
     shinyjs::useShinyjs(),
     useShinyalert(),
     tags$head(includeHTML("www/google_analytics.html")),
@@ -135,14 +135,14 @@ tablerDashPage(
                        uiOutput('choose_geno_karyo2')),
                        conditionalPanel(
                          condition = "input.input_geno_karyo == 'Multiple coordinates (NGS)'",
-                         fileInput("file_cnv", label = h5("Upload file (.bed):")%>% helper(type = "inline",
+                         fileInput("file_cnv", label = h5("Upload file (.tsv):")%>% helper(type = "inline",
                                                                                                                # icon = "exclamation",
                                                                                                                style = "text-indent: 0.5em;",
                                                                                                                title = "File missing",
                                                                                                                size = "m",
                                                                                                                buttonLabel = 'OK',
-                                                                                                               content = c("If you can not find your file, please make sure the filename ends with .bed")
-                         ), accept = '.bed' ),
+                                                                                                               content = c("If you can not find your file, please make sure the file extension is .bed or .tsv")
+                         ), accept = c('.bed', '.tsv'),
                          downloadLink('download_file_1', label = "Download file example [#1]")
                        )
                        
@@ -210,7 +210,7 @@ tablerDashPage(
               ),
 
             # img(src = 'imagine_logo.png', height = '120px', width = '250px', align = 'right'),
-            img(src = 'imagine_logo.png'),
+            # img(src = 'imagine_logo.png'),
             tags$hr(),
             uiOutput('ref_user_region'),
             uiOutput('ref_user_cytoband'),
@@ -913,8 +913,8 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
                             width = 12,
                             collapsible = FALSE,
                             closable = FALSE,
-                            fileInput("upload_bed_file", label = h5(strong("CNVs regions (.bed file)")), 
-                                      accept = c(".bed"))),
+                            fileInput("upload_bed_file", label = h5(strong("CNVs regions (.tsv file)")), 
+                                      accept = c(".bed", '.tsv'))),
                  tablerCard(title = 'Filter by size',
                             width = 12,
                             collapsible = FALSE,
