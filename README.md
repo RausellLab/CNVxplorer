@@ -13,7 +13,7 @@ A companion preprint is presented in BioRxiv: [CNVxplorer: a web tool to assist 
   - [Overview](#Overview)
   - [Features highlight](#Features highlight)
   - [Availability](#Availability)
-  - [Installation](#Installation)
+  - [Local installation](https://github.com/RausellLab/CNVxplorer/blob/master/README.md#local-installation)
   - [Authors and contact](#Authors)
   - [License](#License)
   - [References](#References)
