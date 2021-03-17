@@ -17,6 +17,7 @@ A companion preprint is presented in BioRxiv: [CNVxplorer: a web tool to assist 
 
 ## Overview
 
+CNVxplorer, a web server suited for the functional assessment of CNVs in a clinical diagnostic setting. CNVxplorer mines a comprehensive set of clinical, genomic, and epigenomic features associated with CNVs. It provides sequence constraint metrics, impact on regulatory elements and topologically associating domains, as well as expression patterns. Analyses offered cover (a) agreement with patient phenotypes; (b) visualizations of associations among genes, including those mediated by regulatory elements, and transcription factors; (c) enrichment on functional and pathway annotations; and (d) co-occurrence of terms across PubMed publications related to the query CNVs. A flexible evaluation workflow allows dynamic re-interrogation in clinical sessions
 <p align="center">
 
 <img  src="https://github.com/frequena/cnvxplorer/blob/master/doc/overview.jpg">
@@ -46,13 +47,15 @@ A companion preprint is presented in BioRxiv: [CNVxplorer: a web tool to assist 
     co-presence network, and filter articles by association
     with Mendelian diseases and genes.
 
-### Access
+### Availability
 
-You can find an instance of CNVxplorer running at this address:
+CNVxplorer is publicly available at <http://cnvxplorer.com>
 
-<http://cnvxplorer.com>
+Detailed tutorials, comprehensive documentation, and a Frequently Asked Questions section are provided.
 
-## Installation
+In addition, a stand-alone open-source R implementation with a shiny interface is offered in this repository, allowing its deployment as a private server through a Docker image without external dependencies. Instructions to locally deploy the application are provided in the next section.
+
+## Installation as a local private server.
 
 ## Docker installation (3 lines)
 
@@ -71,7 +74,7 @@ docker run -d -p 3838:3838 cnvxplorer # -p (specify port) -d (detached mode)
 # (EXPOSE instruction)
 ```
 
-### Local installation
+### Local installation of CNVxplorer
 
 ``` bash
 
