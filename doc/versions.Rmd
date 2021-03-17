@@ -117,21 +117,10 @@ output:
 <p>OMIM</p>
 </td>
 <td width="83">
-<p>2021-03-04</p>
+<p>2020_03_12</p>
 </td>
 <td width="273">
 <p>http://www.omim.org/</p>
-</td>
-</tr>
-<tr>
-<td width="247">
-<p>HUGO Gene Nomenclature Committee</p>
-</td>
-<td width="83">
-<p>2021-03-03</p>
-</td>
-<td width="273">
-<p>&nbsp;http://www.genenames.org/</p>
 </td>
 </tr>
 <tr>
