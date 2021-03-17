@@ -14,6 +14,10 @@ A companion preprint is presented in BioRxiv: [CNVxplorer: a web tool to assist 
   - [Features](#Features)
   - [Access](#Access)
   - [Installation](#Installation)
+  - [Authors](#Authors)
+  - [License](#License)
+  - [References](#References)
+  - [Updates] (#Updates)
 
 ## Overview
 
@@ -93,3 +97,20 @@ R -e 'load('local_data.RData')'
 # Make sure you have all the packages installed
 R -e 'shiny:runApp()'
 ```
+
+## Authors and contact
+
+* **Francisco Requena** - [francisco.requena@institutimagine.org](francisco.requena@institutimagine.org)
+* **Antonio Rausell** -  [antonio.rausell@institutimagine.org](antonio.rausell@institutimagine.org)
+
+## License
+
+This project is licensed under the GNU General Public License 3 - see the [LICENSE](LICENSE) file for details
+
+## References
+
+CNVxplorer: a web tool to assist clinical interpretation of CNVs in rare disease patients. Requena F, Abdallah HA, García A, Nitschké P, Romana S, Malan V, Rausell A. BioRxiv 2021. doi: [https://doi.org/](https://doi.org/)
+
+## Updates 
+You may follow us in Twitter for regular updates: https://twitter.com/AntonioRausell
+
