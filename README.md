@@ -1,6 +1,11 @@
 
 # CNVxplorer: A webtool for the clinical interpretation of CNVs in rare disease patients
 
+----------------------------------------
+
+Welcome to the official Github repository of the **CNVxplorer** webserver presented at the BioRxiv preprint [CNVxplorer: a web tool to assist clinical interpretation of CNVs in rare disease patients](https://www.biorxiv.org/)
+
+
 # Table of contents
 
   - [Overview](#Overview)
@@ -16,27 +21,28 @@
 
 </p>
 
-## Features
+## Feature highlights
 
   - Query a genomic interval, cytoband, or upload a file with multiple
-    genomic regions and analyze it simultaneously.
-  - Compare the genetic evidence of disease genes from five different
-    databases (OMIM, ORPHANET, ClinGen, DECIPHER, and Genomics England
-    PanelApp).
+    genomic regions.
   - Explore CNV syndromes, pathogenic and non-pathogenic CNVs, disease
     variants (ClinVar, GWAS), and denovo variants (denovo.db) that
-    overlap with the CNVs.
-  - Find regulatory elements disrupted by the variant and their target
-    genes.
-  - Consider those target genes that do not map the input variant(s) in
-    the subsequent analysis (optional).
-  - Identify relevant diseases and genes based on phenotypic similarity
-    with the clinical characteristics of the patient.
-  - Check the phenotype of the orthologous genes in experiments with
-    mouse models.
-  - Find PubMed articles related to your variants and filter the
-    relevant ones by keyword, number of citations, or by association
-    with the OMIM database.
+    overlap with the query CNV(s).
+  - Explore protein-coding genes targetted by the query CNV(s), including
+    disease annotations from five reference sources (OMIM, ORPHANET, 
+    ClinGen, DECIPHER, and Genomics England PanelApp).
+  - Find regulatory elements overlapping within the genomic intervals
+    of the query CNV(s) as well as their target genes (within or outside
+    the query CNV(s) genomic intervals.
+  - Identify the genomic elements associated to the query CNV(s) with
+    the closest phenotypic similarity to the patient's clinical signs.
+  - Check the phenotype of KO experiments of the orthologous genes in mouse
+    models.
+  - Perform gene-set level analyses covering functional and pathway enrichment,
+    tissue specific expression and gene/protein interaction network analyses.
+  - Find PubMed articles related to the query CNV(s), analyse their keywork
+    co-presence network, and filter articles by association
+    with Mendelian diseases and genes.
 
 ### Access
 
