@@ -12,7 +12,7 @@ output:
 CNVxplorer is a user-friendly web application developed to assist in the clinical interpretation of CNVs. For this purpose, CNVxplorer provides the user with the following main features:
 
 <p align="center">
-  <img  src="overview.jpg" width='750' height='1000'>
+  <img  src="overview2.jpg" width='750' height='1000'>
 </p>
 
 ## Features 
