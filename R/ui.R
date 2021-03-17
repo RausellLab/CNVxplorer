@@ -5,7 +5,7 @@ tablerDashPage(
     
     shinyjs::useShinyjs(),
     useShinyalert(),
-    tags$head(includeHTML("../www/google_analytics.html")),
+    tags$head(includeHTML("www/google_analytics.html")),
     # tags$script(HTML("
     #     var openTab = function(tabName){
     #       $('a', $('.sidebar')).each(function() {
@@ -120,7 +120,7 @@ tablerDashPage(
                        statusSide = 'left',
                        prettyRadioButtons(
                          inputId = "input_geno_karyo",
-                         label = "Choose:", 
+                         label = "Choose: (GRCh37 coordinates)", 
                          choices = c("Genomic coordinates", "G banding", 'Multiple coordinates (NGS)'),
                          inline = TRUE, 
                          status = "primary",
@@ -209,10 +209,14 @@ tablerDashPage(
               )
               ),
 
+            # img(src = 'imagine_logo.png', height = '120px', width = '250px', align = 'right'),
+            img(src = 'imagine_logo.png'),
+            tags$hr(),
             uiOutput('ref_user_region'),
             uiOutput('ref_user_cytoband'),
             uiOutput('ref_user_length'),
             uiOutput('check_blacklist')
+            
 
           )
         ),
