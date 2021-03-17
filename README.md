@@ -16,8 +16,9 @@ A companion preprint is presented in BioRxiv: [CNVxplorer: a web tool to assist 
   - [Local installation](#local-installation)
   - [Authors and contact](#authors-and-contact)
   - [License](#License)
+  - [Disclaimer](#Disclaimer)
   - [References](#References)
-  - [News] (#News)
+  - [News](#News)
 
 ## Overview
 
@@ -106,6 +107,16 @@ R -e 'shiny:runApp()'
 ## License
 
 This project is licensed under the GNU General Public License 3 - see the [LICENSE](LICENSE) file for details
+
+See the License for the specific language governing permissions and limitations under the License.
+
+Copyright 2021 Clinical BioInformatics Laboratory - Institut Imagine
+
+## Disclaimer
+
+CNVxplorer or any document available from this server are distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express, implied, or statutory, including, but not limited to, any implied warranties of merchantability, fitness for a particular purpose and freedom from infringement, or that CNVxplorer or any documents available from this server will be error-free.
+
+In no event will the Imagine Institute, the Clinical Bioinformatics lab, or any of its members be liable for any damages, including but not limited to direct, indirect, special, or consequential damages, arising out of, resulting from, or in any way connected with the use of CNVxplorer or documents available from it.
 
 ## References
 
