@@ -61,7 +61,7 @@ RUN Rscript -e "BiocManager::install(c('karyoploteR','Gviz','TissueEnrich', 'Rht
 
 
 # Copy the app to the image
-COPY cnvxplorer /srv/shiny-server/
+COPY CNVxplorer /srv/shiny-server/
 
 # Unzip local data
 
