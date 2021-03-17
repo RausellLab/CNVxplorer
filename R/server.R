@@ -5390,7 +5390,7 @@ HTML('<center>
 
 
   output$download_file_1 <- downloadHandler(
-    filename = 'file_example.bed',
+    filename = 'file_example.tsv',
     content = function(file) {
       
       write_tsv(down_file1(), file)
