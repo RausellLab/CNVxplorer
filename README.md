@@ -3,7 +3,9 @@
 
 ----------------------------------------
 
-Welcome to the official Github repository of the **CNVxplorer** webserver presented at the BioRxiv preprint [CNVxplorer: a web tool to assist clinical interpretation of CNVs in rare disease patients](https://www.biorxiv.org/)
+Welcome to the official Github repository of the **CNVxplorer** webserver available at http://cnvxplorer.com
+
+A companion preprint is presented in BioRxiv: [CNVxplorer: a web tool to assist clinical interpretation of CNVs in rare disease patients](https://www.biorxiv.org/)
 
 
 # Table of contents
