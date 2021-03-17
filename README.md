@@ -88,7 +88,9 @@ section.
 
 # Note: the first session after the deployment is slower since the application loads all the data required
 
-git clone https://github.com/frequena/cnvxplorer.git
+git clone https://github.com/RausellLab/CNVxplorer.git
+
+mv CNVxplorer/Dockerfile .
 
 docker build -t cnvxplorer . # The tag "cnvxplorer" is optional
 
