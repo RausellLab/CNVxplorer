@@ -101,6 +101,11 @@ R -e 'shiny:runApp()'
 
 ## Authors and contact
 
+CNVxplorer has been developed by Francisco Requena and Antonio Rausell, at the [Clinical Bioinformatics Laboratory](https://www.institutimagine.org/en/antonio-rausell-161) of the [Imagine Institute](https://www.institutimagine.org/en/) in Paris, France.
+
+CNVxplorer is the result of a close collaboration with Prof. Valérie Malan and Prof. Serge Romana, from the [Cytogenetics Service of the Necker Hospital for Sick Children](http://hopital-necker.aphp.fr/histologie) (APHP) and the [Bioinformatics Platform](https://www.institutimagine.org/en/patrick-nitschke-201) of the Imagine Institute headed by Patrick Nitschké.
+
+Please address comments and questions about CNVxplorer to:
 * **Francisco Requena** - [francisco.requena@institutimagine.org](francisco.requena@institutimagine.org)
 * **Antonio Rausell** -  [antonio.rausell@institutimagine.org](antonio.rausell@institutimagine.org)
 
