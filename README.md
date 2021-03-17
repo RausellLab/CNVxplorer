@@ -20,7 +20,7 @@ A companion preprint is presented in BioRxiv: [CNVxplorer: a web tool to assist 
 CNVxplorer, a web server suited for the functional assessment of CNVs in a clinical diagnostic setting. CNVxplorer mines a comprehensive set of clinical, genomic, and epigenomic features associated with CNVs. It provides sequence constraint metrics, impact on regulatory elements and topologically associating domains, as well as expression patterns. Analyses offered cover (a) agreement with patient phenotypes; (b) visualizations of associations among genes, including those mediated by regulatory elements, and transcription factors; (c) enrichment on functional and pathway annotations; and (d) co-occurrence of terms across PubMed publications related to the query CNVs. A flexible evaluation workflow allows dynamic re-interrogation in clinical sessions
 <p align="center">
 
-<img  src="https://github.com/RausellLab/CNVxplorer/tree/master/doc/overview.svg">
+<img  src="https://github.com/RausellLab/CNVxplorer/blob/master/doc/Overview.svg">
 
 </p>
 
