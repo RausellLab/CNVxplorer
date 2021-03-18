@@ -142,7 +142,7 @@ tablerDashPage(
                                                                                                                size = "m",
                                                                                                                buttonLabel = 'OK',
                                                                                                                content = c("If you can not find your file, please make sure the file extension is .bed or .tsv")
-                         ), accept = c('.bed', '.tsv'),
+                         ), accept = c('.bed', '.tsv')),
                          downloadLink('download_file_1', label = "Download file example [#1]")
                        )
                        
@@ -1219,7 +1219,7 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
                              'Input data and software' = 'versions',
                              'Installation' = 'installation',
                              'Browser compatibility' = 'browser', 
-                             'Contact' = 'contact',
+                             'About' = 'contact',
                              'Terms of use' = 'terms_of_use'),
               inline = TRUE, 
               status = "primary",
