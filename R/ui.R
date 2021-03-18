@@ -208,10 +208,6 @@ tablerDashPage(
                          
               )
               ),
-
-            # img(src = 'imagine_logo.png', height = '120px', width = '250px', align = 'right'),
-            # img(src = 'imagine_logo.png'),
-            tags$hr(),
             uiOutput('ref_user_region'),
             uiOutput('ref_user_cytoband'),
             uiOutput('ref_user_length'),
