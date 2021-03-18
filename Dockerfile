@@ -67,7 +67,7 @@ COPY CNVxplorer /srv/shiny-server/
 
 RUN gunzip /srv/shiny-server/local_data.RData.gz 
 
-RUN cat shiny-server.txt > /etc/shiny-server/shiny-server.conf
+RUN cat /etc/shiny-server/shiny-server.txt > /etc/shiny-server/shiny-server.conf
 
 
 RUN echo 'allow_app_override;' >> /etc/shiny-server/shiny-server.conf
