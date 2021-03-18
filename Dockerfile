@@ -60,12 +60,14 @@ RUN R -e "install.packages(c('shinydashboard', \
 RUN Rscript -e "BiocManager::install(c('karyoploteR','Gviz','TissueEnrich', 'Rhtslib', 'ReactomePA', 'clusterProfiler', 'org.Hs.eg.db', 'DOSE', 'chromPlot'))"
 
 
-# test
-RUN cat CNVxplorer/shiny-server.txt > /etc/shiny-server/shiny-server.conf
+
 
 
 # Copy the app to the image
 COPY CNVxplorer /srv/shiny-server/
+
+# test
+RUN cat /srv/shiny-server/shiny-server.txt > /etc/shiny-server/shiny-server.conf
 
 # Unzip local data
 
