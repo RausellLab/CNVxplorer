@@ -695,7 +695,7 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
         ),
 
 
-        fluidRow(
+        # fluidRow(
 
           tablerCard(
             title = "Disease-associated variants",
@@ -721,7 +721,7 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
           )
 
           
-        )
+        # )
       ),
       tablerTabItem(
         tabName = "reg_region",
