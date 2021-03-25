@@ -26,6 +26,12 @@ CNVxplorer is a user-friendly web application developed to assist in the clinica
 * Check the phenotype of the orthologous genes in experiments with mouse models.
 * Find PubMed articles related to your variants and filter the relevant ones by keyword, number of citations, or by association with the OMIM database.
 
+## How to cite
+
+[CNVxplorer: a web tool to
+assist clinical interpretation of CNVs in rare disease
+patients](https://www.medrxiv.org/content/10.1101/2021.03.19.21253806v1)
+
 
 ## Google group
 
