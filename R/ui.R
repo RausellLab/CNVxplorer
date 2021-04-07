@@ -5,16 +5,7 @@ tablerDashPage(
     img(src = 'imagine_logo.png', height = '75px', width = '150px'),
     shinyjs::useShinyjs(),
     useShinyalert(),
-    tags$head(includeHTML("www/google_analytics.html")),
-    # tags$script(HTML("
-    #     var openTab = function(tabName){
-    #       $('a', $('.sidebar')).each(function() {
-    #         if(this.getAttribute('data-value') == tabName) {
-    #           this.click()
-    #         };
-    #       });
-    #     }
-    #   ")),
+    tags$head(includeHTML("www/google_analytics.html"))
 
     navMenu = tablerNavMenu(
       
@@ -226,7 +217,7 @@ tablerDashPage(
                             zoomable = FALSE,
                             status = 'success',
                             statusSide = 'left',
-                            title = tagList(shiny::icon("database"), "Overlap with reference CNV databases"
+                            title = tagList(shiny::icon("database"), 'Overlap with reference CNV databases',
                                             ),
                             fluidRow(
                               column(width = 4,
@@ -363,7 +354,7 @@ tablerDashPage(
                                                                                       size = "m",
                                                                                       buttonLabel = 'OK',
                                                                                       content = c("
-CNVxplorer compares the length of the CNV provided by the user and the length distribution of the CNVs found in four databases (DGV, gnomAD, DECIPHER Control, DECIPHER). To make a comparison, we provide two approaches:",
+CNVxplorer compares the length of the CNV provided by the user and the length distribution of the CNVs found in five databases (DGV, gnomAD, DECIPHER Control, DECIPHER, ClinVar). To make a comparison, we provide two approaches:",
                                                                                                   
                                                                                                   "<b> Global: </b> The length of the CNV is compared with the total number of CNVs available in the databases.",
                                                                                                   "<b> Local: </b> The comparison is made exclusively with the CNVs mapping the query.",
@@ -657,8 +648,6 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
           closable = FALSE,
           overflow = TRUE
         ),
-
-        fluidRow(
           tablerCard(
             title = "Overlap with disease genes",
             DTOutput("dgenes"),
@@ -677,7 +666,7 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
             options = tagList(
               uiOutput('input_source')
             )
-          )),
+          ),
         tablerCard(
           title = "Overlap with disease & non-disease genes"  %>% helper(type = "inline",
                                                                          style = "text-indent: 0.5em;",
@@ -1185,11 +1174,11 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
         tablerCard(title = 'Mouse phenotypes associated with genes',
                    plotOutput('agg_model'),
                    width = 12),
-        fluidRow(
+        
 
           tablerCard(title = 'Orthologous genes associated with phenotypes in mouse (MGI)',
                      DTOutput('model_genes'),
-                     width = 12))
+                     width = 12)
         
       ),
       tablerTabItem(
@@ -1287,7 +1276,7 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
             prettyRadioButtons(
               inputId = "entity_title_abstract",
               label = tags$b("Choose:"),
-              choices = c("Title", 'Title + abstract'),
+              choices = c('Title + abstract', "Title"),
               inline = FALSE, 
               status = "primary",
               fill = TRUE
