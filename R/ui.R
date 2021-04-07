@@ -5,7 +5,7 @@ tablerDashPage(
     img(src = 'imagine_logo.png', height = '75px', width = '150px'),
     shinyjs::useShinyjs(),
     useShinyalert(),
-    tags$head(includeHTML("www/google_analytics.html"))
+    tags$head(includeHTML("www/google_analytics.html")),
 
     navMenu = tablerNavMenu(
       
