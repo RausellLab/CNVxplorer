@@ -1,5 +1,8 @@
 function(input, output, session) {
   
+  
+  observe_helpers() # do not remove -> helper dialogs 
+  
   observeEvent(input$start_analysis, {
     
     shinyjs::reset("dgenes_rows_selected")
@@ -4537,7 +4540,7 @@ HTML('<center>
                                          tibble('chrom' = chrom, 'start' = start,
                                                       'end' = end)) %>% pull(gene.x), collapse = ', ')) %>%
       ungroup() %>%
-      relocate(p_overlap, everything())
+      select(p_overlap, everything())
     
     
     datatable(tmp_df, 
