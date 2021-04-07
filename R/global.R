@@ -101,6 +101,7 @@ ridges_home <- cnv_df %>%
              source == 'gnomad_v2.1' ~ 'gnomAD v2.1',
              source == 'decipher_control' ~ 'DECIPHER Control'
            )) %>%
+  bind_rows(clinvar_variants %>% filter(length_cnv >= 50) %>% mutate(source = paste('ClinVar','-', clinical)) %>% select(source, length_cnv)) %>%
   ggplot(aes(length_cnv, y = source)) +
   stat_density_ridges(quantile_lines = TRUE, quantiles = 2, aes(fill = source), alpha = 0.6, show.legend = FALSE, size = 1.25) +
   scale_x_log10() +
