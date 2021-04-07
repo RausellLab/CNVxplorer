@@ -1,47 +1,5 @@
 function(input, output, session) {
   
-  
-  
-  # res_auth <- secure_server(
-  #   check_credentials = check_credentials(credentials)
-  # )
-  # 
-  # output$auth_output <- renderPrint({
-  #   reactiveValuesToList(res_auth)
-  # })
-  
-  #azteca
-  # waitress <- waitress$new(theme = "overlay-percent") # call the waitress
-  # 
-  # observeEvent(input$start_analysis, {
-  #     waitress$
-  #       start()$
-  #       auto(percent = 5, ms = 150) # increase by 5 percent every 150 milliseconds
-  #     Sys.sleep(3.5)
-  #     waitress$hide()
-  #   })
-  # 
-  
-  # check_popup <- reactive({
-  #   
-  #   start_coordinates <- coord_user()[1]
-  #   end_coordinates <- coord_user()[2]
-  #   
-  #   test02399 <<- start_coordinates
-  #   test0231 <<- end_coordinates
-  #   
-  #   
-  #   test_length <- if((end_coordinates - start_coordinates + 1) < 0)
-  #   
-  #   
-  # observeEvent(((coord_user()[2] - coord_user()[1] + 1) < 0), {
-  #   shinyalert("The end of the genomic interval is lower than the start", type = "error")
-  # })
-  
-  # })
-  
-
-  
   observeEvent(input$start_analysis, {
     
     shinyjs::reset("dgenes_rows_selected")
@@ -69,12 +27,9 @@ function(input, output, session) {
     
     shinyjs::reset('input_gene_tissue')
     shinyjs::reset('input_tissue')
-    
-    
     #
     shinyjs::reset('counter_header')
     shinyjs::reset('select_reg_region')
-    
     #
     shinyjs::reset('enable_net')
     shinyjs::reset('choose_net_source')
@@ -192,19 +147,21 @@ function(input, output, session) {
 
     }
   })
-  
-  
-  observe_helpers()
 
-  
   map_blacklist <- reactive({
 
-    blacklist_encode %>%
-      bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
-      select(-startdelete, -enddelete, -.overlap)
+    input_test <- coord_user() %>% mutate(start = start - 1) 
+    
+    tmp_df <- blacklist_encode %>% 
+      mutate(length_cnv = end - start + 1) %>% 
+      bed_coverage(input_test) %>%
+      filter(.cov > 0) %>%
+      mutate(.frac = paste0(round(.frac * 100, 2), '%')) %>%
+      mutate(tag = paste0(class,' - ', .frac, ' (', chrom,':', start, '-', end, ')'))
     
     
-    
+    tmp_df
+
   })
   
   
@@ -214,26 +171,14 @@ function(input, output, session) {
     
     
     req(nrow(tmp_df) > 0)
-    
-    if (tmp_df %>% count(class) %>% nrow() > 1) {
-      
-      say_this <- 'High signal and low mappability region(s) overlapping with the CNV'
-      
-    } else if (str_detect(tmp_df$class[1], 'High')) {
-      
-      say_this <- 'High signal region(s) overlapping with the CNV'
-      
-    } else {
-      say_this <- 'Low mappability region(s) overlapping with the CNV'
-    }
-    
-    
+
     tablerInfoCard(
       width = 12,
-      value =  nrow(tmp_df),
+      value =  paste(nrow(tmp_df), 'problematic regions'),
       status = "danger",
       icon = "database",
-      description =  say_this)
+      description =  HTML(tmp_df %>% pull(tag) %>% paste(collapse = ' <br/> '))
+    )
     
     
   })
@@ -896,151 +841,7 @@ function(input, output, session) {
     )
     
   })
-  
-  
-  # run_arules <- reactive({
-  #   
-  #   # test913 <<- as.numeric(input$type_cnv)
-  #   # test914 <<- as.numeric(input$denovo_yes_no)
-  #   
-  #   tmp_variant <- as.numeric(input$type_cnv) # Deletion 1 - Duplication 0
-  #   tmp_inheritance <- as.numeric(input$denovo_yes_no) # De novo consitutive 1 - Other 0
-  #   
-  #   # tmp_start <- as.numeric(coord_user()[1])
-  #   # tmp_end <- as.numeric(coord_user()[2])
-  #   # tmp_chrom <- coord_user()[3]
-  #   
-  #   # tmp_start <- 34813719
-  #   # tmp_end <- 36278623
-  #   # tmp_chrom <- '4'
-  #   
-  #   tmp_out  <- check_app_cnv( 1, 1, tmp_variant, tmp_inheritance,
-  #                              tmp_chrom, tmp_start, tmp_end)  %>% 
-  #     select(-id, -clinical) %>%
-  #     rename(maximum_pli =  max_pli)
-  #   
-  #   test99912 <<- tmp_out
-  #   object <- model_cba
-  #   newdata <- tmp_out
-  #   type <- 'class'
-  #   method <- model_cba$method
-  #   
-  #   
-  #   
-  #   newdata <- arules::discretizeDF(tmp_out, lapply(object$discretization, 
-  #                                                   FUN = function(x) list(method = "fixed", breaks = x)))
-  #   
-  #   newdata <- as(newdata, "transactions")
-  #   newdata <- arules::recode(newdata, match = lhs(object$rules))
-  #   rulesMatchLHS <- is.subset(lhs(object$rules), newdata, sparse = (length(newdata) * 
-  #                                                                      length(rules(object)) > 150000))
-  #   dimnames(rulesMatchLHS) <- list(NULL, NULL)
-  #   
-  #   matched_rules <- rulesMatchLHS %>% as_tibble(name = 'V1') %>% 
-  #     mutate(id = row_number()) %>% 
-  #     filter(V1 == TRUE) %>% 
-  #     pull(id)
-  #   
-  #   validate(
-  #     need( length(matched_rules) != 0, "No association rules matching")
-  #   )
-  #   
-  #   test900410410 <<- matched_rules
-  #   
-  #   tmp_output <- bind_cols(quality(model_cba$rules[matched_rules]), 
-  #                           labels(model_cba$rules[matched_rules],  itemSep = " + ") %>% 
-  #                             enframe(name = 'rule')) %>%
-  #     slice(1)
-  #   
-  #   conf_result <- tmp_output$confidence
-  #   
-  #   tmp_object <- tmp_output$value %>% str_split('=>')
-  #   
-  #   test0202 <<- tmp_object
-  #   
-  #   prediction_result <- tmp_object[[1]][2] %>% 
-  #     str_remove('\\{clinical=') %>%
-  #     str_remove('\\}')
-  #   
-  #   rules_result <- tmp_object[[1]][1] %>% 
-  #     str_split('\\+')
-  #   
-  #   test0101 <<- list('prediction' = prediction_result, 
-  #                     'rules' = rules_result)
-  #   
-  #   output_list <- list('prediction' = prediction_result, 
-  #                       'rules' = rules_result,
-  #                       'confidence' = round(conf_result,1)*100)
-  #   
-  # })
-  
-  
-  
-  # output$rules_arules <- renderDT({
-  #   
-  # 
-  #   df_rules <- run_arules()[[2]][[1]] %>% 
-  #     enframe(name = 'rule') %>%
-  #     separate(value, sep = '=', into = c('def', 'value')) %>%
-  #     mutate(def = str_remove(def, '\\{'),
-  #            def = str_replace(def, 'n_cnv_syndromes', 'Nº of CNV syndromes overlapping'),
-  #            def = str_replace(def, 'disease_variants', 'Nº of disease variants overlapping'),
-  #            def = str_replace(def,  'embryo_mouse', 'Nº of genes associated with lethality in embryonic mouse'),
-  #            def = str_replace(def, 'n_genes_hpo', 'Nº of genes associated with HPO terms'),
-  #            def = str_replace(def, 'n_genes', 'Nº of genes'),
-  #            def = str_replace(def,  'type_variant', 'Type of CNV'),
-  #            def = str_replace(def,  'type_inheritance', 'Type of inheritance'),
-  #            def = str_replace(def, 'nonpatho_cnv', 'Nº of non-pathogenic CNVs overlapping'),
-  #            def = str_replace(def, 'patho_cnv', 'Nº of pathogenic CNVs overlapping'),
-  #            def = str_replace(def, 'disease_genes', 'Nº disease genes'),
-  #            def = str_replace(def, 'maximum_pli', 'Maximum pLI score found'),
-  #            def = str_replace(def, 'n_tf', 'Nº of transcription factors (TFs)')
-  #     ) %>%
-  #     mutate(value = str_replace(value, '-Inf', '0'),
-  #            value = str_replace(value, '\\[', 'from '),
-  #            value = str_replace(value, ',', ' to '),
-  #            value = str_replace(value, '\\)', ''),
-  #            value = str_replace(value, '\\]', ''),
-  #            value = str_replace(value, '\\}', ''),
-  #            value = str_replace(value, 'from 0.5 to  Inf', 'higher than 0'),
-  #            value = str_replace(value, 'from 0 to 0.5', 'equal to 0')
-  #            ) %>%
-  #     mutate(rule = paste0("<b>", rule, "</b>"),
-  #            def = paste0("<b>", def, "</b>"))
-  #   
-  #   datatable(df_rules, 
-  #             escape = FALSE,
-  #             rownames = FALSE, 
-  #             colnames = c('Rule', 'Description', 'Value'),
-  #             options = list(dom = 't',
-  #                            columnDefs = list(list(className = 'dt-center', targets = c(0:2)))), 
-  #             class = 'cell-border stripe')
-  #   
-  #   
-  # })
-  
-  output$ui_run_arules  <- renderUI({
-    
-    
-    
-    tablerStatCard(
-      value =   run_arules()[[1]],
-      title = "Prediction - association rules",
-      width = 12
-    )
-    
-  })
-  
-  output$ui_confidence  <- renderUI({
-    
-    tablerStatCard(
-      value =   paste0(run_arules()[[3]], '%'),
-      title = paste("of CNVs of DECIPHER that follow these rules are considered:",
-                    run_arules()[[1]]),
-      width = 12
-    )
-    
-  })
+
   
   
   running_pubmed_del <- reactive({
@@ -1165,8 +966,8 @@ function(input, output, session) {
     }
     
     
-    datatable(tmp_df, rownames = FALSE, filter = 'top', selection = 'single', escape = FALSE,
-              
+    datatable(tmp_df, 
+              rownames = FALSE, filter = 'top', selection = 'single', escape = FALSE,
               colnames = vector_colnames,
               options = list(
                 pageLength = 5, autoWidth = TRUE, style = 'bootstrap', list(searchHighlight = TRUE),
@@ -1634,8 +1435,8 @@ HTML('<center>
       if (input$tads_on_off) {
 
         genes_no_cnv <- tads_reactive() %>% 
-          filter(boundaries_affected == 1) %>% 
-          select(-boundaries_affected) %>% 
+          filter(boundaries_affected == '1/2') %>% 
+          filter(no_mapping != ' - ') %>%
           pull(no_mapping)
         
         if (length(genes_no_cnv) == 2) genes_no_cnv <- paste(genes_no_cnv[1], genes_no_cnv[2])
@@ -2157,19 +1958,22 @@ HTML('<center>
     data_input <- data_selected()  %>% 
       select(-start, -end, -chrom) %>%
       filter(source == 'CNV') %>%
-      select(band, gene, disease, fusil, ohnolog, imprinted, pLI, rvis, ccr, hi, gdi, snipre, ncrvis, 
-             ncgerp, p_overlap)
+      select(p_overlap, band, gene, disease, fusil, ohnolog, imprinted, pLI, rvis, ccr, hi, gdi, snipre, ncrvis, 
+             ncgerp)
     
     validate(
       need(nrow(data_input) > 0, "0 no disease genes.")
     )
     
     
-    tmp_output <- datatable(data_input, rownames = FALSE, 
-                            colnames = c('Band', 'Gene', 'Disease', 'Essentiality',
+    tmp_output <- datatable(data_input, 
+                            extensions = 'Scroller',
+                            options = list(deferRender = TRUE, scrollY = 200, scroller = TRUE),
+                            rownames = FALSE, 
+                            colnames = c('Overlap(%)', 'Band', 'Gene', 'Disease', 'Essentiality',
                                          'Ohnolog', 'Imprinted',
                                          'pLI', 'RVIS', 'CCR', 'HI', 'GDI', 'SnIPRE', 'ncRVIS',
-                                         'ncGERP', 'Overlap(%)'),
+                                         'ncGERP'),
                             filter = list(position = 'top'), 
                             selection = 'single') %>%
       formatStyle(c('pLI', 'rvis', 'hi', 'gdi', 'snipre', 'ncrvis', 'ncgerp'), color = styleInterval(94, c('weight', '#ff7f7f'))) %>%
@@ -2239,6 +2043,8 @@ HTML('<center>
     
     
     tmp_output <- datatable(data_input, rownames = FALSE, 
+                            extensions = 'Scroller',
+                            options = list(deferRender = TRUE, scrollY = 200, scroller = TRUE),
                             colnames = c('Band', 'Gene', 'Disease', 'Essentiality',
                                          'Ohnolog', 'Imprinted',
                                          'pLI', 'RVIS', 'CCR', 'HI', 'GDI', 'SnIPRE', 'ncRVIS',
@@ -2322,18 +2128,9 @@ HTML('<center>
    
     
     size_cnv_query = coord_user() %>% mutate(length_cnv_input = end - start + 1)
-    
-    
-    
-    
+
     if (input$select_density == 'global') {
-      
-      # 
-      # ridges_home +
-      #   geom_vline(xintercept = 10000000) +
-      #   annotate('text',x = 10000000, y = 5, label = 'xd')
-      
-      
+
       ridges_home +
         geom_vline(data = size_cnv_query,
                    aes(xintercept = length_cnv_input), linetype = 2, color = 'red', size = 1.5)
@@ -2348,6 +2145,11 @@ HTML('<center>
                    source == 'gnomad_v2.1' ~ 'gnomAD v2.1',
                    source == 'decipher_control' ~ 'DECIPHER Control'
                  )) %>%
+        bind_rows(clinvar_variants %>% 
+                    filter(length_cnv >= 50) %>% 
+                    bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
+                    mutate(source = paste('ClinVar','-', clinical)) %>% 
+                    select(source, length_cnv)) %>%
         ggplot(aes(length_cnv, y = source)) +
         stat_density_ridges(quantile_lines = TRUE, quantiles = 2, aes(fill = source), alpha = 0.6, 
                             show.legend = FALSE, size = 1.25, bandwidth = 0.304) +
@@ -2521,9 +2323,13 @@ HTML('<center>
       mutate(term = paste0("<a href='", paste0('http://www.informatics.jax.org/vocab/mp_ontology/', term),"' target='_blank'>", term,"</a>"))
     
     
-    datatable(df_tmp, escape = FALSE, rownames = FALSE, 
+    datatable(df_tmp, 
+              extensions = 'Scroller',
+              escape = FALSE, 
+              rownames = FALSE, 
               colnames = c('Source','Human ortholog gene', 'Mouse gene', 'Mouse phenotype id', 'Phenotype description'),
               options = list(
+                deferRender = TRUE, scrollY = 200, scroller = TRUE,
                 columnDefs = list(list(className = 'dt-center', targets = 0:4) )))
 
   })
@@ -2859,16 +2665,13 @@ HTML('<center>
     
 
     tmp_desc_2 <- paste(paste(tmp_tbl$n, 'Target-genes', '-', tmp_tbl$source ), collapse =" <br/> ")
-    # HTML(paste("Target-genes miRNAs", "Target-genes enhancers", sep="<br/>"))
-    
+
     tablerInfoCard(
       width = 12,
       value = paste0('+', tmp_tbl %>% pull(n) %>% sum(), " genes"),
       status = "warning",
       icon = "database",
-      # description =  tmp_desc_2
       description =  HTML(tmp_desc_2)
-      # description = 'Target-genes miRNAs'
     )
 
   })
@@ -2945,6 +2748,9 @@ HTML('<center>
     
 
     datatable(tmp_df, rownames = FALSE, escape = FALSE,
+              # extensions = 'Scroller',
+              filter = 'top',
+              # options = list(deferRender = TRUE, scrollY = 200, scroller = TRUE),
               colnames = c('ID', 'Name', 'Chrom', 'Start', 'End',
                            'Target-gene', 'Validation experiment', 'Reference', 'Mapping query?'))
     
@@ -2978,7 +2784,11 @@ HTML('<center>
       need(nrow(tf_raw()) > 0, '0 Transcription factors (TFs) found.')
     )
     
-    datatable(tf_raw(), rownames = FALSE, escape = FALSE,  
+    datatable(tf_raw(), 
+              extensions = 'Scroller',
+              filter = 'top',
+              options = list(deferRender = TRUE, scrollY = 200, scroller = TRUE),
+              rownames = FALSE, escape = FALSE,  
               colnames = c('TF', 'Chrom', 'Start', 'End', 'Target-gene', 'Mechanism', 'Reference', 'Mapping query?'))
 
   })
@@ -3011,7 +2821,10 @@ HTML('<center>
       need(nrow(lncrna_raw()) > 0, '0 lncRNAs found.')
     )
 
-    datatable(lncrna_raw(), rownames = FALSE,
+    datatable(lncrna_raw(), 
+              
+              
+              rownames = FALSE,
               colnames = c('Symbol', 'Chromosome', 'Start', 'End', 'Ensembl ID', 'Target symbol', 
                            'Tissue origin', 'Disease state', 'PMID', 'Mapping query'),
               options = list(
@@ -3166,10 +2979,13 @@ HTML('<center>
     )
     
 
-    datatable(prev_enhancer(), rownames = FALSE, filter = 'top', selection = 'single',
+    datatable(prev_enhancer(),
+              extensions = 'Scroller',
+              rownames = FALSE, filter = 'top', selection = 'single',
               colnames = c('ID Enhancer', 'Chrom',
                            'Start',  'End','Target-gene', 'Phast100way', 'Phast46way Placental', 'Phast46way Primates', 'Mapping query?'),
               options = list(
+                deferRender = TRUE, scrollY = 200, scroller = TRUE,
                 pageLength = 5, 
                 list(searchHighlight = TRUE)
               ))
@@ -3434,55 +3250,33 @@ HTML('<center>
     
   })
 
- 
-  
   tads_reactive <- reactive({
-    
+
     n_hits <- coord_user() %>%
       bed_intersect(tad %>%
                       pivot_longer(-c(id, chrom), names_to = 'coord', values_to = 'start') %>%
                       mutate(end = start)) %>%
       select(id.y) %>%
       count(id.y)
+
+    if (length(n_hits$id.y) == 0) return(tibble())
     
-    tads_one_hit <- n_hits %>%
-      filter(n >= 1) %>%
-      pull(id.y)
-    
-    
-    if (length(tads_one_hit) == 0) {
-      
-      return(tibble())
-      
-    } else {
 
     tmp_tads <-   tad %>% 
-      filter(id %in% tads_one_hit) %>%
+      filter(id %in% n_hits$id.y) %>%
       rowwise() %>%
       mutate(vector_genes = paste(bed_intersect(hgcn_genes, tibble('chrom' = chrom,
                                                              'start' = start,
                                                              'end' = end)) %>% pull(gene.x),
-                                  collapse = ', '))
-
-    tmp_tads2 <- tmp_tads %>%
-      # ungroup() %>%
-      mutate(vector_genes_2 = vector_genes) %>%
-      select(id, vector_genes_2) %>%
-      separate_rows(vector_genes_2, sep = ', ') %>%
-      mutate(is_mapping = if_else(vector_genes_2 %in% data_selected_prev()$gene, 'yes', 'no')) %>%
-      filter(is_mapping == 'no') %>%
-      select(-is_mapping) %>%
-      mutate(just_name = 1:nrow(.)) %>%
-      pivot_wider(names_from = just_name, values_from = vector_genes_2) %>%
-      unite('no_mapping', -id,  sep = ', ', na.rm = TRUE)
+                                  collapse = ', ')) %>%
+      mutate(no_mapping = paste(str_split(vector_genes, pattern = ', ')[[1]][!str_split(vector_genes, pattern = ', ')[[1]] %in%  data_selected_prev()$gene], collapse = ', ')) %>%
+      mutate(no_mapping = if_else(no_mapping == '', ' - ', no_mapping)) %>%
+      left_join(n_hits %>% rename(boundaries_affected = n), by = c('id' = 'id.y')) %>%
+      select(-id) %>%
+      mutate(boundaries_affected = paste0(boundaries_affected, '/2'))
     
-    tmp_tads3 <- tmp_tads %>%
-      left_join(tmp_tads2, by = 'id') %>%
-      left_join(n_hits %>% rename(boundaries_affected = n), by = c('id' = 'id.y'))
     
-
-    tmp_tads3
-    }
+      tmp_tads
   })
   
   output$df_tads <- renderDT({
@@ -3491,7 +3285,7 @@ HTML('<center>
       need(nrow(tads_reactive()) > 0, 'No TADs disrupted found.')
     )
     
-    datatable(tads_reactive() %>% select(-id) %>% mutate(boundaries_affected = paste0(boundaries_affected, '/2')), 
+    datatable(tads_reactive(), 
               rownames= FALSE,
               colnames = c('Chromosome', 'Start', 'End', 'Genes mapping TAD', 'Genes no mapping CNV(s)',
                            'TAD boundaries disrupted')
@@ -3535,13 +3329,7 @@ HTML('<center>
       # trend = -10,
       width = 12
     )
-    
-    
-    
-    
-    
-    
-    
+
   })
   
   output$n_disease <- renderUI({
@@ -4748,13 +4536,14 @@ HTML('<center>
       mutate(genes = paste(bed_intersect(hgcn_genes, 
                                          tibble('chrom' = chrom, 'start' = start,
                                                       'end' = end)) %>% pull(gene.x), collapse = ', ')) %>%
-      ungroup()
+      ungroup() %>%
+      relocate(p_overlap, everything())
     
     
     datatable(tmp_df, 
               escape = FALSE,
-              colnames = c('ID', 'Chrom', 'Start', 'End', 'Pathogenicity', 'Genotype', 'Class', 'Phenotype',
-                           'CNV size', 'Overlap (%)', 'Genes overlapping'),
+              colnames = c('Overlap (%)', 'ID', 'Chrom', 'Start', 'End', 'Pathogenicity', 'Genotype', 'Class', 'Phenotype',
+                           'CNV size', 'Genes overlapping'),
               selection = 'single',
               filter = list(position = 'top'), 
               options = list(
@@ -4813,8 +4602,8 @@ HTML('<center>
     tmp_df <- dgv_df_raw %>% 
       filter(id %in% filter_id) %>%
       get_perc_overlap(coord_user()) %>%
-      select(id, chrom, start, end, variantsubtype, reference, pubmedid, method, samplesize, observedgains,
-             observedlosses, genes, p_overlap)
+      select(p_overlap, id, chrom, start, end, variantsubtype, reference, pubmedid, method, samplesize, observedgains,
+             observedlosses, genes)
     
 
 
@@ -4834,7 +4623,7 @@ HTML('<center>
       get_perc_overlap(coord_user()) %>%
       arrange(desc(p_overlap)) %>%
       select(-source) %>%
-      select(id, chrom, start, end, everything())
+      select(p_overlap, id, chrom, start, end, everything())
     
     
     
@@ -4852,7 +4641,7 @@ HTML('<center>
     tmp_df <- gnomad_sv_raw %>% 
       filter(id %in% filter_id) %>%
       get_perc_overlap(coord_user()) %>%
-      select(id, chrom, start, end, svtype, AF, p_overlap)
+      select(p_overlap, id, chrom, start, end, svtype, AF)
     
     
     
@@ -4874,16 +4663,12 @@ HTML('<center>
       validate(
         need(nrow(running_dgv()) > 0, '0 non-pathogenic CNVs from DGV found.' )
       )
-      
 
-      
       datatable(running_dgv(), rownames = FALSE,
-                colnames = c('ID', 'Chrom', 'Start', 'End', 'Type', 'Reference', 'PMID',
-                             'Method', 'Sample size', 'Observed gains', 'Observed losses', 'Genes',
-                             'Overlap (%)'))
-      
-      
-      
+                colnames = c('Overlap (%)','ID', 'Chrom', 'Start', 'End', 'Type', 'Reference', 'PMID',
+                             'Method', 'Sample size', 'Observed gains', 'Observed losses', 'Genes'
+                             ))
+
     } else if (input$select_no_patho_cnv == 'decipher_control') {
       
       validate(
@@ -4891,11 +4676,14 @@ HTML('<center>
       )
       
       
-      datatable(running_decipher_c(), rownames = FALSE,
-                colnames = c('ID', 'Chrom', 'Start', 'End', 'Deletion Obs.', 'Deletion Freq.',
+      datatable(running_decipher_c(), 
+                extension = 'Scroller',
+                options = list(deferRender = TRUE, scrollY = 200, scroller = TRUE),
+                rownames = FALSE,
+                colnames = c('Overlap (%)','ID', 'Chrom', 'Start', 'End', 'Deletion Obs.', 'Deletion Freq.',
                              'Deletion (SE)', 'Duplication Obs.', 'Duplication Freq.', 'Duplication (SE)',
-                             'Observations', 'Frequency', 'Standard Error', 'Type','Sample size', 'Study',
-                             'Overlap (%)'))
+                             'Observations', 'Frequency', 'Standard Error', 'Type','Sample size', 'Study'
+                             ))
       
       
       
@@ -4906,8 +4694,10 @@ HTML('<center>
       )
       
       datatable(running_gnomad(), 
+                extension = 'Scroller',
+                options = list(deferRender = TRUE, scrollY = 200, scroller = TRUE),
                 rownames = FALSE,
-                colnames = c('ID', 'Chrom', 'Start', 'End', 'Type', 'Allele Frequency', 'Overlap (%)'))
+                colnames = c('Overlap (%)', 'ID', 'Chrom', 'Start', 'End', 'Type', 'Allele Frequency'))
       
       
       
@@ -5035,19 +4825,17 @@ HTML('<center>
     
     tmp_df <- clinvar_variants %>%
       mutate(chrom = as.character(chrom)) %>%
-      rename(start = pos) %>%
-      mutate(end = start) %>%
+      # rename(start = pos) %>%
+      # mutate(end = start) %>%
       bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
       select(-startdelete, -enddelete, -.overlap) %>%
-      rename(pos = start) %>%
-      select(-end) %>%
+      # rename(pos = start) %>%
+      # select(-end) %>%
       select(-contains('source')) %>%
       distinct() %>%
-      mutate(disease_identifier = str_replace_all(disease_identifier, ',', '\n')) %>%
+      mutate(disease_identifier = str_replace_all(disease_identifier, ',', '<br>')) %>%
       select(id, everything())
-      
-    
-    
+
     tmp_df
     
   })
@@ -5086,16 +4874,21 @@ HTML('<center>
         need(nrow(running_clinvar()) != 0, '0 ClinVar variants found.')
       )
     
-      tmp_df <- running_clinvar() %>% 
-        
+      tmp_df <- running_clinvar() %>%
         mutate(id = paste0("<a href='", paste0('https://www.ncbi.nlm.nih.gov/clinvar/variation/', id),"' target='_blank'>", id,"</a>"))
 
       datatable(tmp_df, 
+                # extensions = 'Scroller',
+                # options = list(
+                #   deferRender = TRUE,
+                #   scrollY = 200,
+                #   scroller = TRUE),
                 filter = list(position = 'top'), 
                 escape = FALSE, 
-                colnames = c('Clinvar ID', 'Chrom','Position','Reference', 'Alternative','Gene','Clinical significance',
+                # options = list(scroller = TRUE),
+                colnames = c('Clinvar ID','Variant Class', 'Chrom','Start','End', 'Ref', 'Alt','Clinical significance', 'Gene',
                                                      'Disease Identifier', 
-                                                     'Disease name'), 
+                                                     'Disease name', 'Length'), 
                 rownames = FALSE
       )
       
@@ -5110,6 +4903,9 @@ HTML('<center>
         mutate(SNPS = paste0("<a href='", paste0('https://www.ebi.ac.uk/gwas/variants/', SNPS),"' target='_blank'>", SNPS,"</a>"))
         
       datatable(tmp_df, 
+                extension = 'Scroller',
+                options = list(deferRender = TRUE, scrollY = 200, scroller = TRUE),
+                filter = list(position = 'top'), 
                 escape = FALSE,
                 colnames = c('Variant','Chrom', 'Position','Intergenic', 'Reported gene', 'Disease or trait', 'Link study'),
                 rownames = FALSE)
@@ -5131,7 +4927,11 @@ HTML('<center>
       select(-contains('source')) %>%
       mutate(PubmedID = paste0("<a href='", paste0('https://pubmed.ncbi.nlm.nih.gov/', PubmedID),"' target='_blank'>", PubmedID,"</a>"))
 
-    datatable(tmp_df, escape = FALSE, colnames = c('Chrom', 'Position','Gene', 'Phenotype', 'Study name', 'PubmedID', 'Function Class', 
+    datatable(tmp_df, 
+              extensions = 'Scroller',
+              options = list(deferRender = TRUE, scrollY = 200, scroller = TRUE),
+              escape = FALSE, 
+              colnames = c('Chrom', 'Position','Gene', 'Phenotype', 'Study name', 'PubmedID', 'Function Class', 
                                                    'CADD score', 'LoF score'), rownames = FALSE)
     
     
