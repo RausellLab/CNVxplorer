@@ -613,21 +613,40 @@ function(input, output, session) {
       filter(source == 'decipher' & pathogenicity %in% c('Pathogenic', 'Likely pathogenic')) %>% 
       nrow()
     
+    data_tmp2 <- running_clinvar_yes_cnv() %>% nrow()
+    
     tablerStatCard(
-      value =  data_tmp,
-      title = "Pathogenic CNVs (DECIPHER)",
-      # trend = -10,
+      value =  data_tmp + data_tmp2,
+      title = "Pathogenic CNVs (DECIPHER & ClinVar)",
       width = 12
     )
+  })
+  
+  output$ui_select_decipher_clinvar <- renderUI({
     
-    # tablerInfoCard(
-    #   value =  data_tmp,
-    #   status = "primary",
-    #   icon = 'book',
-    #   description = "Number of articles found in Pubmed associated with deletions",
-    #   width = 12
-    # )
+    req(running_clinvar_yes_cnv())
+    req(check_cnv_df())
     
+    data_tmp <- check_cnv_df() %>% 
+      filter(source == 'decipher' & pathogenicity %in% c('Pathogenic', 'Likely pathogenic')) %>% 
+      nrow()
+    
+    data_tmp2 <- running_clinvar_yes_cnv() %>% nrow()
+    
+    
+    vector_tmp <- c(paste('ClinVar',paste0('(', data_tmp2, ')')),
+                    paste('DECIPHER', paste0('(', data_tmp, ')')))
+
+    vector_n_dbs <-    rev(split(c('ClinVar', 'DECIPHER'), vector_tmp))
+    
+    prettyRadioButtons(
+      inputId = "select_decipher_clinvar",
+      label = '', 
+      choices =  vector_n_dbs,
+      inline = TRUE, 
+      status = "primary",
+      fill = TRUE
+    )
     
   })
   
@@ -1494,14 +1513,13 @@ HTML('<center>
   
   output$ui_select_cnv_syndrome <- renderUI({
     
-    
     vector_n_dbs <- running_cnv_syndromes() %>%
       count(source) %>% 
       mutate(new_one = paste0(source, ' (', n, ")")) %>%
       pull(new_one) %>%
       str_replace('decipher', 'DECIPHER') %>% 
       str_replace('clingen', 'ClinGen')
-    
+
     
     if (length(vector_n_dbs) == 0) {
       
@@ -1971,7 +1989,7 @@ HTML('<center>
     
     tmp_output <- datatable(data_input, 
                             extensions = 'Scroller',
-                            options = list(deferRender = TRUE, scrollY = 200, scroller = TRUE),
+                            options = list(deferRender = TRUE, scrollY = 200, scroller = TRUE, scrollX = TRUE, fixedColumns = TRUE),
                             rownames = FALSE, 
                             colnames = c('Overlap(%)', 'Band', 'Gene', 'Disease', 'Essentiality',
                                          'Ohnolog', 'Imprinted',
@@ -2047,7 +2065,7 @@ HTML('<center>
     
     tmp_output <- datatable(data_input, rownames = FALSE, 
                             extensions = 'Scroller',
-                            options = list(deferRender = TRUE, scrollY = 200, scroller = TRUE),
+                            options = list(deferRender = TRUE, scrollY = 200, scroller = TRUE, scrollX = TRUE, fixedColumns = TRUE),
                             colnames = c('Band', 'Gene', 'Disease', 'Essentiality',
                                          'Ohnolog', 'Imprinted',
                                          'pLI', 'RVIS', 'CCR', 'HI', 'GDI', 'SnIPRE', 'ncRVIS',
@@ -3301,7 +3319,7 @@ HTML('<center>
     
     
     tablerStatCard(
-      value =  nrow(running_clinvar()),
+      value =  nrow(running_clinvar_no_cnv()),
       title =  'ClinVar variants',
       # trend = -10,
       width = 12
@@ -3494,7 +3512,6 @@ HTML('<center>
       list_hpo_genes <- base::split(to_sim_gene$hp_gene, to_sim_gene$gene)      
       list_hpo_diseases <- base::split(to_sim_disease$hp_omim, to_sim_disease$identifier)      
       
-      # hpo_patient  <- list('patient' = 'HP:0000002')
       hpo_patient  <- list('patient' = input$chosen_hp)
     
       output_genes <- get_sim_grid(ontology=hpo_dbs, 
@@ -4521,6 +4538,8 @@ HTML('<center>
   
   
   output$df_overlap_cnvs <- renderDT({
+    
+    req(input$select_decipher_clinvar)
 
     tmp_df <- df_overlap_cnvs_running() %>% filter(source == 'decipher') %>% 
       filter(pathogenicity %in% c('Pathogenic', 'Likely pathogenic')) %>%
@@ -4543,6 +4562,8 @@ HTML('<center>
       select(p_overlap, everything())
     
     
+    if (input$select_decipher_clinvar == 'DECIPHER') {
+    
     datatable(tmp_df, 
               escape = FALSE,
               colnames = c('Overlap (%)', 'ID', 'Chrom', 'Start', 'End', 'Pathogenicity', 'Genotype', 'Class', 'Phenotype',
@@ -4551,6 +4572,37 @@ HTML('<center>
               filter = list(position = 'top'), 
               options = list(
                 columnDefs = list(list(className = 'dt-center',  targets = c(0:6,8,9, 10)))),  rownames= FALSE)
+      
+    } else {
+      
+      tmp_df <- running_clinvar_yes_cnv()
+      
+      validate(
+        need(nrow(tmp_df) != 0, "No pathogenic CNVs (ClinVar) found.")
+      )
+      
+      tmp_df <- get_perc_overlap(running_clinvar_yes_cnv(), coord_user(), is_patho = TRUE) %>% 
+        select(p_overlap, id, chrom, start, end, variant_class, everything())
+
+
+
+      tmp_df <- tmp_df %>% mutate(disease_identifier = str_replace_all(disease_identifier, '\\|', '<br>' )) %>%
+        mutate(gene = str_replace_all(gene, ';', '<br>' )) %>%
+        mutate(gene = str_replace_all(gene, ':', '<br>' )) %>%
+        select(-length_cnv, -reference, -alternative) %>%
+        mutate(disease_name = if_else(disease_name == 'See cases', '-', disease_name)) %>%
+        mutate(id = paste0("<a href='", paste0('https://www.ncbi.nlm.nih.gov/clinvar/variation/', id),"' target='_blank'>", id,"</a>"))
+      
+      datatable(tmp_df, 
+                filter = list(position = 'top'), 
+                escape = FALSE, 
+                colnames = c('Overlap (%)','ID', 'Chrom','Start','End','Variant Class', 'Clinical significance', 
+                             'Dosage-sensitive genes',
+                             'Disease Identifier', 
+                             'Disease name'), 
+                rownames = FALSE
+      )
+    }
   })
   
   
@@ -4651,11 +4703,6 @@ HTML('<center>
     tmp_df
   })
   
-  
-  
-  
-  
-  
   output$df_overlap_cnvs_nonpatho <- renderDT({
     
     req(input$select_no_patho_cnv)
@@ -4667,7 +4714,10 @@ HTML('<center>
         need(nrow(running_dgv()) > 0, '0 non-pathogenic CNVs from DGV found.' )
       )
 
-      datatable(running_dgv(), rownames = FALSE,
+      datatable(running_dgv(), 
+                extensions = 'Scroller',
+                options = list(deferRender = TRUE, scrollY = 200, scroller = TRUE, scrollX = TRUE, fixedColumns = TRUE),
+                rownames = FALSE,
                 colnames = c('Overlap (%)','ID', 'Chrom', 'Start', 'End', 'Type', 'Reference', 'PMID',
                              'Method', 'Sample size', 'Observed gains', 'Observed losses', 'Genes'
                              ))
@@ -4680,30 +4730,24 @@ HTML('<center>
       
       
       datatable(running_decipher_c(), 
-                extension = 'Scroller',
-                options = list(deferRender = TRUE, scrollY = 200, scroller = TRUE),
+                extensions = 'Scroller',
+                options = list(deferRender = TRUE, scrollY = 200, scroller = TRUE, scrollX = TRUE, fixedColumns = TRUE),
                 rownames = FALSE,
                 colnames = c('Overlap (%)','ID', 'Chrom', 'Start', 'End', 'Deletion Obs.', 'Deletion Freq.',
                              'Deletion (SE)', 'Duplication Obs.', 'Duplication Freq.', 'Duplication (SE)',
                              'Observations', 'Frequency', 'Standard Error', 'Type','Sample size', 'Study'
                              ))
-      
-      
-      
     } else {
       
       validate(
-        need(nrow(running_gnomad()) > 0, '0 non-pathogenic CNVs from gnomAD v.2.1 found.' )
+        need(nrow(running_gnomad()) > 0, '0 non-pathogenic CNVs from gnomAD v.2.1 found.')
       )
       
       datatable(running_gnomad(), 
-                extension = 'Scroller',
-                options = list(deferRender = TRUE, scrollY = 200, scroller = TRUE),
+                extensions = 'Scroller',
+                options = list(deferRender = TRUE, scrollY = 200, scroller = TRUE, scrollX = TRUE, fixedColumns = TRUE),
                 rownames = FALSE,
                 colnames = c('Overlap (%)', 'ID', 'Chrom', 'Start', 'End', 'Type', 'Allele Frequency'))
-      
-      
-      
     }
     
     
@@ -4828,12 +4872,8 @@ HTML('<center>
     
     tmp_df <- clinvar_variants %>%
       mutate(chrom = as.character(chrom)) %>%
-      # rename(start = pos) %>%
-      # mutate(end = start) %>%
       bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
       select(-startdelete, -enddelete, -.overlap) %>%
-      # rename(pos = start) %>%
-      # select(-end) %>%
       select(-contains('source')) %>%
       distinct() %>%
       mutate(disease_identifier = str_replace_all(disease_identifier, ',', '<br>')) %>%
@@ -4843,14 +4883,24 @@ HTML('<center>
     
   })
   
+  running_clinvar_no_cnv <- reactive({
+    
+    running_clinvar() %>% filter(length_cnv < 50) 
+  })
+  
+  running_clinvar_yes_cnv <- reactive({
+    
+    running_clinvar() %>% filter(length_cnv >= 50) 
+  })
+  
   
   output$ui_select_clinvar_gwas <- renderUI({
     
-    req(running_clinvar())
+    req(running_clinvar_no_cnv())
     req(running_gwas())
     
     
-    vector_tmp <- c(paste('ClinVar',paste0('(', nrow(running_clinvar()), ')')),
+    vector_tmp <- c(paste('ClinVar',paste0('(', nrow(running_clinvar_no_cnv()), ')')),
                     paste('GWAS', paste0('(', nrow(running_gwas()), ')')))
     
     
@@ -4874,10 +4924,11 @@ HTML('<center>
     if (input$select_clinvar_gwas == 'clinvar') {
       
       validate(
-        need(nrow(running_clinvar()) != 0, '0 ClinVar variants found.')
+        need(nrow(running_clinvar_no_cnv()) != 0, '0 ClinVar variants found.')
       )
     
-      tmp_df <- running_clinvar() %>%
+      tmp_df <- running_clinvar_no_cnv() %>% mutate(disease_identifier = str_replace_all(disease_identifier, '\\|', '<br>' ), ) %>%
+        select(-length_cnv) %>%
         mutate(id = paste0("<a href='", paste0('https://www.ncbi.nlm.nih.gov/clinvar/variation/', id),"' target='_blank'>", id,"</a>"))
 
       datatable(tmp_df, 
@@ -4891,7 +4942,7 @@ HTML('<center>
                 # options = list(scroller = TRUE),
                 colnames = c('Clinvar ID','Variant Class', 'Chrom','Start','End', 'Ref', 'Alt','Clinical significance', 'Gene',
                                                      'Disease Identifier', 
-                                                     'Disease name', 'Length'), 
+                                                     'Disease name'), 
                 rownames = FALSE
       )
       
