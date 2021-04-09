@@ -80,6 +80,9 @@ tablerDashPage(
   title = "CNVxplorer - A web tool for the clinical interpretation of CNVs",
   body = tablerDashBody(
     
+    # link js
+    tags$head(tags$link(includeScript("www/index.js"))),
+    tags$head(tags$style("a{cursor:pointer;}")),
     
     
     tags$head(tags$script('
@@ -217,8 +220,9 @@ tablerDashPage(
                             zoomable = FALSE,
                             status = 'success',
                             statusSide = 'left',
-                            title = tagList(shiny::icon("database"), 'Overlap with reference CNV databases',
-                                            ),
+                            title = tagList(shiny::icon("database"),
+                                            HTML("<a onclick=","customHref('genetic_evidence')", 'target="_top"' ,">", 
+                                                 "Overlap with reference CNV databases (Link)","</a>")),
                             fluidRow(
                               column(width = 4,
                                      uiOutput('n_syndromes')),
@@ -238,7 +242,9 @@ tablerDashPage(
                             zoomable = FALSE,
                             status = 'primary',
                             statusSide = 'left',
-                            title = tagList(shiny::icon("database"), "Overlap with disease associated genes and SNV variants"),
+                            title = tagList(shiny::icon("database"),
+                                            HTML("<a onclick=","customHref('genetic_evidence')", 'target="_top"' ,">", 
+                                                 "Overlap with disease associated genes and SNV variants (Link)","</a>")),
                             fluidRow(
                               column(width = 4,
                                      uiOutput('n_disease')),
@@ -259,7 +265,9 @@ tablerDashPage(
                             zoomable = FALSE,
                             status = 'success',
                             statusSide = 'left',
-                            title = tagList(shiny::icon("book"), "Mouse model information"),
+                            title = tagList(shiny::icon("book"),
+                                            HTML("<a onclick=","customHref('model')", 'target="_top"' ,">", 
+                                                 "Mouse model information (Link)","</a>")),
                             fluidRow(
                               column(width = 6,
                                      
@@ -273,7 +281,9 @@ tablerDashPage(
                               zoomable = FALSE,
                               status = 'success',
                               statusSide = 'left',
-                              title = tagList(shiny::icon("hospital"), "Clinical information"), 
+                              title = tagList(shiny::icon("hospital"),
+                                              HTML("<a onclick=","customHref('disease')", 'target="_top"' ,">", 
+                                                   "Clinical information (Link)","</a>")),
                               fluidRow(
                                 column(width = 6,
                                        
@@ -292,10 +302,9 @@ tablerDashPage(
                             zoomable = FALSE,
                             status = 'success',
                             statusSide = 'left',
-                            title = tagList(shiny::icon("book"), "Overlap with regulatory elements and TADs"),
-                            
-                            
-                            
+                            title = tagList(shiny::icon("book"),
+                                    HTML("<a onclick=","customHref('reg_region')", 'target="_top"' ,">", 
+                                         "Overlap with regulatory elements and TADs (Link)","</a>")),
                             fluidRow(
                               
                               column(width = 4,
@@ -320,7 +329,9 @@ tablerDashPage(
                             zoomable = FALSE,
                             status = 'success',
                             statusSide = 'left',
-                            title = tagList(shiny::icon("book"), "Biomedical literature"),
+                            title = tagList(shiny::icon("book"),
+                                            HTML("<a onclick=","customHref('pubmed')", 'target="_top"' ,">", 
+                                                 "Biomedical literature (Link)","</a>")),
                             
                             
                             
@@ -597,13 +608,13 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
           )
         ),
         tablerCard(
-          title = "Overlap with pathogenic/likely pathogenic CNVs (DECIPHER)" %>% helper(type = "inline",
+          title = "Overlap with pathogenic/likely pathogenic CNVs (DECIPHER & ClinVar)" %>% helper(type = "inline",
                                                                                      style = "text-indent: 0.5em;",
                                                                                      title = "Likely pathogenic/pathogenic CNVs",
                                                                                      size = "m",
                                                                                      buttonLabel = 'OK',
                                                                                      content = c("<b> Overlap calculation </b>",
-                                                                                                  "To calculate the overlap, we use likely pathogenic/pathogenic CNVs from DECIPHE.R as a reference and, as a query, the CNV(s) entered by the user. For instance, a 100% overlap means that the DECIPHER's CNV is completely mapping the user's CNV. ",
+                                                                                                  "To calculate the overlap, we use likely pathogenic/pathogenic CNVs from DECIPHER and ClinVar as a reference and, as a query, the CNV(s) entered by the user. For instance, a 100% overlap means that the DECIPHER's CNV is completely mapping the user's CNV. ",
                                                                                                   "In the Documentation - FAQ tab, you can find a picture where we illustrate this point.",
                                                                                                   "<b> Phenotypic similarity </b>",
                                                                                                   "For every CNV associated with HP terms, you can calculate the phenotypic similarity with the patient’s clinical symptoms. To do so, go to the Phenotypic analysis tab, enter HP terms and you will find a panel with the list of DECIPHER CNVs and their respective scores.")
@@ -613,7 +624,10 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
           width = 12,
           collapsible = FALSE,
           closable = FALSE,
-          overflow = TRUE
+          overflow = TRUE,
+          options = tagList(
+            uiOutput('ui_select_decipher_clinvar')
+          )
         ),
         tablerCard(
           title = "Overlap with non-pathogenic CNVs"  %>% helper(type = "inline",
