@@ -1124,10 +1124,12 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
                                                                                     size = "m",
                                                                                     buttonLabel = 'OK',
                                                                                     content = c(
+                                                                                      "<b>Meaning of the '-' symbol</b>",
+                                                                                      "The '-' symbol corresponds to p-values considered as non-significant or that could not be calculated due to the absence of phenotypic information. If the user has not entered any HP terms, this simbol represents a NA value",
                                                                                       "<b>Similarity score column is empty</b>",
-                                                                                      "If you can not see any scores, you should first enter the patient's clinical symptoms in the panel above called 'Phenotype terms'.",
+                                                                                      "If you can not see any scores, you should first enter the patient's clinical symptoms in the panel above called 'Indicate here phenotype terms of the patient'.",
                                                                                       "<b>Two phenotypic similarity scores</b>",
-                                                                                      "CNVxplorer calculates two phenotypic similarity scores for the gene and the disease, respectively. This is because you can have multiple diseases for the same gene and vice versa. Therefore, a gene and a disease that are associated may have a different phenotypic annotation.")),
+                                                                                      "For each row, CNVxplorer displays the phenotypic score (p-value) corresponding to gene and disease. The reason for this, it is because you can have multiple diseases for the same gene and vice versa. Therefore, a gene and a disease that are associated may have a different phenotypic annotation.")),
                                      closable = FALSE,
                                      collapsible = FALSE,
                                      zoomable = FALSE,
@@ -1161,25 +1163,25 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
           tablerCard(title = 'DECIPHER CNVs - Phenotypic similarity',
                      DTOutput('decipher_similarity'),
                      overflow = TRUE,
-                     width = 12),
-          tablerCard(title = 'Phenotypic similarity score',
-                     
-                     plotOutput('plot_similarity_genes'),
-                     width = 12,
-                     options = tagList( 
-                       
-                       prettyRadioButtons(
-                         inputId = "select_sim_gene_disease",
-                         label = '', 
-                         choices = list('Genes' = 'genes', 
-                                        'OMIM diseases' = 'diseases', 
-                                        'DECIPHER CNVs' = 'decipher',
-                                        'DECIPHER CNVs / Overlap' = 'decipher_overlap'),
-                         inline = TRUE, 
-                         status = "primary",
-                         fill = TRUE
-                       ))
-          )
+                     width = 12)
+          # tablerCard(title = 'Phenotypic similarity score',
+          #            
+          #            plotOutput('plot_similarity_genes'),
+          #            width = 12,
+          #            options = tagList( 
+          #              
+          #              prettyRadioButtons(
+          #                inputId = "select_sim_gene_disease",
+          #                label = '', 
+          #                choices = list('Genes' = 'genes', 
+          #                               'OMIM diseases' = 'diseases', 
+          #                               'DECIPHER CNVs' = 'decipher',
+          #                               'DECIPHER CNVs / Overlap' = 'decipher_overlap'),
+          #                inline = TRUE, 
+          #                status = "primary",
+          #                fill = TRUE
+          #              ))
+          # )
 
         )
       ),
