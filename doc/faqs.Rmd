@@ -75,7 +75,6 @@ CNVxplorer builds upon and complement existing tools by integrating genic intole
 
 - **pLI**. The gene probability of loss-of-function intolerance. Estimation of the deviation of rare and de novo protein-truncating variants from a neutral model of de novo variation through analysis of 125,748 exome sequences and 15,708 whole-genome sequences from gnomAD v.2.1.1.
 
-high-quality exome sequence data for 60,706 individuals of diverse ethnicities from the Exome Aggregation Consortium (ExAC).
 - **RVIS**. This score evaluates and ranks genes by comparing the overall number of observed variants in a gene to the observed common functional variants. The RVIS score is based on ExAC v2.
 - **HI Index**. Haploinsufficiency score based on predictions using a classification model that evaluates inter-species conservation, gene expression, and network proximity information of the gene to predict the probability of being haploinsufficiency. High ranks (e.g. 0-10%) indicate a gene is more likely to exhibit haploinsufficiency, low ranks (e.g. 90-100%) indicate a gene is more likely to not exhibit haploinsufficiency. 
 - **CCR**. The number of constrained coding regions (CCRs) from observed variants among 123,136 humans from the Genome Aggregation Database (gnomAD). 
