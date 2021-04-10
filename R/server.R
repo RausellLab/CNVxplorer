@@ -3605,48 +3605,114 @@ HTML('<center>
   })
     
     output$dt_running_sim_score <- renderDT({
+      
+      if (length(input$chosen_hp) != 0) {
+      
+      length_hp_chosen <- ifelse(length(input$chosen_hp) >= 10, 10, length(input$chosen_hp))
+
+      tmp_df <- running_sim_score()
+      tmp_value_total <- p_value_total %>% filter(category != 'cnv' & length_query == length_hp_chosen) %>% select(-length_query)
+      
+      # test10 <<- tmp_df
+      # test11 <<- tmp_value_total
+      
+      tmp_df <- tmp_df %>%
+        # DISEASE
+        left_join(tmp_value_total %>% filter(category == 'disease') %>% mutate(identifier = as.integer(identifier)), by = 'identifier') %>%
+        rowwise() %>%
+        mutate(tmp_cmp = ifelse(is.na(sim_mim), NA, length(str_split(vector_score, pattern = ', ')[[1]][sim_mim < str_split(vector_score, pattern = ', ')[[1]]]))) %>%
+        mutate(is_significant_disease = case_when(
+          tmp_cmp < 50 & tmp_cmp > 0 ~ as.character(tmp_cmp/1e3),
+          tmp_cmp == 50 ~ '-',
+          tmp_cmp == 0 ~ 'lower than 0.001',
+          is.na(tmp_cmp) ~ '-',
+        )) %>%
+        select(-tmp_cmp, -sim_mim, -vector_score, -category) %>%
+        left_join(tmp_value_total %>% filter(category == 'gene') %>% mutate(identifier = as.character(identifier)), by = c('gene' = 'identifier')) %>%
+      mutate(tmp_cmp = ifelse(is.na(sim_gene), NA, length(str_split(vector_score, pattern = ', ')[[1]][sim_gene < str_split(vector_score, pattern = ', ')[[1]]]))) %>%
+        mutate(is_significant_gene = case_when(
+          tmp_cmp < 50 & tmp_cmp > 0 ~ as.character(tmp_cmp/1e3),
+          tmp_cmp == 50 ~ '-',
+          tmp_cmp == 0 ~ 'lower than 0.001',
+          is.na(tmp_cmp) ~ '-',
+        )) %>%
+        # select(-tmp_cmp, -sim_gene, -vector_score, -category) %>%
+        select(source, gene, disease_source, identifier, desc, is_significant_gene, is_significant_disease)
+      
+      # tmp_df <- tmp_df %>% replace_na(list(is_significant_gene = '-', is_significant_disease = '-')) %>%
+      #   mutate(is_significant_gene = as.numeric(is_significant_gene), 
+      #          is_significant_disease = as.numeric(is_significant_disease))
+
+      datatable(tmp_df %>%
+                  mutate(identifier = paste0(identifier, '(', disease_source, ')')) %>%
+                  select(-disease_source), 
+                rownames = FALSE,
+                # options = list(dom = 't', pageLength = 25),
+                selection = 'single',
+                colnames = c('Source', 
+                             'Gene', 
+                             'Identifier', 
+                             'Disease description', 
+                             'Similarity score (P-Value) GENE',
+                             'Similarity score (P-Value) DISEASE'
+                             ))
+
+      } else {
+        
 
       datatable(running_sim_score() %>% replace_na(list(sim_gene = '-', sim_mim = '-')) %>%
                   mutate(identifier = paste0(identifier, '(', disease_source, ')')) %>%
                   select(-disease_source), 
                 rownames = FALSE,
                 selection = 'single',
-                colnames = c('Source', 'Gene', 'Identifier', 'Disease description', 'Similarity score (gene)',
-                             'Similarity score (disease)'))
+                colnames = c('Source', 
+                             'Gene', 
+                             'Identifier', 
+                             'Disease description', 
+                             'Similarity score (P-Value) - GENE',
+                             'Similarity score (P-Value) - DISEASE'))
+        
+      }
     })
     
     
     output$decipher_similarity <-  renderDT({
       
-      tmp_df <- running_sim_decipher() %>% arrange(desc(sim_decipher)) 
-      p_value_tmp_df <- p_value_total %>% filter(category == 'cnv' & length_query == length(input$chosen_hp)) %>%
-        mutate(identifier = as.character(identifier))
+      tmp_df <- running_sim_decipher()
       
-      test140 <<- p_value_tmp_df
-      test141 <<- tmp_df
+      length_hp_chosen <- ifelse(length(input$chosen_hp) >= 10, 10, length(input$chosen_hp))
+      
+      p_value_tmp_df <- p_value_total %>% filter(category == 'cnv' & length_query == length_hp_chosen) %>% 
+        select(-length_query, -category)
+      
+      # test90 <<- tmp_df
+      # test91 <<- p_value_tmp_df
       
       tmp_df <- tmp_df %>%
-        left_join(p_value_tmp_df %>% select(-length_query, -category), by = c('id' = 'identifier')) %>% 
-        # select(threshold, value) %>%
-        pivot_wider(names_from = threshold, values_from = value) %>%
-        select(-`NA`) %>%
+        left_join(p_value_tmp_df, by = c('id' = 'identifier')) %>%
+        rowwise() %>%
+        mutate(tmp_cmp = ifelse(is.na(sim_decipher), NA, length(str_split(vector_score, pattern = ', ')[[1]][sim_decipher < str_split(vector_score, pattern = ', ')[[1]]]))) %>%
         mutate(is_significant = case_when(
-          threshold_0_001 <= sim_decipher ~ 'p-value <= 0.001',
-          threshold_0_01 <= sim_decipher ~ 'p-value <= 0.01',
-          threshold_0_05 <= sim_decipher ~ 'p-value <= 0.05',
-          is.na(threshold_0_05) ~ '-',
-          TRUE ~ 'not significant (p-value > 0.05)'
+          tmp_cmp < 50 & tmp_cmp > 0 ~ as.character(tmp_cmp/1e3),
+          tmp_cmp == 50 ~ '-',
+          tmp_cmp == 0 ~ 'lower than 0.001',
+          is.na(tmp_cmp) ~ '-',
         )) %>%
-        select(-contains('threshold')) 
+        select(-tmp_cmp, -sim_decipher, -vector_score) %>%
+        arrange(desc(is_significant))
+
       
       datatable(tmp_df, 
+                # extensions = 'Scroller',
                 escape = FALSE,
                 colnames = c('ID', 'Chrom', 'Start', 'End', 'Pathogenicity', 'Genotype', 'Class', 'Phenotype',
-                             'CNV size', 'Overlap (%)', 'Similarity score', 'P-Value'),
+                             'CNV size', 'Overlap (%)', 'Similarity score (P-Value)'),
                 selection = 'single',
                 filter = list(position = 'top'), 
                 options = list(
-                  columnDefs = list(list(className = 'dt-center',  targets = c(0:6,8,9, 10)))),  rownames= FALSE)
+                    # autoWidth = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE, scrollX = TRUE, 
+                    # fixedColumns = TRUE,
+                  columnDefs = list(list(className = 'dt-center',  targets = c(0:6,8,9, 9)))),  rownames= FALSE)
       
       
       
@@ -3831,104 +3897,104 @@ HTML('<center>
   })
   
 
-  output$plot_similarity_genes <- renderPlot({
-    
-    validate(
-      need(length(input$chosen_hp) > 0, "Please, select at least one HPO term.")
-    )
-    
-    tmp_df <- running_sim_score()
-    
-
-    if (input$select_sim_gene_disease == 'genes') {
-
-      tmp_df  %>%
-        select(gene, sim_gene) %>%
-        arrange(desc(sim_gene)) %>%
-        distinct() %>%
-        ggplot(aes(reorder(gene, -sim_gene), sim_gene)) +
-        geom_col(aes(fill = sim_gene), color = 'black', show.legend = FALSE) +
-        ylab('Phenotypic similarity score') +
-        xlab('Genes') +
-        scale_fill_viridis_c() +
-        theme_fancy() +
-        theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
-              axis.title.x = element_text(size = 16),
-              axis.title.y = element_text(size = 16))
-
-    } else if (input$select_sim_gene_disease == 'diseases') {
-
-      tmp_df  %>%
-        select(identifier, sim_mim) %>%
-        distinct() %>%
-        arrange(desc(sim_mim)) %>%
-        # filter(similarity_score >= filter_higher_than) %>%
-        ggplot(aes(reorder(identifier, -sim_mim), sim_mim)) +
-        geom_col(aes(fill = sim_mim), color = 'black', show.legend = FALSE) +
-        # coord_flip() +
-        ylab('Phenotypic similarity score') +
-        xlab('Disease identifiers') +
-        scale_fill_viridis_c() +
-        # scale_x_reverse() +
-        theme_fancy() +
-        theme(axis.text.x = element_text(angle = 45, hjust = 1),
-              axis.title.x = element_text(size = 16),
-              axis.title.y = element_text(size = 16))
-
-    } else if (input$select_sim_gene_disease == 'decipher') {
-      
-      
-      running_sim_decipher()  %>%
-        select(id, sim_decipher) %>%
-        distinct() %>%
-        arrange(desc(sim_decipher)) %>%
-        # filter(similarity_score >= filter_higher_than) %>%
-        ggplot(aes(reorder(id, -sim_decipher), sim_decipher)) +
-        geom_col(aes(fill = sim_decipher), color = 'black', show.legend = FALSE) +
-        # coord_flip() +
-        ylab('Phenotypic similarity score') +
-        xlab('DECIPHER CNVs identifiers') +
-        scale_fill_viridis_c() +
-        # scale_x_reverse() +
-        theme_fancy() +
-        theme(axis.text.x = element_text(angle = 45, hjust = 1),
-              axis.title.x = element_text(size = 16),
-              axis.title.y = element_text(size = 16))
-      
-      
-      
-      
-      
-      
-    } else {
-      p1 <- running_sim_decipher() %>% 
-        filter(variant_class == 'Deletion') %>%
-        ggplot(aes(p_overlap, sim_decipher, label = id)) + 
-        geom_point(aes(fill = variant_class), color = 'black', shape = 21, show.legend = FALSE) + 
-        geom_text_repel() +
-        theme_minimal() +
-        labs(title = 'Deletion', x = 'Overlap (%)', y = 'Phenotypic similarity') +
-        theme(plot.title = element_text(size=25),
-              axis.title=element_text(size=15,face="bold"))
-        
-        p2 <- running_sim_decipher() %>% 
-          filter(variant_class == 'Duplication') %>%
-        ggplot(aes(p_overlap, sim_decipher, label = id)) + 
-          geom_point(aes(fill = variant_class), color = 'black', shape = 21, show.legend = FALSE) + 
-          geom_text_repel() +
-          theme_minimal() +
-          labs(title = 'Duplication', x = 'Overlap (%)', y = 'Phenotypic similarity') +
-          theme(plot.title = element_text(size=25),
-                axis.title=element_text(size=15,face="bold"))
-        
-        p1 + p2
-        
-        
-
-    }
-
-
-  })
+  # output$plot_similarity_genes <- renderPlot({
+  #   
+  #   validate(
+  #     need(length(input$chosen_hp) > 0, "Please, select at least one HPO term.")
+  #   )
+  #   
+  #   tmp_df <- running_sim_score()
+  #   
+  # 
+  #   if (input$select_sim_gene_disease == 'genes') {
+  # 
+  #     tmp_df  %>%
+  #       select(gene, sim_gene) %>%
+  #       arrange(desc(sim_gene)) %>%
+  #       distinct() %>%
+  #       ggplot(aes(reorder(gene, -sim_gene), sim_gene)) +
+  #       geom_col(aes(fill = sim_gene), color = 'black', show.legend = FALSE) +
+  #       ylab('Phenotypic similarity score') +
+  #       xlab('Genes') +
+  #       scale_fill_viridis_c() +
+  #       theme_fancy() +
+  #       theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
+  #             axis.title.x = element_text(size = 16),
+  #             axis.title.y = element_text(size = 16))
+  # 
+  #   } else if (input$select_sim_gene_disease == 'diseases') {
+  # 
+  #     tmp_df  %>%
+  #       select(identifier, sim_mim) %>%
+  #       distinct() %>%
+  #       arrange(desc(sim_mim)) %>%
+  #       # filter(similarity_score >= filter_higher_than) %>%
+  #       ggplot(aes(reorder(identifier, -sim_mim), sim_mim)) +
+  #       geom_col(aes(fill = sim_mim), color = 'black', show.legend = FALSE) +
+  #       # coord_flip() +
+  #       ylab('Phenotypic similarity score') +
+  #       xlab('Disease identifiers') +
+  #       scale_fill_viridis_c() +
+  #       # scale_x_reverse() +
+  #       theme_fancy() +
+  #       theme(axis.text.x = element_text(angle = 45, hjust = 1),
+  #             axis.title.x = element_text(size = 16),
+  #             axis.title.y = element_text(size = 16))
+  # 
+  #   } else if (input$select_sim_gene_disease == 'decipher') {
+  #     
+  #     
+  #     running_sim_decipher()  %>%
+  #       select(id, sim_decipher) %>%
+  #       distinct() %>%
+  #       arrange(desc(sim_decipher)) %>%
+  #       # filter(similarity_score >= filter_higher_than) %>%
+  #       ggplot(aes(reorder(id, -sim_decipher), sim_decipher)) +
+  #       geom_col(aes(fill = sim_decipher), color = 'black', show.legend = FALSE) +
+  #       # coord_flip() +
+  #       ylab('Phenotypic similarity score') +
+  #       xlab('DECIPHER CNVs identifiers') +
+  #       scale_fill_viridis_c() +
+  #       # scale_x_reverse() +
+  #       theme_fancy() +
+  #       theme(axis.text.x = element_text(angle = 45, hjust = 1),
+  #             axis.title.x = element_text(size = 16),
+  #             axis.title.y = element_text(size = 16))
+  #     
+  #     
+  #     
+  #     
+  #     
+  #     
+  #   } else {
+  #     p1 <- running_sim_decipher() %>% 
+  #       filter(variant_class == 'Deletion') %>%
+  #       ggplot(aes(p_overlap, sim_decipher, label = id)) + 
+  #       geom_point(aes(fill = variant_class), color = 'black', shape = 21, show.legend = FALSE) + 
+  #       geom_text_repel() +
+  #       theme_minimal() +
+  #       labs(title = 'Deletion', x = 'Overlap (%)', y = 'Phenotypic similarity') +
+  #       theme(plot.title = element_text(size=25),
+  #             axis.title=element_text(size=15,face="bold"))
+  #       
+  #       p2 <- running_sim_decipher() %>% 
+  #         filter(variant_class == 'Duplication') %>%
+  #       ggplot(aes(p_overlap, sim_decipher, label = id)) + 
+  #         geom_point(aes(fill = variant_class), color = 'black', shape = 21, show.legend = FALSE) + 
+  #         geom_text_repel() +
+  #         theme_minimal() +
+  #         labs(title = 'Duplication', x = 'Overlap (%)', y = 'Phenotypic similarity') +
+  #         theme(plot.title = element_text(size=25),
+  #               axis.title=element_text(size=15,face="bold"))
+  #       
+  #       p1 + p2
+  #       
+  #       
+  # 
+  #   }
+  # 
+  # 
+  # })
   
   
   output$n_hi<- renderUI({
