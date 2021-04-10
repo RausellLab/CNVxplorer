@@ -88,9 +88,11 @@ In addition, the application integrates scores evaluating the intolerance to var
 
 ### Phenotypic analysis
 
-- **How is the similarity score calculated?**
+- **How is the similarity score p-value calculated?**
 
-To calculate the similarity between two sets of phenotype terms (e.g, disease, gene, or DECIPHER CNV), we use Resnik's symmetrical similarity. To aggregate the results into a single score, Best Match Average (BMA) is used.
+First, we generate a background distribution for each entity (disease, gene, or DECIPHER CNV). To do this, we calculate Resnik's similarity between the HP terms associated with the entity and 1,000 random sets of HP terms. We repeat this process ten times, varying the length (from 1 to 10) of the random set. As a consequence, for each entity, we generate a total of 10,000 Resnik's similarity scores representing its background distribution. 
+
+During the user's session, CNVxplorer calculates the Resnik's measure between the patient's clinical symptoms (entered by the user) and each entity associated with the query. Finally, it selects the background distribution corresponding to the entity and the number of entered HP terms and counts the number of random values lower than the calculated one.
 
 - **I have found a non-disease gene with HPO.**
 
