@@ -83,6 +83,7 @@ library(scales)
 #     mgi, ## -
 #     interactions_db, ## -
 #     syndromes_total, ## hg19
+#     p_value_total,
 #     file = "local_data.RData")
 
 # system("gzip local_data.RData")
