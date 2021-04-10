@@ -3605,9 +3605,7 @@ HTML('<center>
   })
     
     output$dt_running_sim_score <- renderDT({
-      
-      
-      
+
       datatable(running_sim_score() %>% replace_na(list(sim_gene = '-', sim_mim = '-')) %>%
                   mutate(identifier = paste0(identifier, '(', disease_source, ')')) %>%
                   select(-disease_source), 
@@ -3620,11 +3618,31 @@ HTML('<center>
     
     output$decipher_similarity <-  renderDT({
       
+      tmp_df <- running_sim_decipher() %>% arrange(desc(sim_decipher)) 
+      p_value_tmp_df <- p_value_total %>% filter(category == 'cnv' & length_query == length(input$chosen_hp)) %>%
+        mutate(identifier = as.character(identifier))
       
-      datatable(running_sim_decipher() %>% arrange(desc(sim_decipher)), 
+      test140 <<- p_value_tmp_df
+      test141 <<- tmp_df
+      
+      tmp_df <- tmp_df %>%
+        left_join(p_value_tmp_df %>% select(-length_query, -category), by = c('id' = 'identifier')) %>% 
+        # select(threshold, value) %>%
+        pivot_wider(names_from = threshold, values_from = value) %>%
+        select(-`NA`) %>%
+        mutate(is_significant = case_when(
+          threshold_0_001 <= sim_decipher ~ 'p-value <= 0.001',
+          threshold_0_01 <= sim_decipher ~ 'p-value <= 0.01',
+          threshold_0_05 <= sim_decipher ~ 'p-value <= 0.05',
+          is.na(threshold_0_05) ~ '-',
+          TRUE ~ 'not significant (p-value > 0.05)'
+        )) %>%
+        select(-contains('threshold')) 
+      
+      datatable(tmp_df, 
                 escape = FALSE,
                 colnames = c('ID', 'Chrom', 'Start', 'End', 'Pathogenicity', 'Genotype', 'Class', 'Phenotype',
-                             'CNV size', 'Overlap (%)', 'Similarity score'),
+                             'CNV size', 'Overlap (%)', 'Similarity score', 'P-Value'),
                 selection = 'single',
                 filter = list(position = 'top'), 
                 options = list(
@@ -4560,18 +4578,23 @@ HTML('<center>
                                                       'end' = end)) %>% pull(gene.x), collapse = ', ')) %>%
       ungroup() %>%
       select(p_overlap, everything())
+      # mutate(genes = str_replace_all(genes, ', ', '<br>' ))
     
     
     if (input$select_decipher_clinvar == 'DECIPHER') {
-    
+
     datatable(tmp_df, 
+              extensions = 'Scroller',
               escape = FALSE,
               colnames = c('Overlap (%)', 'ID', 'Chrom', 'Start', 'End', 'Pathogenicity', 'Genotype', 'Class', 'Phenotype',
                            'CNV size', 'Genes overlapping'),
               selection = 'single',
               filter = list(position = 'top'), 
               options = list(
-                columnDefs = list(list(className = 'dt-center',  targets = c(0:6,8,9, 10)))),  rownames= FALSE)
+                autoWidth = TRUE,
+                deferRender = TRUE, scrollY = 200, scroller = TRUE, scrollX = TRUE, fixedColumns = TRUE,
+                columnDefs = list(list(className = 'dt-center',  targets = c(0:6,8)),
+                                  list(width = '20px', targets = 9))),  rownames= FALSE)
       
     } else {
       
@@ -4582,24 +4605,26 @@ HTML('<center>
       )
       
       tmp_df <- get_perc_overlap(running_clinvar_yes_cnv(), coord_user(), is_patho = TRUE) %>% 
-        select(p_overlap, id, chrom, start, end, variant_class, everything())
+        select(p_overlap, id, chrom, start, end, variant_class, clinical, disease_identifier, disease_name, gene) %>%
+        mutate(disease_identifier = str_replace_all(disease_identifier, 'Human Phenotype Ontology', 'HPO'))
 
 
 
       tmp_df <- tmp_df %>% mutate(disease_identifier = str_replace_all(disease_identifier, '\\|', '<br>' )) %>%
-        mutate(gene = str_replace_all(gene, ';', '<br>' )) %>%
-        mutate(gene = str_replace_all(gene, ':', '<br>' )) %>%
-        select(-length_cnv, -reference, -alternative) %>%
+        # mutate(gene = str_replace_all(gene, ';', '<br>' )) %>%
+        # mutate(gene = str_replace_all(gene, ':', '<br>' )) %>%
         mutate(disease_name = if_else(disease_name == 'See cases', '-', disease_name)) %>%
         mutate(id = paste0("<a href='", paste0('https://www.ncbi.nlm.nih.gov/clinvar/variation/', id),"' target='_blank'>", id,"</a>"))
       
-      datatable(tmp_df, 
+      datatable(tmp_df,
+                extensions = 'Scroller',
                 filter = list(position = 'top'), 
+                options = list(autoWidth = TRUE, scrollY = 200, scroller = TRUE, scrollX = TRUE, fixedColumns = TRUE),
                 escape = FALSE, 
                 colnames = c('Overlap (%)','ID', 'Chrom','Start','End','Variant Class', 'Clinical significance', 
-                             'Dosage-sensitive genes',
                              'Disease Identifier', 
-                             'Disease name'), 
+                             'Disease name',
+                             'Dosage-sensitive genes'), 
                 rownames = FALSE
       )
     }
