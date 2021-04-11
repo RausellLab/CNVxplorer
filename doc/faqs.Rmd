@@ -32,9 +32,15 @@ Currently, we have limited the number of variants to 200.
 
 ### General information
 
-- **How do we define gene coordinates?**
 
-To define a gene, CNVxplorer uses the attributes, start_position, and end_position, provided by Ensembl. These two attributes refer to the outermost transcript start and end coordinates, respectively.
+- **How problematic regions of the human genome and segmental duplications were defined and where can I get their breakpoint coordinates?**
+
+Problematic regions of the human genome were obtained from the ENCODE blacklist ((26), version 2). ENCODE blacklist reports a comprehensive set of regions in the human genomes that have anomalous, unstructured or high signal in next-generation sequencing runs, independent of cell line or experiment. Amemiya et al. classified  problematic regions into two major types: (i) high-signal regions, identified as being overrepresented in sequencing reads and ChiP-seq peaks, which presumably represent unannotated repeats or artifacts in the human genome assembly GRCh37; and (ii) low-mappability regions, which represent short repetitive elements in the genome assembly that are poorly mappable. A total of 583 high-signal regions and 251 low-mappability regions for the GRCh37 genome assembly were obtained from https://github.com/Boyle-Lab/Blacklist/ (version 2; file hg19-blacklist.v2.bed.gz). In addition to the previous problematic regions, we considered human Segmental Duplications (SD), also known as low copy repeats (LCRs). SDs were defined in (PMID: 16770338 ) as continuous portions of DNA that map to two or more genomic locations, can contain any standard constituent of genomic DNA, including genic sequence and common repeats, and can either be organized in tandem or map to interspersed locations. SDs detected in the human genome GRCh37 were obtained from the Segmental Duplication Database, which focuses on genomic duplications >1000bp and >90% identity. (file GRCh37GenomicSuperDup.tab from https://humanparalogy.gs.washington.edu/build37/build37.htm).   
+
+
+- **How do we delimit gene coordinates?**
+
+To delimit a gene, CNVxplorer uses the attributes, start_position, and end_position, provided by Ensembl. These two attributes refer to the outermost transcript start and end coordinates, respectively.
 
 - **How is the percentage of overlap calculated?**
 
@@ -92,7 +98,17 @@ In addition, the application integrates scores evaluating the intolerance to var
 
 First, we generate a background distribution for each entity (disease, gene, or DECIPHER CNV). To do this, we calculate Resnik's similarity between the HP terms associated with the entity and 1,000 random sets of HP terms. We repeat this process ten times, varying the length (from 1 to 10) of the random set. As a consequence, for each entity, we generate a total of 10,000 Resnik's similarity scores representing its background distribution. 
 
-During the user's session, CNVxplorer calculates the Resnik's measure between the patient's clinical symptoms (entered by the user) and each entity associated with the query. Finally, it selects the background distribution corresponding to the entity and the number of entered HP terms and counts the number of random values lower than the calculated one.
+During the user's session, CNVxplorer calculates the Resnik's measure between the patient's clinical symptoms (entered by the user) and each entity associated with the query. Finally, it filters the background distribution corresponding to the entity (and the number of entered HP terms) and counts the number of random values lower than the calculated one.
+
+- **Why CNVxplorer does only provide a p-value and not the raw clinical similarity score between the query CNV(s) and a reference instance (e.g. pathogenic CNV, gene or disease)?**
+
+The phenotypic similarity calculation implemented in CNVxplorer follows the Phenomizer approach (Köhler et al, AJHG 2009). As indicated in the original publication, the raw similarity score between two sets of HPO terms depends on the number and the specificity of the HPO terms that constitute both lists. Thus, quoting the authors: “It is thus not possible to say what score constitutes a ‘good match’ for a general query”. However, a Monte Carlo random sampling approach referred as Ontological Similarity Search with p values (OSS-PV), was proposed in order to provide a p-value associated with the raw clinical similarity scores. Here p-values can be interpreted as the probability of observing the same or a higher score between a random query list (i.e., constituted of N randomly selected HPO terms) and a reference instance (e.g. pathogenic CNV, gene or disease). In contrast to the raw clinical similarity scores, OSS-PV based p-values allow to rank instances by clinical similarity and are thus the values displayed in the application.
+
+- **Why some clinical similarity p-values show a slash '-' symbol rather than a value?**
+
+For computational reasons, CNVxplorer only stores in memory the top 5% of the background distribution values generated in the OSS-PV approach (see above), which allow us to estimate significant p-values < 0.05. Thus, when clinical similarity scores were equal or above the 0.05 threshold, are consider not statistically significant and are simply displayed with a slash '-' symbol.
+
+Note the slash symbol can be displayed when no HP term has been entered by the user or there is not available phenotypic information about the gene, disease or DECIPHER CNV.
 
 - **I have found a non-disease gene with HPO.**
 
