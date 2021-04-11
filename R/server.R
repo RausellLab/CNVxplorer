@@ -2862,12 +2862,11 @@ HTML('<center>
     )
 
     datatable(lncrna_raw(), 
-              
-              
+              extension = 'Scroller',
               rownames = FALSE,
               colnames = c('Symbol', 'Chromosome', 'Start', 'End', 'Ensembl ID', 'Target symbol', 
                            'Tissue origin', 'Disease state', 'PMID', 'Mapping query'),
-              options = list(
+              options = list(autoWidth = TRUE, scrollY = 200, scroller = TRUE, scrollX = TRUE, fixedColumns = TRUE,
                 pageLength = 5, autoWidth = TRUE, list(searchHighlight = TRUE)))
     
     
