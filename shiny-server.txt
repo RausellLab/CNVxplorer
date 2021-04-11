@@ -20,7 +20,7 @@ server {
     # Limit idle 20 mins
     app_idle_timeout 1200;
     app_init_timeout 600;
-    http_keepalive_timeout 300;
+    # http_keepalive_timeout 300;
 
     # When a user visits the base URL rather than a particular application,
     # an index of the applications available in this directory will be shown.
