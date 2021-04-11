@@ -161,7 +161,7 @@ output:
 <p>ClinGen &ndash; CNV syndromes</p>
 </td>
 <td width="83">
-<p>v.1.1</p>
+<p>2021-04-11</p>
 </td>
 <td width="273">
 <p>https://clinicalgenome.org/</p>
