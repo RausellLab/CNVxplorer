@@ -989,10 +989,16 @@ function(input, output, session) {
     
     
     datatable(tmp_df, 
-              rownames = FALSE, filter = 'top', selection = 'single', escape = FALSE,
+              extension = 'Scroller',
+              rownames = FALSE, 
+              filter = 'top', 
+              selection = 'single', 
+              escape = FALSE,
               colnames = vector_colnames,
               options = list(
-                pageLength = 5, autoWidth = TRUE, style = 'bootstrap', list(searchHighlight = TRUE),
+                # autoWidth = TRUE, scrollY = 200, scroller = TRUE, scrollX = TRUE, fixedColumns = TRUE,
+                scrollY = 200,
+                pageLength = 20, autoWidth = TRUE, style = 'bootstrap', list(searchHighlight = TRUE),
                 selection = 'single'
                 # columnDefs = list(list(className = 'dt-center', targets = '_all'))
               ))
@@ -1258,10 +1264,16 @@ HTML('<center>
     tmp_df <- running_pubmed_dup()
     tmp_df <- tmp_df %>% mutate(pmid = paste0("<a href='", paste0('https://pubmed.ncbi.nlm.nih.gov/', pmid),"' target='_blank'>", pmid,"</a>")) 
 
-    datatable(tmp_df, rownames = FALSE, filter = 'top', selection = 'single', escape = FALSE,
-              
+    datatable(tmp_df, 
+              rownames = FALSE, 
+              filter = 'top', 
+              selection = 'single', 
+              escape = FALSE,
+              extensions = 'Scroller',
               colnames = c('Title','First author', 'Last author', 'N°cites','Journal', 'Published date', 'PMID' ),
               options = list(
+                autoWidth = TRUE, scrollY = 200, scroller = TRUE, scrollX = TRUE, fixedColumns = TRUE,
+                
                 pageLength = 5, autoWidth = TRUE, style = 'bootstrap', list(searchHighlight = TRUE),
                 selection = 'single'
                 # columnDefs = list(list(className = 'dt-center', targets = '_all'))
@@ -1505,7 +1517,8 @@ HTML('<center>
       bed_intersect(coord_user(), suffix = c('', 'delete')) %>%
       select(-startdelete, -enddelete, -.overlap) %>%
       replace_na(replace = list(variant_class = '-', phenotypes = '-')) %>%
-      select(chrom, start, end, syndrome_name, variant_class, phenotypes, source) %>%
+      select(isca_id, chrom, start, end, syndrome_name, variant_class, phenotypes, source, haplo_description,
+             triplo_description) %>%
       get_perc_overlap(coord_user(), is_patho = TRUE)
     
   })
@@ -1568,20 +1581,23 @@ HTML('<center>
       
       tmp_df <- running_cnv_syndromes() %>% 
         filter(source == 'decipher') %>% 
-        select(chrom, start, end, syndrome_name, variant_class, phenotypes, p_overlap)
+        select(p_overlap, chrom, start, end, syndrome_name, variant_class, phenotypes)
       
       
       datatable(tmp_df, rownames = FALSE,
-                colnames = c('Chrom', 'Start', 'End', 'CNV syndrome name', 'Variant class', 'Phenotypes', 'Overlap (%)'))
+                colnames = c('Overlap (%)','Chrom', 'Start', 'End', 'CNV syndrome name', 'Variant class', 'Phenotypes'))
       
     } else {
       
-      tmp_df <- running_cnv_syndromes() %>% filter(source == 'clingen') %>% select(chrom, start, end, syndrome_name, p_overlap, -source)
+      
+      tmp_df <- running_cnv_syndromes() %>% 
+        filter(source == 'clingen') %>% 
+        select(p_overlap, isca_id, chrom, start, end, syndrome_name, haplo_description, triplo_description) %>%
+        mutate(isca_id = paste0("<a href='", paste0('https://search.clinicalgenome.org/kb/gene-dosage/region/', isca_id),"' target='_blank'>", isca_id,"</a>"))
 
-      
-      datatable(tmp_df, rownames = FALSE,
-                colnames = c('Chrom', 'Start', 'End', 'CNV syndrome name', 'Overlap (%)'))
-      
+      datatable(tmp_df, rownames = FALSE, escape = FALSE,
+                colnames = c('Overlap (%)','ISCA ID', 'Chrom', 'Start', 'End', 'CNV syndrome name', 
+                             'Haploinsufficiency evidence', 'Triplosensitivity evidence'))
     }
     
     
@@ -2319,6 +2335,8 @@ HTML('<center>
 
 
     datatable(tmp_df, 
+              extensions = 'Scroller',
+              options = list(autoWidth = TRUE, scrollY = 200, scroller = TRUE, scrollX = TRUE, fixedColumns = TRUE),
               colnames = c('Gene','Tissue', 'Cell type', 'Level', 'Reliability'),
               filter = 'top')
     
@@ -2765,15 +2783,16 @@ HTML('<center>
       mutate(name = paste0("<a href='", paste0('http://www.mirbase.org/textsearch.shtml?q=', name),
                            "' target='_blank'>", name,"</a>")) %>%
       mutate(id = paste0("<a href='", paste0('http://mirtarbase.cuhk.edu.cn/php/detail.php?mirtid=', id),
-                         "' target='_blank'>", id,"</a>"))
+                         "' target='_blank'>", id,"</a>")) %>%
+      select(id, name, chrom, start, end, gene_symbol, references, is_mapping, experiment)
     
 
     datatable(tmp_df, rownames = FALSE, escape = FALSE,
-              # extensions = 'Scroller',
+              extensions = 'Scroller',
+              options = list(autoWidth = TRUE, scrollY = 200, scroller = TRUE, scrollX = TRUE, fixedColumns = TRUE),
               filter = 'top',
-              # options = list(deferRender = TRUE, scrollY = 200, scroller = TRUE),
               colnames = c('ID', 'Name', 'Chrom', 'Start', 'End',
-                           'Target-gene', 'Validation experiment', 'Reference', 'Mapping query?'))
+                           'Target-gene', 'Reference', 'Mapping query?', 'Validation experiment'))
     
     
     
@@ -3037,42 +3056,9 @@ HTML('<center>
       title = "TADs",
       width = 12
     )
-    
-    # tablerInfoCard(
-    #   value =  number_tads(),
-    #   status = "primary",
-    #   icon = 'book',
-    #   description = "Number of TADs disrupted",
-    #   width = 12
-    # )
-    
-    
+
   })
   
-  
-  # output$n_filtered_enhancers <- renderUI({
-  #   
-  #   
-  #   if (is.null(input$df_enhancer_rows_all)) {
-  #     n_enhancers <- prev_enhancer()
-  #   } else {
-  #     n_enhancers <- prev_enhancer()[input$df_enhancer_rows_all,]
-  #   }
-  #   
-  #   n_total_enhancers <- prev_enhancer() %>% select(gene) %>% distinct() %>% nrow()
-  #   n_enhancers <- n_enhancers %>% select(gene) %>% distinct() %>% nrow()
-  #   
-  #   
-  #   tablerInfoCard(
-  #     width = 12,
-  #     value =  paste0(n_enhancers, '/', n_total_enhancers, ' target-genes'),
-  #     status = "warning",
-  #     icon = "database"
-  #     # description =  ''
-  #     
-  #   )
-  #   
-  # })
   
   output$n_target_enh <- renderUI({
     
@@ -3307,6 +3293,8 @@ HTML('<center>
     )
     
     datatable(tads_reactive(), 
+              # extensions = 'Scroller',
+              # options = list(autoWidth = TRUE, scrollY = 200, scroller = TRUE, scrollX = TRUE, fixedColumns = TRUE),
               rownames= FALSE,
               colnames = c('Chromosome', 'Start', 'End', 'Genes mapping TAD', 'Genes no mapping CNV(s)',
                            'TAD boundaries disrupted')
@@ -3700,18 +3688,25 @@ HTML('<center>
         )) %>%
         select(-tmp_cmp, -sim_decipher, -vector_score) %>%
         arrange(desc(is_significant))
+      
+      
+      
+      tmp_df <- tmp_df %>% 
+        mutate(id = paste0("<a href='", paste0('https://www.ncbi.nlm.nih.gov/clinvar/variation/', id),"' target='_blank'>", id,"</a>")) %>%
+        select(p_overlap, id, chrom, start, end, pathogenicity, genotype, variant_class, is_significant, phenotypes)
 
       
       datatable(tmp_df, 
-                # extensions = 'Scroller',
-                escape = FALSE,
-                colnames = c('ID', 'Chrom', 'Start', 'End', 'Pathogenicity', 'Genotype', 'Class', 'Phenotype',
-                             'CNV size', 'Overlap (%)', 'Similarity score (P-Value)'),
+                extensions = 'Scroller',
+                # options = list(autoWidth = TRUE, scrollY = 200, scroller = TRUE, scrollX = TRUE, fixedColumns = TRUE),                escape = FALSE,
+                colnames = c('Overlap (%)', 'ID', 'Chrom', 'Start', 'End', 'Pathogenicity', 'Genotype', 'Class', 'Similarity score (P-Value)',
+                             'Phenotype'
+                             ),
                 selection = 'single',
-                filter = list(position = 'top'), 
+                filter = list(position = 'top'),
+                escape = FALSE,
                 options = list(
-                    # autoWidth = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE, scrollX = TRUE, 
-                    # fixedColumns = TRUE,
+                  autoWidth = TRUE, scrollY = 200, scroller = TRUE, scrollX = TRUE, fixedColumns = TRUE,
                   columnDefs = list(list(className = 'dt-center',  targets = c(0:6,8,9, 9)))),  rownames= FALSE)
       
       
@@ -4656,11 +4651,12 @@ HTML('<center>
                            'CNV size', 'Genes overlapping'),
               selection = 'single',
               filter = list(position = 'top'), 
+              rownames = FALSE,
               options = list(
-                autoWidth = TRUE,
-                deferRender = TRUE, scrollY = 200, scroller = TRUE, scrollX = TRUE, fixedColumns = TRUE,
-                columnDefs = list(list(className = 'dt-center',  targets = c(0:6,8)),
-                                  list(width = '20px', targets = 9))),  rownames= FALSE)
+                # autoWidth = TRUE,
+                deferRender = TRUE, scrollY = 200, scrollX = TRUE, fixedColumns = TRUE))
+                # columnDefs = list(list(className = 'dt-center',  targets = c(0:6,8)),
+                #                   list(width = '20px', targets = 9))),  rownames= FALSE)
       
     } else {
       
@@ -4676,7 +4672,8 @@ HTML('<center>
 
 
 
-      tmp_df <- tmp_df %>% mutate(disease_identifier = str_replace_all(disease_identifier, '\\|', '<br>' )) %>%
+      tmp_df <- tmp_df %>% 
+        # mutate(disease_identifier = str_replace_all(disease_identifier, '\\|', '<br>' )) %>%
         # mutate(gene = str_replace_all(gene, ';', '<br>' )) %>%
         # mutate(gene = str_replace_all(gene, ':', '<br>' )) %>%
         mutate(disease_name = if_else(disease_name == 'See cases', '-', disease_name)) %>%
@@ -5018,22 +5015,23 @@ HTML('<center>
         need(nrow(running_clinvar_no_cnv()) != 0, '0 ClinVar variants found.')
       )
     
-      tmp_df <- running_clinvar_no_cnv() %>% mutate(disease_identifier = str_replace_all(disease_identifier, '\\|', '<br>' ), ) %>%
-        select(-length_cnv) %>%
-        mutate(id = paste0("<a href='", paste0('https://www.ncbi.nlm.nih.gov/clinvar/variation/', id),"' target='_blank'>", id,"</a>"))
+      tmp_df <- running_clinvar_no_cnv() %>% 
+        # mutate(disease_identifier = str_replace_all(disease_identifier, '\\|', '<br>' )) %>%
+        select(id, variant_class, chrom, start, end, reference, alternative, clinical, gene, disease_name, disease_identifier) %>%
+        mutate(id = paste0("<a href='", paste0('https://www.ncbi.nlm.nih.gov/clinvar/variation/', id),"' target='_blank'>", id,"</a>")) %>%
+        mutate(disease_name = str_replace_all(disease_name, '\\|', '<br>' )) %>%
+        mutate(disease_name = str_replace_all(disease_name, ';', '<br>' )) %>%
+        mutate(variant_class = if_else(variant_class == 'single nucleotide variant', 'SNV', variant_class))
+      
 
       datatable(tmp_df, 
-                # extensions = 'Scroller',
-                # options = list(
-                #   deferRender = TRUE,
-                #   scrollY = 200,
-                #   scroller = TRUE),
+                extensions = 'Scroller',
+                options = list(autoWidth = TRUE, scrollY = 200, scroller = TRUE, scrollX = TRUE, fixedColumns = TRUE),
                 filter = list(position = 'top'), 
                 escape = FALSE, 
-                # options = list(scroller = TRUE),
-                colnames = c('Clinvar ID','Variant Class', 'Chrom','Start','End', 'Ref', 'Alt','Clinical significance', 'Gene',
-                                                     'Disease Identifier', 
-                                                     'Disease name'), 
+                colnames = c('Clinvar ID','Class', 'Chrom','Start','End', 'Ref', 'Alt','Clinical significance', 'Gene',
+                                                     'Disease name', 
+                                                     'Disease identifier'), 
                 rownames = FALSE
       )
       
