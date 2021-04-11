@@ -40,6 +40,7 @@ patients](https://www.medrxiv.org/content/10.1101/2021.03.19.21253806v1)
 </center>
 
 ## News
+- **v. 0.21 (11/04/2021)**. Added new version of CNV syndromes ClinGen
 - **v. 0.2 (10/04/2021)**. Added p-values phenotypic similarity; added segmental duplications to the list of prob. regions
 - **v. 0.14 (07/04/2021)**. Fixed minor errors, added scroller; added  ClinVar variants in CNV's length distribution
 - **v. 0.13 (17/03/2021)**. Added Imagine logo, overview figure and terms of use
