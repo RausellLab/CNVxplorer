@@ -51,7 +51,7 @@ output:
 <p>DECIPHER Population CNVs</p>
 </td>
 <td width="83">
-<p>-</p>
+<p>v.1.0</p>
 </td>
 <td width="273">
 <p>http://decipher.sanger.ac.uk/</p>
@@ -66,6 +66,17 @@ output:
 </td>
 <td width="273">
 <p>http://decipher.sanger.ac.uk/</p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>DDG2P</p>
+</td>
+<td width="83">
+<p>2021-04-12</p>
+</td>
+<td width="273">
+<p>https://www.ebi.ac.uk/gene2phenotype/downloads</p>
 </td>
 </tr>
 <tr>
@@ -139,7 +150,7 @@ output:
 <p>Genomics England PanelApp</p>
 </td>
 <td width="83">
-<p>-</p>
+<p>2021-03-01</p>
 </td>
 <td width="273">
 <p>https://panelapp.genomicsengland.co.uk/</p>
