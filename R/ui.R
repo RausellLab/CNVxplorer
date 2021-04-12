@@ -1213,7 +1213,7 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
               choices = list('Overview' = 'overview',
                              'Tutorials' = 'tutorials',
                              'FAQs' = 'faqs',
-                             'Input data and software' = 'versions',
+                             'Input data' = 'versions',
                              'Installation' = 'installation',
                              'Browser compatibility' = 'browser', 
                              'About' = 'contact',
