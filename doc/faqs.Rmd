@@ -106,7 +106,7 @@ The phenotypic similarity calculation implemented in CNVxplorer follows the Phen
 
 - **Why some clinical similarity p-values show a slash '-' symbol rather than a value?**
 
-For computational reasons, CNVxplorer only stores in memory the top 5% of the background distribution values generated in the OSS-PV approach (see above), which allow us to estimate significant p-values < 0.05. Thus, when clinical similarity scores were equal or above the 0.05 threshold, are consider not statistically significant and are simply displayed with a slash '-' symbol.
+For computational reasons, CNVxplorer only stores in memory the top 5% of the background distribution values generated in the OSS-PV approach (see above), which allows us to estimate significant p-values < 0.05. Thus, when clinical similarity scores p-values were equal to or above above the 0.05 threshold, they are consider not statistically significant and are displayed with a slash '-' symbol.
 
 Note the slash symbol can be displayed when no HP term has been entered by the user or there is not available phenotypic information about the gene, disease or DECIPHER CNV.
 
