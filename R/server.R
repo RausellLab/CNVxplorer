@@ -3599,9 +3599,7 @@ HTML('<center>
 
       tmp_df <- running_sim_score()
       tmp_value_total <- p_value_total %>% filter(category != 'cnv' & length_query == length_hp_chosen) %>% select(-length_query)
-      
-      # test10 <<- tmp_df
-      # test11 <<- tmp_value_total
+
       
       tmp_df <- tmp_df %>%
         # DISEASE
@@ -3618,9 +3616,9 @@ HTML('<center>
         left_join(tmp_value_total %>% filter(category == 'gene') %>% mutate(identifier = as.character(identifier)), by = c('gene' = 'identifier')) %>%
       mutate(tmp_cmp = ifelse(is.na(sim_gene), NA, length(str_split(vector_score, pattern = ', ')[[1]][sim_gene < str_split(vector_score, pattern = ', ')[[1]]]))) %>%
         mutate(is_significant_gene = case_when(
-          tmp_cmp < 50 & tmp_cmp > 0 ~ as.character(tmp_cmp/1e3),
-          tmp_cmp == 50 ~ '-',
-          tmp_cmp == 0 ~ 'lower than 0.001',
+          tmp_cmp < 500 & tmp_cmp > 0 ~ as.character(tmp_cmp/1e4),
+          tmp_cmp == 500 ~ '-',
+          tmp_cmp == 0 ~ 'lower than 0.0001',
           is.na(tmp_cmp) ~ '-',
         )) %>%
         # select(-tmp_cmp, -sim_gene, -vector_score, -category) %>%
@@ -3680,9 +3678,9 @@ HTML('<center>
         rowwise() %>%
         mutate(tmp_cmp = ifelse(is.na(sim_decipher), NA, length(str_split(vector_score, pattern = ', ')[[1]][sim_decipher < str_split(vector_score, pattern = ', ')[[1]]]))) %>%
         mutate(is_significant = case_when(
-          tmp_cmp < 50 & tmp_cmp > 0 ~ as.character(tmp_cmp/1e3),
-          tmp_cmp == 50 ~ '-',
-          tmp_cmp == 0 ~ 'lower than 0.001',
+          tmp_cmp < 500 & tmp_cmp > 0 ~ as.character(tmp_cmp/1e4),
+          tmp_cmp == 500 ~ '-',
+          tmp_cmp == 0 ~ 'lower than 0.0001',
           is.na(tmp_cmp) ~ '-',
         )) %>%
         select(-tmp_cmp, -sim_decipher, -vector_score) %>%
