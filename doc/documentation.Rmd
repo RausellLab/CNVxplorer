@@ -40,6 +40,8 @@ patients](https://www.medrxiv.org/content/10.1101/2021.03.19.21253806v1)
 </center>
 
 ## News
+
+- **v. 0.31 (19/04/2021)**. Added one order of magnitude to p-values calculation (lower than 0.0001)
 - **v. 0.3 (12/04/2021)**. Added FAQs questions regarding phenotypic similarity p-values.
 - **v. 0.21 (11/04/2021)**. Added new version of CNV syndromes ClinGen
 - **v. 0.2 (10/04/2021)**. Added p-values phenotypic similarity; added segmental duplications to the list of prob. regions
