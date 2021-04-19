@@ -3609,9 +3609,9 @@ HTML('<center>
         rowwise() %>%
         mutate(tmp_cmp = ifelse(is.na(sim_mim), NA, length(str_split(vector_score, pattern = ', ')[[1]][sim_mim < str_split(vector_score, pattern = ', ')[[1]]]))) %>%
         mutate(is_significant_disease = case_when(
-          tmp_cmp < 50 & tmp_cmp > 0 ~ as.character(tmp_cmp/1e3),
-          tmp_cmp == 50 ~ '-',
-          tmp_cmp == 0 ~ 'lower than 0.001',
+          tmp_cmp < 500 & tmp_cmp > 0 ~ as.character(tmp_cmp/1e4),
+          tmp_cmp == 500 ~ '-',
+          tmp_cmp == 0 ~ 'lower than 0.0001',
           is.na(tmp_cmp) ~ '-',
         )) %>%
         select(-tmp_cmp, -sim_mim, -vector_score, -category) %>%
