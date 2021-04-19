@@ -89,10 +89,10 @@ library(scales)
 
 source('functions.R')
 load('../local_data.RData')
-
-# Read p_value_files 
-p_value_total <- list.files(paste0('R/', list.files('p_values_dataset/'))) %>% 
-  map_dfr(~ read_tsv(.x, col_types = list('identifier' = col_character())))
+# 
+# # Read p_value_files 
+p_value_total <- list.files('p_values_dataset/') %>%
+  map_dfr(~ read_tsv(glue('p_values_dataset/{.x}'), col_types = list('identifier' = col_character())))
 
 ridges_home <- cnv_df %>%
   filter(length_cnv >= 50) %>%
