@@ -83,13 +83,16 @@ library(scales)
 #     mgi, ## -
 #     interactions_db, ## -
 #     syndromes_total, ## hg19
-#     p_value_total,
 #     file = "local_data.RData")
 
 # system("gzip local_data.RData")
 
 source('functions.R')
 load('../local_data.RData')
+
+# Read p_value_files 
+p_value_total <- list.files(paste0('R/', list.files('p_values_dataset/'))) %>% 
+  map_dfr(~ read_tsv(.x, col_types = list('identifier' = col_character())))
 
 ridges_home <- cnv_df %>%
   filter(length_cnv >= 50) %>%
