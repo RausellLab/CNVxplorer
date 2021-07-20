@@ -59,24 +59,13 @@ RUN R -e "install.packages(c('shinydashboard', \
 # install Bioconductor packages
 RUN Rscript -e "BiocManager::install(c('karyoploteR','Gviz','TissueEnrich', 'Rhtslib', 'ReactomePA', 'clusterProfiler', 'org.Hs.eg.db', 'DOSE', 'chromPlot'))"
 
-
-
-
-
 # Copy the app to the image
 COPY CNVxplorer /srv/shiny-server/
 
-# test
+# Updated configuration file 
 RUN cat /srv/shiny-server/shiny-server.txt > /etc/shiny-server/shiny-server.conf
 
-# Unzip local data
-
-RUN gunzip /srv/shiny-server/local_data.RData.gz 
-
-
-
 RUN echo 'allow_app_override;' >> /etc/shiny-server/shiny-server.conf
-
 
 # Make all app files readable
 RUN chmod -R +r /srv/shiny-server/
