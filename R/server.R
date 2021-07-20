@@ -2577,6 +2577,36 @@ HTML('<center>
       }
   })
   
+  
+  output$ref_user_cnvscore <- renderUI({
+    
+    req(input$input_geno_karyo != 'Multiple coordinates (NGS)')
+    
+    tmp_start <- coord_user() %>% pull(start)
+    tmp_end <- coord_user() %>% pull(end)
+    tmp_chrom <- coord_user() %>% pull(chrom)
+    
+    api_result <- POST('http://3.68.213.5:3838/classifier',
+               body = paste0('input_chrom=', tmp_chrom,
+                             '&input_start=', tmp_start,
+                             '&input_end=', tmp_end,
+                             '&input_type=deletion'))
+    
+    api_result <- as_tibble(content(api_result)[[1]])
+    
+    tablerInfoCard(
+      width = 12,
+      value =  paste0(ifelse(api_result$.pred_pathogenic >= 0.5, 'Pathogenic CNV \n', 'Benign CNV \n'),
+                      'Uncertainty:', api_result$sd),
+      status = "primary",
+      icon = "database",
+      description =  'CNVscore result'
+    )
+    
+    
+    
+  })
+  
   output$ref_user_region <- renderUI({
     
     req(input$input_geno_karyo != 'Multiple coordinates (NGS)')

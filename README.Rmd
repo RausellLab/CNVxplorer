@@ -8,7 +8,9 @@ output: github_document
 
 Welcome to the official Github repository of the **CNVxplorer** webserver available at http://cnvxplorer.com
 
-A companion preprint is presented in BioRxiv: [CNVxplorer: a web tool to assist clinical interpretation of CNVs in rare disease patients](https://www.biorxiv.org/)
+The CNVxplorer manuscript is available on:
+
+Requena, Francisco, et al. ["CNVxplorer: a web tool to assist clinical interpretation of CNVs in rare disease patients." Nucleic acids research: gkab347](https://academic.oup.com/nar/article/49/W1/W93/6279834).
 
 
 # Table of contents
@@ -130,7 +132,7 @@ In no event will the Imagine Institute, the Clinical Bioinformatics lab, or any 
 
 ## References
 
-CNVxplorer: a web tool to assist clinical interpretation of CNVs in rare disease patients. Requena F, Abdallah HA, García A, Nitschké P, Romana S, Malan V, Rausell A. BioRxiv 2021. doi: [https://doi.org/](https://doi.org/)
+Requena, Francisco, et al. "CNVxplorer: a web tool to assist clinical interpretation of CNVs in rare disease patients." Nucleic acids research: gkab347. [(Access)](https://academic.oup.com/nar/article/49/W1/W93/6279834)
 
 ## News 
 You may follow us in Twitter for regular news and updates: https://twitter.com/AntonioRausell

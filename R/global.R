@@ -42,6 +42,7 @@ library(tidyverse)
 library(bioloupe)
 library(networkD3)
 library(scales)
+library(httr)
 
 # file.remove('local_data.RData.gz')
 # file.remove('local_data.RData')
@@ -88,7 +89,7 @@ library(scales)
 # system("gzip local_data.RData")
 
 source('functions.R')
-load('../local_data.RData')
+load('../local_data.RData.gz')
 # 
 # # Read p_value_files 
 p_value_total <- list.files('p_values_dataset/') %>%

@@ -202,6 +202,7 @@ tablerDashPage(
                          
               )
               ),
+            # uiOutput('ref_user_cnvscore'),
             uiOutput('ref_user_region'),
             uiOutput('ref_user_cytoband'),
             uiOutput('ref_user_length'),

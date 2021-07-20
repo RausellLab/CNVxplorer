@@ -28,9 +28,7 @@ CNVxplorer is a user-friendly web application developed to assist in the clinica
 
 ## How to cite
 
-[CNVxplorer: a web tool to
-assist clinical interpretation of CNVs in rare disease
-patients](https://www.medrxiv.org/content/10.1101/2021.03.19.21253806v1)
+Requena, Francisco, et al. [“CNVxplorer: a web tool to assist clinical interpretation of CNVs in rare disease patients.” Nucleic acids research: gkab347](https://academic.oup.com/nar/article/49/W1/W93/6279834)
 
 
 ## Google group

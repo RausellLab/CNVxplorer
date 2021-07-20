@@ -32,6 +32,12 @@ Currently, we have limited the number of variants to 200.
 
 ### General information
 
+- **How to cite CNVxplorer?**
+
+The CNVxplorer manuscript is available on:
+
+Requena, Francisco, et al. [“CNVxplorer: a web tool to assist clinical interpretation of CNVs in rare disease patients.” Nucleic acids research: gkab347](https://academic.oup.com/nar/article/49/W1/W93/6279834)
+
 
 - **How problematic regions of the human genome and segmental duplications were defined and where can I get their breakpoint coordinates?**
 
