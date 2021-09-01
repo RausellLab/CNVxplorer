@@ -1,0 +1,17 @@
+---
+title: "terms_of_use"
+author: "frequena"
+date: "13/5/2020"
+output:
+  html_document:
+    toc: true
+---
+
+
+### Disclaimer
+
+CNVxplorer or any document available from this server are distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express, implied, or statutory, including, but not limited to, any implied warranties of merchantability, fitness for a particular purpose and freedom from infringement, or that CNVxplorer or any documents available from this server will be error-free.
+In no event will the Imagine Institute, the Clinical Bioinformatics lab, or any of its members be liable for any damages, including but not limited to direct, indirect, special, or consequential damages, arising out of, resulting from, or in any way connected with the use of CNVxplorer or documents available from it.
+
+Copyright 2021 Clinical BioInformatics Laboratory - Institut Imagine
+

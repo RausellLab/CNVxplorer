@@ -1,0 +1,342 @@
+---
+title: "browser_compatibility"
+author: "frequena"
+date: "13/5/2020"
+output:
+  html_document:
+    toc: true
+---
+
+## Database versions
+
+<center>
+
+<table style="width:100%">
+<tbody>
+<tr>
+<td width="247">
+<p><strong>Database</strong></p>
+</td>
+<td width="83">
+<p><strong>Version/access date</strong></p>
+</td>
+<td width="273">
+<p><strong>Link</strong></p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>Database of Genomic Variants (DGV)</p>
+</td>
+<td width="83">
+<p>2020-02-25</p>
+</td>
+<td width="273">
+<p>&nbsp;http://dgv.tcag.ca/dgv/app/home</p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>DECIPHER CNVs</p>
+</td>
+<td width="83">
+<p>2020-01-19</p>
+</td>
+<td width="273">
+<p>http://decipher.sanger.ac.uk/</p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>DECIPHER Population CNVs</p>
+</td>
+<td width="83">
+<p>v.1.0</p>
+</td>
+<td width="273">
+<p>http://decipher.sanger.ac.uk/</p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>DECIPHER CNV syndromes</p>
+</td>
+<td width="83">
+<p>2020-01-19</p>
+</td>
+<td width="273">
+<p>http://decipher.sanger.ac.uk/</p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>DDG2P</p>
+</td>
+<td width="83">
+<p>2021-04-12</p>
+</td>
+<td width="273">
+<p>https://www.ebi.ac.uk/gene2phenotype/downloads</p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>Mouse Genome Informatics</p>
+</td>
+<td width="83">
+<p>2021-03-01</p>
+</td>
+<td width="273">
+<p>http://www.informatics.jax.org/</p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>The Human Protein Atlas</p>
+</td>
+<td width="83">
+<p>v.20.1</p>
+</td>
+<td width="273">
+<p>http://www.proteinatlas.org/</p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>OHNOLOGS</p>
+</td>
+<td width="83">
+<p>v.2.0</p>
+</td>
+<td width="273">
+<p>http://ohnologs.curie.fr/</p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>STRING</p>
+</td>
+<td width="83">
+<p>v.11</p>
+</td>
+<td width="273">
+<p>https://string-db.org/</p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>OMIM</p>
+</td>
+<td width="83">
+<p>2020_03_12</p>
+</td>
+<td width="273">
+<p>http://www.omim.org/</p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>gnomAD Structural Variants (SVs)</p>
+</td>
+<td width="83">
+<p>v.2.1</p>
+</td>
+<td width="273">
+<p>&nbsp;https://gnomad.broadinstitute.org/</p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>Genomics England PanelApp</p>
+</td>
+<td width="83">
+<p>2021-03-01</p>
+</td>
+<td width="273">
+<p>https://panelapp.genomicsengland.co.uk/</p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>ORPHANET</p>
+</td>
+<td width="83">
+<p>2021-03-01</p>
+</td>
+<td width="273">
+<p>https://www.orpha.net/consor/cgi-bin/index.php</p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>ClinGen &ndash; CNV syndromes</p>
+</td>
+<td width="83">
+<p>2021-04-11</p>
+</td>
+<td width="273">
+<p>https://clinicalgenome.org/</p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>ClinGen &ndash; Dosage Sensitivity Map</p>
+</td>
+<td width="83">
+<p>2021-03-03</p>
+</td>
+<td width="273">
+<p>https://clinicalgenome.org/</p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>ClinVar</p>
+</td>
+<td width="83">
+<p>2021-04-06</p>
+</td>
+<td width="273">
+<p>https://www.ncbi.nlm.nih.gov/clinvar/</p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>GWAS Catalog (*)</p>
+</td>
+<td width="83">
+<p>v.1.0</p>
+</td>
+<td width="273">
+<p>https://www.ebi.ac.uk/gwas/</p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>denovo-db</p>
+</td>
+<td width="83">
+<p>v.1.6.1</p>
+</td>
+<td width="273">
+<p>http://denovo-db.gs.washington.edu/denovo-db/</p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>ENCODE Blacklist</p>
+</td>
+<td width="83">
+<p>v.2</p>
+</td>
+<td width="273">
+<p>https://github.com/Boyle-Lab/Blacklist/tree/master/lists</p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>The Human Phenotype Ontology (HPO)</p>
+</td>
+<td width="83">
+<p>2021-02-09</p>
+</td>
+<td width="273">
+<p>https://hpo.jax.org/app/</p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>miRTarBase</p>
+</td>
+<td width="83">
+<p>8.0</p>
+</td>
+<td width="273">
+<p>http://mirtarbase.cuhk.edu.cn/php/index.php</p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>mirBase (*)</p>
+</td>
+<td width="83">
+<p>8.0</p>
+</td>
+<td width="273">
+<p>http://www.mirbase.org/index.shtml</p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>TRRUST</p>
+</td>
+<td width="83">
+<p>v.2</p>
+</td>
+<td width="273">
+<p>https://www.grnpedia.org/trrust/</p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>HI index</p>
+</td>
+<td width="83">
+<p>v.3</p>
+</td>
+<td width="273">
+<p>https://decipher.sanger.ac.uk/about/downloads/data</p>
+</td>
+</tr>
+<tr>
+<tr>
+<td width="247">
+<p>lncrna2target</p>
+</td>
+<td width="83">
+<p>v.2</p>
+</td>
+<td width="273">
+<p>http://123.59.132.21/lncrna2target/</p>
+</td>
+</tr>
+<tr>
+<tr>
+<td width="247">
+<p>GeneHancer (*)</p>
+</td>
+<td width="83">
+<p>v.4.11</p>
+</td>
+<td width="273">
+<p>-</p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>Mammalian Phenotype Ontology (MPO)</p>
+</td>
+<td width="83">
+<p>2021-01-12</p>
+</td>
+<td width="273">
+<p>http://www.informatics.jax.org/vocab/mp_ontology/</p>
+</td>
+</tr>
+<tr>
+<td width="247">
+<p>The Genotype-Tissue Expression (GTEx)</p>
+</td>
+<td width="83">
+<p>v.8</p>
+</td>
+<td width="273">
+<p>https://www.gtexportal.org/home/</p>
+</td>
+</tr>
+</tbody>
+</table>
+
+</center>
+
+(*) These datasets were converted from hg38 to hg19 with liftOver

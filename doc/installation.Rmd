@@ -1,0 +1,51 @@
+---
+title: "installation"
+author: "frequena"
+date: "13/5/2020"
+output:
+  html_document:
+    toc: true
+---
+
+We provide instructions to install CNVxplorer locally or on a server (through Docker) with just 3 lines of code:
+
+## Docker installation (recommended)
+
+``` bash
+
+# Note: the first session after the deployment is slower since the application loads all the data required
+
+git clone https://github.com/frequena/cnvxplorer.git
+
+docker build -t cnvxplorer . # The tag "cnvxplorer" is optional
+
+docker run -d -p 3838:3838 cnvxplorer # -p (specify the port) -d (detached mode)
+
+# The port 3838 is optional. Please make sure you set a port that
+# is not blocked by firewalls. Also, if you change 3838 for any other port, you need to specify it before 
+# in the Dockerfile (EXPOSE instruction)
+```
+
+### Local installation
+
+``` bash
+
+git clone https://github.com/frequena/cnvxplorer.git
+
+cd cnvxplorer
+
+gunzip -c local_data.RData.gz > local_data.RData
+
+R -e 'load('local_data.RData')'
+
+# Once you loaded the R environment with the files and functions
+# comment the same two lines above in global.R so the app doesn't need
+# to load the data every session but only once.
+
+# Make sure you have all the packages installed
+R -e 'shiny:runApp()'
+```
+
+
+For any technical problem, please open a issue on the Github page, we will be happy to help :).
+
