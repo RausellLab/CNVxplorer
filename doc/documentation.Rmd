@@ -39,6 +39,7 @@ Requena, Francisco, et al. [“CNVxplorer: a web tool to assist clinical interpr
 
 ## News
 
+- **v. 0.4 (20/07/2021)**. Integration with CNVscore + fixed minor bugs
 - **v. 0.32 (20/07/2021)**. Updated reference.
 - **v. 0.31 (19/04/2021)**. Added one order of magnitude to p-values calculation (lower than 0.0001)
 - **v. 0.3 (12/04/2021)**. Added FAQs questions regarding phenotypic similarity p-values.

@@ -880,6 +880,7 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
       
       tablerTabItem(
         tabName = "genomic_interactions",
+        fluidRow(
         column(width = 9,
         tablerCard(title = 'Protein interaction network' %>% helper(type = "inline",
                                                                     style = "text-indent: 0.5em;",
@@ -907,7 +908,7 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
                tablerCard(title = 'Color legend', width = 12,
                           htmlOutput('legend_html'))
                
-),
+)),
                
         tablerCard(title = 'Nº of protein-protein interactions',
                    width = 12,

@@ -3658,7 +3658,7 @@ HTML('<center>
       arrange(desc(p_overlap))
     
     validate(
-      need(nrow(tmp_main) != 0, "No DECIPHER CNVs found.")
+      need(nrow(tmp_main) != 0, "DECIPHER variants are not provided on the Github version due to privacy restrictions. Please visit http://cnvxplorer.com/ for a complete version of the app.")
     )
     
     
@@ -4582,8 +4582,14 @@ HTML('<center>
   
   output$func_do  <- renderPlot({
     
+    # test4 <<- running_do()
+    
+    tmp_running_do <- running_do()
+    
+    # test6 <<- tmp_running_do
+    
 
-    cnetplot(running_do(), foldChange= hgcn_genes$entrez_id, readable = TRUE)
+    enrichplot::cnetplot(tmp_running_do, foldChange= hgcn_genes$entrez_id)
   })
 
   
@@ -4720,6 +4726,11 @@ HTML('<center>
   output$df_overlap_cnvs <- renderDT({
     
     req(input$select_decipher_clinvar)
+    
+    
+    if (input$select_decipher_clinvar == 'DECIPHER') {
+      
+    
 
     tmp_df <- df_overlap_cnvs_running() %>% filter(source == 'decipher') %>% 
       filter(pathogenicity %in% c('Pathogenic', 'Likely pathogenic')) %>%
@@ -4727,8 +4738,9 @@ HTML('<center>
       arrange(desc(p_overlap))
     
     
+    
     validate(
-      need(nrow(tmp_df) != 0, "No pathogenic CNVs found.")
+      need(nrow(tmp_df) != 0 , "DECIPHER variants are not provided on the Github version due to privacy restrictions. Please visit http://cnvxplorer.com/ for a complete version of the app.")
     )
     
   
@@ -4740,10 +4752,8 @@ HTML('<center>
                                                       'end' = end)) %>% pull(gene.x), collapse = ', ')) %>%
       ungroup() %>%
       select(p_overlap, everything())
-      # mutate(genes = str_replace_all(genes, ', ', '<br>' ))
     
     
-    if (input$select_decipher_clinvar == 'DECIPHER') {
 
     datatable(tmp_df, 
               extensions = 'Scroller',
@@ -4771,12 +4781,7 @@ HTML('<center>
         select(p_overlap, id, chrom, start, end, variant_class, clinical, disease_identifier, disease_name, gene) %>%
         mutate(disease_identifier = str_replace_all(disease_identifier, 'Human Phenotype Ontology', 'HPO'))
 
-
-
       tmp_df <- tmp_df %>% 
-        # mutate(disease_identifier = str_replace_all(disease_identifier, '\\|', '<br>' )) %>%
-        # mutate(gene = str_replace_all(gene, ';', '<br>' )) %>%
-        # mutate(gene = str_replace_all(gene, ':', '<br>' )) %>%
         mutate(disease_name = if_else(disease_name == 'See cases', '-', disease_name)) %>%
         mutate(id = paste0("<a href='", paste0('https://www.ncbi.nlm.nih.gov/clinvar/variation/', id),"' target='_blank'>", id,"</a>"))
       

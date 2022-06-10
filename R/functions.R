@@ -4,6 +4,11 @@ count <- dplyr::count
 rename <- dplyr::rename
 slice <- dplyr::slice
 
+nrow <- base::nrow
+na.omit <- stats::na.omit
+unique <- base::unique
+nchar <- base::nchar
+
 
 # ------------------------------------------------------------------------------
 # Name: get_perc_overlap
