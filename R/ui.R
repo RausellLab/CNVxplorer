@@ -100,7 +100,7 @@ tablerDashPage(
         shinyjs::useShinyjs(),
         # use_waiter(),
         setShadow(class = 'card'),
-        chooseSliderSkin("Nice"),
+        # chooseSliderSkin("Nice"),
         
         fluidRow(
           column(
@@ -171,7 +171,32 @@ tablerDashPage(
    
                  ),
                  plotOutput('plot_chrom', height = 200),
-                 DTOutput('cnvscore_rules')
+                 tags$br(),
+                 tablerCard(
+                   title = "CNVscore's prediction:",
+                   collapsible = FALSE,
+                   closable = FALSE,
+                   zoomable = FALSE,
+                   width = 12,
+                   options = tagList(
+                     
+                     prettyRadioButtons(
+                       inputId = "cnvscore_del_dup",
+                       label = '', 
+                       choices =  split(c("deletion", "duplication"), c('Deletion', 'Duplication')),
+                       selected = 'deletion',
+                       inline = TRUE, 
+                       status = "primary",
+                       fill = TRUE
+                     )
+                   ),
+                   fluidRow(
+                   uiOutput('cnvscore_score'),
+                   uiOutput('cnvscore_uncertainty'),
+                   tags$br(),
+                   DTOutput('cnvscore_rules')
+                   )
+                 )
 
           ),
           
@@ -203,7 +228,7 @@ tablerDashPage(
                          
               )
               ),
-            uiOutput('ref_user_cnvscore'),
+            # uiOutput('ref_user_cnvscore'),
             # uiOutput('cnvscore_rules'),
             uiOutput('ref_user_region'),
             uiOutput('ref_user_cytoband'),
@@ -391,8 +416,6 @@ CNVxplorer compares the length of the CNV provided by the user and the length di
                        status = "primary",
                        fill = TRUE
                      )
-                     
-                     
                    )
                  ) 
           )

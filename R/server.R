@@ -2590,29 +2590,52 @@ HTML('<center>
     test11 <<- tmp_end
     test12 <<- tmp_chrom
     
-    api_result <- POST('http://3.68.213.5:3838/classifier',
+    test4111 <<- input$cnvscore_del_dup
+    
+    api_result <- POST('http://35.180.225.167:3838/classifier',
                        body = paste0('input_chrom=', tmp_chrom,
                                      '&input_start=', as.integer(tmp_start), 
                                      '&input_end=',  as.integer(tmp_end), 
-                                     '&input_type=deletion'))
+                                     '&input_type=', input$cnvscore_del_dup))
     
     api_result <- as_tibble(content(api_result)[[1]])
 
   })
   
-  output$ref_user_cnvscore <- renderUI({
-    
-    test14 <<- generate_cnvscore()
-    
+  output$cnvscore_score <- renderUI({
+ 
     tmp_df <- generate_cnvscore()
     
     tablerInfoCard(
       width = 12,
-      value =  paste0(ifelse(tmp_df$.pred_pathogenic >= 0.5, 'Pathogenic CNV \n', 'Benign CNV \n'),
-                      'Uncertainty:', tmp_df$sd),
+      value = paste0(ifelse(tmp_df$cnvscore >= 0.5, 'Pathogenic CNV \n', 'Benign CNV \n')),
+      # value =  paste0(ifelse(tmp_df$.pred_pathogenic >= 0.5, 'Pathogenic CNV \n', 'Benign CNV \n'),
+      #                 'Uncertainty:', tmp_df$uncertainty_level),
       status = "primary",
       icon = "database",
-      description =  paste(tmp_df$chrom, tmp_df$start, tmp_df$end)
+      description =  paste('CNVscore:', round(tmp_df$cnvscore, 4))
+    )
+
+  })
+
+  output$cnvscore_uncertainty <- renderUI({
+
+    test14 <<- generate_cnvscore()
+    
+    tmp_df <- generate_cnvscore()
+    
+   tmp_uncertainty <- case_when(tmp_df$uncertainty_level == 1 ~ 'Low',
+                                tmp_df$uncertainty_level == 2 ~ 'Moderate',
+                                tmp_df$uncertainty_level == 3 ~ 'High')
+    
+    tablerInfoCard(
+      width = 12,
+      value =  paste0('Uncertainty level: ', tmp_uncertainty),
+      # value =  paste0(ifelse(tmp_df$.pred_pathogenic >= 0.5, 'Pathogenic CNV \n', 'Benign CNV \n'),
+      #                 'Uncertainty:', tmp_df$uncertainty_level),
+      status = "primary",
+      icon = "database"
+      # description =  paste(tmp_df$chrom, tmp_df$start, tmp_df$end)
     )
 
   })
@@ -2622,8 +2645,38 @@ HTML('<center>
     tmp_df <- generate_cnvscore()
     
     tmp_df <- str_split(tmp_df$rules, ', ')[[1]] %>% as_tibble()
+    tmp_df <- tmp_df %>% separate_rows(value, sep = ';')
     
-    datatable(tmp_df)
+    test41 <<- tmp_df
+    # tmp_df %>%
+    #   mutate(risk = str_extract(value, 'risk:\\d.\\d\\d') %>% str_remove('risk:')) %>%
+    #   
+
+    tmp_df <- tmp_df %>% separate(value, '\\(', into = c('Decision rule', 'tmp')) %>% 
+      separate(tmp, sep = '-', into = c('risk', 'support')) %>%
+      mutate(risk = str_remove(risk, 'risk:')) %>%
+      mutate(support = str_remove(support, 'support:')) %>%
+      mutate(support = str_remove(support, '\\)')) %>%
+      map_dfr(~ str_replace_all(.x, ' ', '')) %>%
+      rename(Risk = risk, Support = support) %>%
+      mutate(id = row_number()) %>%
+      mutate(`Decision rule` = paste0(id, ') ', `Decision rule`)) %>%
+      select(-id) %>%
+      mutate(`Decision rule` = str_replace(`Decision rule`, '&', ' AND ')) %>%
+      mutate(`Decision rule` = str_replace(`Decision rule`, 'max_cadd', 'Max. CADD score')) %>%
+      mutate(`Decision rule` = str_replace(`Decision rule`, 'min_expression', 'Min. gene expression')) %>%
+      mutate(`Decision rule` = str_replace(`Decision rule`, 'pli', 'pLI score')) %>%
+      mutate(`Decision rule` = str_replace(`Decision rule`, 'loeuf', 'LOEUF score')) %>%
+      mutate(`Decision rule` = str_replace(`Decision rule`, 'eds', 'EDS score')) %>%
+      mutate(`Decision rule` = str_replace(`Decision rule`, 'enhancer', 'Overlap with Enhancer regions')) %>%
+      mutate(`Decision rule` = str_replace(`Decision rule`, 'lads', 'LADS regions')) %>%
+      mutate(`Decision rule` = str_replace(`Decision rule`, 'mean_expression', 'Mean gene expression')) %>%
+      mutate(`Decision rule` = str_replace(`Decision rule`, 'degree', 'Nº interactions PPI network'))
+      
+    
+    
+    datatable(tmp_df, rownames= FALSE, escape = FALSE,
+              options = list(dom = 't', scrollX = T))
 
     
   })
